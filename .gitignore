@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.output/
+.vercel/
+.env
+.env.*
+*.log
+.DS_Store
+
+# Source packs and local QA dumps, not needed to run the game
+apecat-rail.zip
+attachments/
+screenshots/
+artifacts/
