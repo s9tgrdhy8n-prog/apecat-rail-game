@@ -6,6 +6,7 @@ import type { Hud, Nudge, Phase, RailApi, RunnerName } from "@/game/types";
 const SAVE_KEY = "apecat-rail-v1";
 const LANE = 2.2;
 const AHEAD = 78;
+const GALLERY_PACES = [2.4, 5, 8.5, 13, 20];
 const SPEED_MIN = 18;
 const SPEED_MAX = 40;
 const GRAVITY = 34;
@@ -147,6 +148,11 @@ class RailWorld {
   private queueJump = false;
   private queueSlide = false;
 
+  private galleryGear = 1;
+  private galleryYaw = 0;
+  private galleryPitch = 0;
+  private galleryPaceLock = 0;
+  private lookPointer: { id: number; x: number; y: number } | null = null;
   private phase: Phase = "loading";
   private coins = 0;
   private meters = 0;
@@ -253,7 +259,6 @@ class RailWorld {
   private wallMats: THREE.MeshBasicMaterial[] = [];
   private portraits: { group: THREE.Group; pic: THREE.Mesh; z: number; side: number; image: number }[] = [];
   private portraitPicks = 0;
-  private bullCursor = 0;
 
   private hudSnap = "";
 
@@ -325,6 +330,8 @@ class RailWorld {
       nudge: (dir) => this.nudge(dir),
       hold: (action, down) => this.hold(action, down),
       toMenu: () => this.toMenu(),
+      enterGallery: () => this.enterGallery(),
+      galleryPace: (dir) => this.stepGalleryPace(dir),
       swap: () => this.swapRunner(),
       pick: (name) => this.pickRunner(name),
       noteBest: (score) => this.noteBest(score),
@@ -344,6 +351,11 @@ class RailWorld {
     window.removeEventListener("keyup", this.onKeyUp);
     window.removeEventListener("blur", this.onBlur);
     window.removeEventListener("pointerdown", this.onGesture);
+    window.removeEventListener("pointerdown", this.onLookDown);
+    window.removeEventListener("pointermove", this.onLookMove);
+    window.removeEventListener("pointerup", this.onLookUp);
+    window.removeEventListener("pointercancel", this.onLookUp);
+    window.removeEventListener("wheel", this.onGalleryWheel);
     window.removeEventListener("resize", this.resize);
     window.visualViewport?.removeEventListener("resize", this.resize);
     this.sfx.stopMusic();
@@ -356,6 +368,11 @@ class RailWorld {
     window.addEventListener("keyup", this.onKeyUp);
     window.addEventListener("blur", this.onBlur);
     window.addEventListener("pointerdown", this.onGesture);
+    window.addEventListener("pointerdown", this.onLookDown);
+    window.addEventListener("pointermove", this.onLookMove);
+    window.addEventListener("pointerup", this.onLookUp);
+    window.addEventListener("pointercancel", this.onLookUp);
+    window.addEventListener("wheel", this.onGalleryWheel, { passive: false });
     window.addEventListener("resize", this.resize);
     window.visualViewport?.addEventListener("resize", this.resize);
   }
@@ -369,6 +386,20 @@ class RailWorld {
   private onKeyDown = (e: KeyboardEvent) => {
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
     if (e.repeat) return;
+    if (this.phase === "gallery") {
+      if (e.code === "Escape" || e.code === "Tab") {
+        if (e.code === "Escape") this.toMenu();
+        return;
+      }
+      if (e.code === "KeyW" || e.code === "Equal" || e.code === "NumpadAdd" || e.code === "ArrowUp") {
+        this.stepGalleryPace(1);
+        return;
+      }
+      if (e.code === "KeyS" || e.code === "Minus" || e.code === "NumpadSubtract" || e.code === "ArrowDown") {
+        this.stepGalleryPace(-1);
+        return;
+      }
+    }
     if (e.code === "Tab") {
       e.preventDefault();
       this.swapRunner();
@@ -745,6 +776,34 @@ class RailWorld {
       ...Array.from({ length: 28 }, (_, i) =>
         `/textures/walls/Bulltoshi_Wall_${String(i + 1).padStart(2, "0")}.png`,
       ),
+      ...[
+        "1m",
+        "2m",
+        "3m",
+        "4m",
+        "5m",
+        "6m",
+        "7m",
+        "8m",
+        "10m",
+        "11m",
+        "12m",
+        "13m",
+        "14m",
+        "15m",
+        "16m",
+        "17m",
+        "19m",
+        "20m",
+        "22",
+        "23m",
+        "25m",
+        "26m",
+        "28m",
+        "29m",
+        "30m",
+        "43m",
+      ].map((name) => `/textures/walls/Ape_${name}.png`),
     ];
     const loader = new THREE.TextureLoader();
     const anisotropy = Math.min(8, this.renderer.capabilities.getMaxAnisotropy());
@@ -795,15 +854,10 @@ class RailWorld {
     const step = this.portraitPicks % 18;
     const featured = step === 1 ? 0 : step === 10 ? 2 : step === 4 || step === 13 ? 1 : -1;
     if (featured >= 0 && !banned.has(featured)) return featured;
-    const bullCount = Math.max(1, n - 3);
-    for (let k = 0; k < bullCount; k++) {
-      const image = 3 + ((this.bullCursor + k) % bullCount);
-      if (!banned.has(image)) {
-        this.bullCursor = (this.bullCursor + k + 1) % bullCount;
-        return image;
-      }
-    }
-    return 3;
+    const open: number[] = [];
+    for (let i = 3; i < n; i++) if (!banned.has(i)) open.push(i);
+    if (open.length === 0) return 3;
+    return open[Math.floor(Math.random() * open.length)]!;
   }
 
   private scrollPortraits() {
@@ -1404,7 +1458,7 @@ class RailWorld {
   }
 
   private start() {
-    if (!this.modelReady || this.phase === "run" || this.phase === "loading") return;
+    if (!this.modelReady || this.phase === "run" || this.phase === "loading" || this.phase === "gallery") return;
     if (this.lockedRunner(this.runnerName)) {
       this.flash = "169 Diamond Skulls";
       this.flashT = 1.6;
@@ -1518,7 +1572,83 @@ class RailWorld {
     this.queueSlide = false;
   }
 
+  private enterGallery() {
+    if (this.phase !== "menu") return;
+    this.phase = "gallery";
+    this.galleryGear = 1;
+    this.galleryYaw = 0;
+    this.galleryPitch = 0;
+    this.galleryPaceLock = 0;
+    this.lookPointer = null;
+    this.speed = GALLERY_PACES[1]!;
+    this.scroll = 0;
+    this.clearEnts();
+    this.sfx.playGallery();
+    this.push(true);
+  }
+
+  private stepGalleryPace(dir: -1 | 1, fromWheel = false) {
+    if (this.phase !== "gallery") return;
+    if (fromWheel && this.runTime < this.galleryPaceLock) return;
+    const next = Math.max(0, Math.min(GALLERY_PACES.length - 1, this.galleryGear + dir));
+    if (next === this.galleryGear) return;
+    if (fromWheel) this.galleryPaceLock = this.runTime + 0.16;
+    this.galleryGear = next;
+    this.speed = GALLERY_PACES[next]!;
+    this.push(true);
+  }
+
+  private onLookDown = (e: PointerEvent) => {
+    if (this.phase !== "gallery" || e.button !== 0) return;
+    const target = e.target as HTMLElement | null;
+    if (target?.closest("button, a, input, textarea")) return;
+    this.lookPointer = { id: e.pointerId, x: e.clientX, y: e.clientY };
+  };
+
+  private onLookMove = (e: PointerEvent) => {
+    if (!this.lookPointer || this.lookPointer.id !== e.pointerId) return;
+    const dx = e.clientX - this.lookPointer.x;
+    const dy = e.clientY - this.lookPointer.y;
+    this.lookPointer.x = e.clientX;
+    this.lookPointer.y = e.clientY;
+    this.galleryYaw = Math.max(-1.25, Math.min(1.25, this.galleryYaw + dx * 0.0042));
+    this.galleryPitch = Math.max(-0.55, Math.min(0.62, this.galleryPitch - dy * 0.0036));
+  };
+
+  private onLookUp = (e: PointerEvent) => {
+    if (this.lookPointer?.id === e.pointerId) this.lookPointer = null;
+  };
+
+  private onGalleryWheel = (e: WheelEvent) => {
+    if (this.phase !== "gallery") return;
+    e.preventDefault();
+    this.stepGalleryPace(e.deltaY > 0 ? -1 : 1, true);
+  };
+
+  private simGallery(dt: number) {
+    const glance = 0.85 * dt;
+    if (this.keys.has("KeyA") || this.keys.has("ArrowLeft")) {
+      this.galleryYaw = Math.max(-1.25, this.galleryYaw - glance);
+    }
+    if (this.keys.has("KeyD") || this.keys.has("ArrowRight")) {
+      this.galleryYaw = Math.min(1.25, this.galleryYaw + glance);
+    }
+    this.speed = GALLERY_PACES[this.galleryGear] ?? GALLERY_PACES[1]!;
+    this.scroll = this.speed * dt;
+  }
+
   private toMenu() {
+    if (this.phase === "gallery") {
+      this.phase = "menu";
+      this.lookPointer = null;
+      this.galleryYaw = 0;
+      this.galleryPitch = 0;
+      this.speed = 0;
+      this.scroll = 0;
+      this.sfx.useRunMusic();
+      this.push(true);
+      return;
+    }
     if (this.phase !== "dead" && this.phase !== "run") return;
     this.phase = "menu";
     this.speed = 0;
@@ -1650,9 +1780,14 @@ class RailWorld {
       }
     }
 
+    const showRunner = this.phase !== "gallery";
+    this.rig.visible = showRunner;
+    this.shadow.visible = showRunner;
+
     this.scroll = 0;
     if (this.phase === "run") this.simRun(dt);
     else if (this.phase === "dead") this.simDead(dt);
+    else if (this.phase === "gallery") this.simGallery(dt);
     else {
       this.scroll = this.phase === "menu" ? 2.4 * dt : 0;
       this.poseCharacter(dt);
@@ -1998,6 +2133,12 @@ class RailWorld {
   }
 
   private updateCamera(dt: number) {
+    if (this.phase === "gallery") {
+      this.camera.position.set(0, 1.7, 5.6);
+      this.camera.rotation.order = "YXZ";
+      this.camera.rotation.set(this.galleryPitch, this.galleryYaw, 0);
+      return;
+    }
     const target = this.x * 0.62;
     this.camX += (target - this.camX) * (1 - Math.exp(-4.5 * dt));
     const bob = Math.sin(this.runTime * (this.phase === "run" ? 11 : 2)) * (this.phase === "run" ? 0.045 : 0.02);
@@ -2045,6 +2186,7 @@ class RailWorld {
       jumps: this.jumps,
       slides: this.slides,
       maxCombo: this.maxCombo,
+      pace: this.galleryGear,
     };
     const snap = JSON.stringify(hud);
     if (!force && snap === this.hudSnap) return;

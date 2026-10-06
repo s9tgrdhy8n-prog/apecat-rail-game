@@ -528,6 +528,7 @@ export function RailShell() {
   }
 
   function onPointerDown(e: React.PointerEvent) {
+    if (hud.phase === "gallery") return;
     if ((e.target as HTMLElement).closest("button, input, textarea, a, .rail-sheet, .rail-menu, .rail-dead")) return;
     swipe.current = { x: e.clientX, y: e.clientY, id: e.pointerId, held: null, used: false };
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -923,6 +924,9 @@ export function RailShell() {
               <button type="button" className="rail-stats-btn" onClick={() => setLegendOpen(true)}>
                 Legend
               </button>
+              <button type="button" className="rail-stats-btn" onClick={() => apiRef.current?.enterGallery()}>
+                Gallery
+              </button>
               <div className="rail-achieve-row">
                 <button type="button" className="rail-stats-btn" onClick={() => setAchOpen(true)}>
                   Achievements
@@ -1300,6 +1304,24 @@ export function RailShell() {
       >
         {hud.muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
       </button>
+
+      {hud.phase === "gallery" ? (
+        <div className="rail-gallery">
+          <p>Drag to look. A and D glance. W and S change the pace.</p>
+          <div>
+            <button type="button" onClick={() => apiRef.current?.galleryPace(-1)}>
+              Slower
+            </button>
+            <strong>{["Slow", "Stroll", "Walk", "Brisk", "Quick"][hud.pace] ?? "Stroll"}</strong>
+            <button type="button" onClick={() => apiRef.current?.galleryPace(1)}>
+              Faster
+            </button>
+            <button type="button" onClick={() => apiRef.current?.toMenu()}>
+              Back
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       {hud.phase === "menu" || hud.phase === "run" || hud.phase === "dead" ? (
         <div className="rail-modes rail-modes-dock">{controlPick()}</div>

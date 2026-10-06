@@ -1,4 +1,5 @@
 const TRACKS = ["/music/pulsing-2.mp3", "/music/pulsing-1.mp3"];
+const GALLERY_TRACK = "/music/delusional-to-win-it.mp3";
 const MUSIC_VOL = 0.58;
 
 export class Sfx {
@@ -9,6 +10,7 @@ export class Sfx {
   private rumbleFilter: BiquadFilterNode | null = null;
   private music: HTMLAudioElement | null = null;
   private track = 0;
+  private gallery = false;
   private musicHeld = false;
   private gestured = false;
 
@@ -25,24 +27,50 @@ export class Sfx {
     if (this.ctx.state === "suspended") void this.ctx.resume();
   }
 
+  /** Keeps the track that belongs to the current screen. */
   startMusic() {
+    this.spin();
+  }
+
+  /** Gallery only. The two run tracks stay off until you leave. */
+  playGallery() {
+    this.gallery = true;
+    this.spin();
+  }
+
+  /** Back to the two run tracks. */
+  useRunMusic() {
+    this.gallery = false;
+    this.spin();
+  }
+
+  private spin() {
     this.gestured = true;
-    if (this.muted || this.musicHeld) return;
+    const src = this.gallery ? GALLERY_TRACK : TRACKS[this.track] ?? TRACKS[0];
     if (!this.music) {
       const audio = document.createElement("audio");
       audio.preload = "auto";
       audio.volume = MUSIC_VOL;
       audio.setAttribute("playsinline", "true");
-      audio.src = TRACKS[0];
       audio.addEventListener("ended", () => {
+        if (this.gallery) return;
         this.track = (this.track + 1) % TRACKS.length;
-        audio.src = TRACKS[this.track];
-        void audio.play().catch(() => {});
+        audio.loop = false;
+        audio.src = TRACKS[this.track] ?? TRACKS[0];
+        if (!this.muted && !this.musicHeld) void audio.play().catch(() => {});
       });
       document.body.appendChild(audio);
       this.music = audio;
     }
-    if (!this.music.paused && this.music.currentTime > 0) return;
+    const playingThis = this.music.src.endsWith(src) && !this.music.paused && this.music.currentTime > 0;
+    this.music.loop = this.gallery;
+    if (!this.music.src.endsWith(src)) {
+      this.music.pause();
+      this.music.src = src;
+      this.music.currentTime = 0;
+    }
+    if (this.muted || this.musicHeld) return;
+    if (playingThis) return;
     const pending = this.music.play();
     this.unlock();
     void pending?.catch(() => {});

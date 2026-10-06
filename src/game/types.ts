@@ -1,4 +1,4 @@
-export type Phase = "loading" | "menu" | "run" | "dead";
+export type Phase = "loading" | "menu" | "run" | "dead" | "gallery";
 
 export type RunnerName = "APECAT" | "BOGGY" | "GIMBO" | "PINKY" | "KOKO";
 
@@ -24,6 +24,8 @@ export type Hud = {
   jumps: number;
   slides: number;
   maxCombo: number;
+  /** Gallery speed step, 0 through 4. Unused on a scored run. */
+  pace: number;
 };
 
 export type Nudge = -1 | 1 | "jump" | "slide";
@@ -36,6 +38,8 @@ export type RailApi = {
   nudge: (dir: Nudge) => void;
   hold: (action: "jump" | "slide", down: boolean) => void;
   toMenu: () => void;
+  enterGallery: () => void;
+  galleryPace: (dir: -1 | 1) => void;
   swap: () => void;
   pick: (name: RunnerName) => void;
   noteBest: (score: number) => void;
@@ -65,4 +69,5 @@ export const EMPTY_HUD: Hud = {
   jumps: 0,
   slides: 0,
   maxCombo: 0,
+  pace: 1,
 };
