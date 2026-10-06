@@ -172,12 +172,25 @@ const grokOAuthPlugin = authConfigured
     })
   : null;
 
+const googleId = env("GOOGLE_CLIENT_ID");
+const googleSecret = env("GOOGLE_CLIENT_SECRET");
+const twitterId = env("TWITTER_CLIENT_ID");
+const twitterSecret = env("TWITTER_CLIENT_SECRET");
+
 export const auth = betterAuth({
   baseURL,
   // Deployed apps inject BETTER_AUTH_SECRET. Preview: process-stable secret on
   // globalThis so HMR doesn't invalidate PGLite-backed sessions (see above).
   secret: env("BETTER_AUTH_SECRET") ?? previewAuthSecret(),
   database,
+  socialProviders: {
+    ...(googleId && googleSecret
+      ? { google: { clientId: googleId, clientSecret: googleSecret } }
+      : {}),
+    ...(twitterId && twitterSecret
+      ? { twitter: { clientId: twitterId, clientSecret: twitterSecret } }
+      : {}),
+  },
 
   // CSRF / origin check for credentialed auth POSTs (email sign-up/sign-in, …).
   // See `trustedOrigins` construction above — must cover live preview hosts AND
@@ -196,6 +209,8 @@ export const auth = betterAuth({
       enabled: true,
       trustedProviders: [
         ...GROK_PROVIDERS.map((p) => p.providerId),
+        "google",
+        "twitter",
         GATE_PROVIDER_ID,
       ],
       // X's synthetic email is never "verified", so don't gate linking on the

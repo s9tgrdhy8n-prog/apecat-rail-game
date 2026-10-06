@@ -12,3 +12,5 @@ apecat-rail.zip
 attachments/
 screenshots/
 artifacts/
+.vercel
+.env*

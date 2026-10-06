@@ -96,6 +96,17 @@ type PopupMessage = { source: "grok-auth-popup"; token: string | null; error?: s
  * Either way it clears any existing local session FIRST so switching providers
  * actually switches identity.
  */
+/** Google or X on this game's own login, not the Grok broker. */
+export async function signInWith(provider: "google" | "twitter"): Promise<void> {
+  const { data, error } = await authClient.signIn.social({
+    provider,
+    callbackURL: "/",
+    errorCallbackURL: "/login",
+  });
+  if (error) throw new Error(error.message ?? "Sign-in failed");
+  if (data?.url) window.location.href = data.url;
+}
+
 export async function signIn(
   providerId: string,
   opts: { callbackURL?: string; errorCallbackURL?: string } = {},

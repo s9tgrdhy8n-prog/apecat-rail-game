@@ -14,7 +14,7 @@ export const Route = createRootRoute({
       { name: "theme-color", content: "#09080d" },
       {
         name: "description",
-        content: "Ape the Cat runs the subway. Collect $APE. Dodge the trains.",
+        content: "APECAT & Frens run the Rail. Collect $APECAT coins, get the highest score, unlock characters. Don't kiss the bears.",
       },
     ],
     links: [

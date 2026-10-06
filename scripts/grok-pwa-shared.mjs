@@ -350,10 +350,12 @@ export function grokOgHeadTags({
   const publicHost = resolvePublicHost(host);
   const tags = [
     `<meta name="twitter:card" content="summary_large_image">`,
+    `<meta name="twitter:title" content="${escapeHtml(title)}">`,
     `<meta property="og:title" content="${escapeHtml(title)}">`,
   ];
   const description = String(site.description ?? "").trim();
   if (description) {
+    tags.push(`<meta name="twitter:description" content="${escapeHtml(description)}">`);
     tags.push(`<meta property="og:description" content="${escapeHtml(description)}">`);
   }
   if (String(site.type ?? "").toLowerCase() === "x:game") {
@@ -367,12 +369,14 @@ export function grokOgHeadTags({
       : `${ogServiceUrl()}/v1/card.png?host=${encodeURIComponent(publicHost)}&title=${encodeURIComponent(title)}`;
     const color = !custom ? placeholderCardColor(site) : "";
     if (color) image += `&color=${encodeURIComponent(color)}`;
+    tags.push(`<meta name="twitter:image" content="${escapeHtml(image)}">`);
     tags.push(`<meta property="og:image" content="${escapeHtml(image)}">`);
     tags.push(`<meta property="og:image:width" content="1200">`);
     tags.push(`<meta property="og:image:height" content="630">`);
     const banner = String(site.banner ?? "").trim();
     if (banner) {
-      const bannerUrl = `https://${publicHost}${banner.startsWith("/") ? banner : `/${banner}`}`;
+      const bannerPath = banner.startsWith("/") ? banner : `/${banner}`;
+      const bannerUrl = `https://${publicHost}${bannerPath}`;
       tags.push(`<meta property="x:game:image" content="${escapeHtml(bannerUrl)}">`);
       tags.push(`<meta property="x:game:image:width" content="1200">`);
       tags.push(`<meta property="x:game:image:height" content="264">`);

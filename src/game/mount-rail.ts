@@ -1,15 +1,17 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { Sfx } from "@/game/sfx";
-import type { Hud, Nudge, Phase, RailApi } from "@/game/types";
+import type { Hud, Nudge, Phase, RailApi, RunnerName } from "@/game/types";
 
 const SAVE_KEY = "apecat-rail-v1";
 const LANE = 2.2;
 const AHEAD = 78;
 const SPEED_MIN = 18;
 const SPEED_MAX = 40;
-const GRAVITY = 30;
-const JUMP_V = 9.4;
+const GRAVITY = 34;
+const JUMP_V = 10.2;
+const JUMP_CUT_V = 4.5;
+const JUMP_CUT_DELAY = 0.06;
 const MODEL_YAW = 0;
 const SLIDE_PITCH = -1.05;
 
@@ -27,7 +29,9 @@ type Ent = {
   y: number;
   halfW: number;
   drift: number;
+  tug: number;
   tag: Power | "";
+  spin0: number;
 };
 
 type Save = { v: 1; best: number; muted: boolean };
@@ -122,6 +126,8 @@ export function mountRail(canvas: HTMLCanvasElement, onHud: (h: Hud) => void) {
   };
 }
 
+type RunnerId = "apecat" | "boggo" | "gimbo" | "pinky" | "koko";
+
 class RailWorld {
   api: RailApi;
   private canvas: HTMLCanvasElement;
@@ -152,20 +158,23 @@ class RailWorld {
   private flashT = 0;
   private newBest = false;
   private loadError = "";
-  private loadsLeft = 6;
-  private runnerId: "apecat" | "boggo" | "gimbo" = "apecat";
-  private runnerName: "APECAT" | "BOGGO" | "GIMBO" = "APECAT";
+  private loadsLeft = 9;
+  private runnerId: RunnerId = "apecat";
+  private runnerName: RunnerName = "APECAT";
   private runSerial = 0;
   private roster = new Map<
-    "apecat" | "boggo" | "gimbo",
+    RunnerId,
     {
-      id: "apecat" | "boggo" | "gimbo";
-      name: "APECAT" | "BOGGO" | "GIMBO";
+      id: RunnerId;
+      name: RunnerName;
       model: THREE.Object3D;
       mixer: THREE.AnimationMixer;
       clips: Map<string, THREE.AnimationAction>;
     }
   >();
+  private deadSource: THREE.AnimationClip | null = null;
+  private pinkyUnlocked = false;
+  private kokoUnlocked = false;
   private speed = 0;
   private hudAcc = 0;
   private saveDirty = false;
@@ -176,11 +185,29 @@ class RailWorld {
   private points = 0;
   private combo = 0;
   private comboT = 0;
+  private maxCombo = 0;
+  private jumps = 0;
+  private slides = 0;
   private shield = false;
   private magnetT = 0;
   private surgeT = 0;
+  private pickedShield = 0;
+  private pickedMagnet = 0;
+  private pickedSurge = 0;
   private rushNext = false;
-  private shieldRing: THREE.Mesh;
+  private shieldRing!: THREE.Object3D;
+  private shieldRings: THREE.Mesh[] = [];
+  private shieldMats: THREE.MeshBasicMaterial[] = [];
+  private magnetMesh: THREE.Mesh | null = null;
+  private magnetPos: Float32Array | null = null;
+  private powerI = 0;
+  private slideLatched = false;
+  private fullJump = false;
+  private neonCyan: THREE.MeshBasicMaterial | null = null;
+  private neonMag: THREE.MeshBasicMaterial | null = null;
+  private neonGold: THREE.MeshBasicMaterial | null = null;
+  private coinHalo: THREE.MeshBasicMaterial | null = null;
+  private coinRing: THREE.MeshBasicMaterial | null = null;
 
   private lane = 0;
   private x = 0;
@@ -276,15 +303,8 @@ class RailWorld {
     this.shadow.position.y = 0.03;
     this.scene.add(this.shadow);
 
-    const ring = new THREE.Mesh(
-      new THREE.TorusGeometry(0.92, 0.045, 8, 28),
-      new THREE.MeshBasicMaterial({ color: 0x3dfff6, transparent: true, opacity: 0.9 }),
-    );
-    ring.rotation.x = Math.PI / 2;
-    ring.position.y = 0.95;
-    ring.visible = false;
-    this.shieldRing = ring;
-    this.rig.add(ring);
+    this.buildShield();
+    this.buildMagnetWeb();
 
     this.resize();
     this.bind();
@@ -299,8 +319,16 @@ class RailWorld {
       toggleMute: () => this.toggleMute(),
       toggleMusic: () => this.toggleMusic(),
       nudge: (dir) => this.nudge(dir),
+      toMenu: () => this.toMenu(),
       swap: () => this.swapRunner(),
       pick: (name) => this.pickRunner(name),
+      noteBest: (score) => this.noteBest(score),
+      setPinkyUnlocked: (unlocked) => {
+        this.pinkyUnlocked = unlocked;
+      },
+      setKokoUnlocked: (unlocked) => {
+        this.kokoUnlocked = unlocked;
+      },
     };
   }
 
@@ -394,10 +422,12 @@ class RailWorld {
   }
 
   private loadRunners() {
-    const specs = [
-      { id: "apecat" as const, name: "APECAT" as const, url: "/models/apecat_rail.glb" },
-      { id: "boggo" as const, name: "BOGGO" as const, url: "/models/boggo.glb" },
-      { id: "gimbo" as const, name: "GIMBO" as const, url: "/models/gimbo.glb" },
+    const specs: { id: RunnerId; name: RunnerName; url: string }[] = [
+      { id: "apecat", name: "APECAT", url: "/models/apecat_rail.glb" },
+      { id: "boggo", name: "BOGGY", url: "/models/boggo.glb" },
+      { id: "gimbo", name: "GIMBO", url: "/models/gimbo.glb" },
+      { id: "pinky", name: "PINKY", url: "/models/pinky.glb" },
+      { id: "koko", name: "KOKO", url: "/models/koko.glb" },
     ];
     const loader = new GLTFLoader();
     for (const spec of specs) {
@@ -419,12 +449,28 @@ class RailWorld {
           const clips = new Map<string, THREE.AnimationAction>();
           for (const clip of gltf.animations) {
             const action = mixer.clipAction(clip);
-            action.loop = THREE.LoopRepeat;
-            action.clampWhenFinished = false;
-            clips.set(clip.name, action);
+            const canon = clip.name === "Running" ? "Run" : clip.name === "Walking" ? "Walk" : clip.name;
+            if (canon === "Dead") {
+              action.setLoop(THREE.LoopOnce, 1);
+              action.clampWhenFinished = true;
+            } else {
+              action.loop = THREE.LoopRepeat;
+              action.clampWhenFinished = false;
+            }
+            clips.set(canon, action);
           }
-          this.fitModel(model, spec.id === "boggo" ? 1.2 : 1);
+          if (!clips.has("Idle")) {
+            const idle = clips.get("Walk") ?? clips.get("Run");
+            if (idle) clips.set("Idle", idle);
+          }
+          if (spec.id === "pinky") {
+            this.deadSource = gltf.animations.find((clip) => clip.name === "Dead") ?? null;
+          }
+          const fit = spec.id === "boggo" ? 1.2 : spec.id === "pinky" || spec.id === "koko" ? 1.3 : 0.7;
+          const yaw = spec.id === "pinky" || spec.id === "koko" ? Math.PI : MODEL_YAW;
+          this.fitModel(model, fit, yaw);
           this.roster.set(spec.id, { id: spec.id, name: spec.name, model, mixer, clips });
+          this.giveDeadToAll();
           this.settleLoad();
         },
         undefined,
@@ -433,6 +479,22 @@ class RailWorld {
           this.settleLoad();
         },
       );
+    }
+  }
+
+  private giveDeadToAll() {
+    if (!this.deadSource) return;
+    for (const runner of this.roster.values()) {
+      const existing = runner.clips.get("Dead");
+      if (existing) {
+        existing.setLoop(THREE.LoopOnce, 1);
+        existing.clampWhenFinished = true;
+        continue;
+      }
+      const action = runner.mixer.clipAction(this.deadSource);
+      action.setLoop(THREE.LoopOnce, 1);
+      action.clampWhenFinished = true;
+      runner.clips.set("Dead", action);
     }
   }
 
@@ -451,7 +513,7 @@ class RailWorld {
     this.push(true);
   }
 
-  private activate(id: "apecat" | "boggo" | "gimbo", announce: boolean) {
+  private activate(id: RunnerId, announce: boolean) {
     const next = this.roster.get(id);
     if (!next) return;
     if (this.current) this.current.stop();
@@ -463,7 +525,7 @@ class RailWorld {
     this.mixer = next.mixer;
     this.clips = next.clips;
     this.current = null;
-    this.play(this.phase === "run" ? "Run" : "Idle", 0);
+    this.play(this.phase === "dead" ? "Dead" : "Run", 0);
     if (announce) {
       this.flash = next.name;
       this.flashT = 0.8;
@@ -471,24 +533,38 @@ class RailWorld {
     this.push(true);
   }
 
-  private pickRunner(name: "APECAT" | "BOGGO" | "GIMBO") {
+  private lockedRunner(name: RunnerName) {
+    if (name === "PINKY") return !this.pinkyUnlocked;
+    if (name === "KOKO") return !this.kokoUnlocked;
+    return false;
+  }
+
+  private pickRunner(name: RunnerName) {
     if (!this.modelReady) return;
-    const id = name === "APECAT" ? "apecat" : name === "BOGGO" ? "boggo" : "gimbo";
+    if (this.lockedRunner(name) && this.phase === "run") return;
+    const id: RunnerId =
+      name === "APECAT" ? "apecat" : name === "BOGGY" ? "boggo" : name === "PINKY" ? "pinky" : name === "KOKO" ? "koko" : "gimbo";
     if (!this.roster.has(id) || id === this.runnerId) return;
     this.activate(id, true);
   }
 
   private swapRunner() {
     if (!this.modelReady) return;
-    const order = ["apecat", "boggo", "gimbo"] as const;
-    const available = order.filter((id) => this.roster.has(id));
+    const order: RunnerId[] = ["apecat", "boggo", "gimbo", "pinky", "koko"];
+    const available = order.filter((id) => {
+      if (!this.roster.has(id)) return false;
+      const name = this.roster.get(id)?.name;
+      if (name && this.lockedRunner(name) && this.phase === "run") return false;
+      return true;
+    });
+    if (available.length === 0) return;
     const i = Math.max(0, available.indexOf(this.runnerId));
     const next = available[(i + 1) % available.length];
-    if (next) this.activate(next, true);
+    if (next && next !== this.runnerId) this.activate(next, true);
   }
 
-  private fitModel(model: THREE.Object3D, extra = 1) {
-    model.rotation.y = MODEL_YAW;
+  private fitModel(model: THREE.Object3D, extra = 1, yaw = MODEL_YAW) {
+    model.rotation.y = yaw;
     model.updateMatrixWorld(true);
     const box = new THREE.Box3().setFromObject(model);
     const size = box.getSize(new THREE.Vector3());
@@ -756,29 +832,204 @@ class RailWorld {
   private buildPools() {
     this.loadBearWalls();
     this.loadShortBears();
-    this.loadBananas();
+    this.loadCoins();
     this.loadPowers();
   }
 
-  private loadPowers() {
-    const specs: { tag: Power; color: number; geo: THREE.BufferGeometry }[] = [
-      { tag: "shield", color: 0x3dfff6, geo: new THREE.TorusGeometry(0.42, 0.07, 8, 22) },
-      { tag: "magnet", color: 0xff2bd6, geo: new THREE.OctahedronGeometry(0.4, 0) },
-      { tag: "surge", color: 0xffe14a, geo: new THREE.IcosahedronGeometry(0.36, 0) },
+  private buildShield() {
+    const hues = [0.5, 0.76, 0.9];
+    const shield = new THREE.Group();
+    const rings: { radius: number; tube: number; tilt: number }[] = [
+      { radius: 0.98, tube: 0.022, tilt: Math.PI / 2 },
+      { radius: 0.9, tube: 0.016, tilt: 0.42 },
+      { radius: 0.82, tube: 0.014, tilt: 1.2 },
     ];
-    for (const spec of specs) {
-      for (let i = 0; i < 4; i++) {
-        const group = new THREE.Group();
-        const mesh = new THREE.Mesh(
-          spec.geo,
-          new THREE.MeshBasicMaterial({ color: spec.color }),
-        );
-        mesh.position.y = 1.15;
-        group.add(mesh);
-        const ent = this.makeEnt("power", group, 0.6, 0.46);
-        ent.tag = spec.tag;
-        ent.y = 1.15;
+    rings.forEach((spec, i) => {
+      const mat = new THREE.MeshBasicMaterial({
+        color: new THREE.Color().setHSL(hues[i]!, 1, 0.55),
+        transparent: true,
+        opacity: 0.88,
+        depthWrite: false,
+        fog: false,
+        blending: THREE.AdditiveBlending,
+      });
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(spec.radius, spec.tube, 8, 56), mat);
+      ring.rotation.x = spec.tilt;
+      ring.frustumCulled = false;
+      shield.add(ring);
+      this.shieldRings.push(ring);
+      this.shieldMats.push(mat);
+    });
+    shield.position.y = 0.95;
+    shield.visible = false;
+    this.shieldRing = shield;
+    this.rig.add(shield);
+  }
+
+  private buildMagnetWeb() {
+    const chains = 18;
+    const segs = 8;
+    const verts = chains * (segs + 1) * 2;
+    const pos = new Float32Array(verts * 3);
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    const idx: number[] = [];
+    for (let c = 0; c < chains; c++) {
+      const base = c * (segs + 1) * 2;
+      for (let s = 0; s < segs; s++) {
+        const a = base + s * 2;
+        idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
       }
+    }
+    geo.setIndex(idx);
+    const mesh = new THREE.Mesh(
+      geo,
+      new THREE.MeshBasicMaterial({
+        color: 0xff1493,
+        transparent: true,
+        opacity: 0.92,
+        depthWrite: false,
+        fog: false,
+        side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending,
+      }),
+    );
+    mesh.frustumCulled = false;
+    mesh.visible = false;
+    this.scene.add(mesh);
+    this.magnetMesh = mesh;
+    this.magnetPos = pos;
+  }
+
+  private coinInMagnet(ent: Ent) {
+    if (ent.z > 1.15 || ent.z < -3.2) return false;
+    const dx = Math.abs(laneX(ent.lane) + ent.tug - this.x);
+    if (dx > 0.45 && dx < LANE * 1.35) return true;
+    if (dx > 1.15) return false;
+    const above = ent.y > this.jumpY + 1.15;
+    const below = this.jumpY > 0.55 && ent.y < this.jumpY + 0.15;
+    return above || below;
+  }
+
+  private tugCoin(ent: Ent, dz: number) {
+    if (this.magnetT <= 0 || !this.coinInMagnet(ent)) return;
+    const x = laneX(ent.lane) + ent.tug;
+    const k = Math.min(0.55, dz * 0.45);
+    ent.tug += (this.x - x) * k;
+  }
+
+  private updateMagnetChains() {
+    const mesh = this.magnetMesh;
+    const pos = this.magnetPos;
+    if (!mesh || !pos) return;
+    if (this.magnetT <= 0) {
+      mesh.visible = false;
+      return;
+    }
+    const segs = 8;
+    const max = 18;
+    const oy = 1.05 + this.jumpY * 0.35;
+    let n = 0;
+    for (const ent of this.ents) {
+      if (n >= max || !ent.active || ent.kind !== "coin" || !this.coinInMagnet(ent)) continue;
+      const end = ent.mesh.position;
+      const base = n * (segs + 1) * 2;
+      const dx = end.x - this.x;
+      const dz = end.z - 0.3;
+      const span = Math.hypot(dx, dz) || 1;
+      const sx = -dz / span;
+      const sz = dx / span;
+      for (let s = 0; s <= segs; s++) {
+        const t = s / segs;
+        const wave = Math.sin(t * Math.PI) * 0.22 + Math.sin(this.runTime * 16 + n * 1.7 + t * 11) * 0.03;
+        const x = this.x + dx * t;
+        const y = oy + (end.y - oy) * t + wave;
+        const z = 0.3 + dz * t;
+        const w = 0.032 + (s % 2 === 0 ? 0.012 : 0);
+        const i0 = (base + s * 2) * 3;
+        pos[i0] = x + sx * w;
+        pos[i0 + 1] = y;
+        pos[i0 + 2] = z + sz * w;
+        pos[i0 + 3] = x - sx * w;
+        pos[i0 + 4] = y;
+        pos[i0 + 5] = z - sz * w;
+      }
+      n += 1;
+    }
+    for (let c = n; c < max; c++) {
+      const base = c * (segs + 1) * 2;
+      for (let s = 0; s <= segs; s++) {
+        const i0 = (base + s * 2) * 3;
+        pos[i0] = pos[i0 + 1] = pos[i0 + 2] = 0;
+        pos[i0 + 3] = pos[i0 + 4] = pos[i0 + 5] = 0;
+      }
+    }
+    const attr = mesh.geometry.getAttribute("position") as THREE.BufferAttribute;
+    attr.needsUpdate = true;
+    mesh.geometry.setDrawRange(0, n * segs * 6);
+    mesh.visible = n > 0;
+  }
+
+  private loadPowers() {
+    const specs: { tag: Power; color: number; url: string }[] = [
+      { tag: "shield", color: 0x3dfff6, url: "/models/Shield_Skull_AC.glb" },
+      { tag: "magnet", color: 0xff2bd6, url: "/models/Magnet_Skull.glb" },
+      { tag: "surge", color: 0xffe14a, url: "/models/Surge_Skull_AC.glb" },
+    ];
+    const loader = new GLTFLoader();
+    let pending = specs.length;
+    const finish = () => {
+      pending -= 1;
+      if (pending === 0) this.settleLoad();
+    };
+    for (const spec of specs) {
+      loader.load(spec.url, (gltf) => {
+        if (this.disposed) return;
+        const src = gltf.scene;
+        src.updateMatrixWorld(true);
+        const glow = new THREE.Color(spec.color);
+        src.traverse((obj) => {
+          const mesh = obj as THREE.Mesh;
+          if (!mesh.isMesh) return;
+          mesh.frustumCulled = false;
+          mesh.castShadow = false;
+          const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+          for (const mat of mats) {
+            const std = mat as THREE.MeshStandardMaterial;
+            if (!std.isMeshStandardMaterial) continue;
+            std.emissive = glow;
+            if (std.map) std.emissiveMap = std.map;
+            std.emissiveIntensity = 0.72;
+            std.needsUpdate = true;
+          }
+        });
+        const box = new THREE.Box3().setFromObject(src);
+        const size = box.getSize(new THREE.Vector3());
+        const center = box.getCenter(new THREE.Vector3());
+        const s = 0.81 / Math.max(0.01, size.y);
+        const haloMat = new THREE.MeshBasicMaterial({
+          color: spec.color,
+          transparent: true,
+          opacity: 0.22,
+          depthWrite: false,
+          fog: false,
+        });
+        for (let i = 0; i < 4; i++) {
+          const group = new THREE.Group();
+          const skull = src.clone(true);
+          skull.name = "power-icon";
+          skull.scale.setScalar(s);
+          skull.position.set(-center.x * s, -center.y * s, -center.z * s);
+          const halo = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16, 12), haloMat);
+          halo.frustumCulled = false;
+          group.add(halo, skull);
+          const ent = this.makeEnt("power", group, 0.9, 0.7);
+          ent.tag = spec.tag;
+          ent.y = 1.15;
+          this.ents.push(ent);
+        }
+        finish();
+      }, undefined, () => finish());
     }
   }
 
@@ -823,6 +1074,7 @@ class RailWorld {
         });
         spin.add(wall);
         group.add(spin);
+        this.addBearNeon(group, 1.9, size.y * s, 0, depth);
         this.ents.push(this.makeEnt("train", group, Math.max(0.85, depth), 0.86));
       }
       this.settleLoad();
@@ -871,6 +1123,7 @@ class RailWorld {
         });
         spin.add(wall);
         group.add(spin);
+        this.addBearNeon(group, size.x * s, 0.82, 0, depth);
         this.ents.push(this.makeEnt("barrier", group, Math.max(0.7, depth), Math.min(0.78, halfW)));
       }
       for (let i = 0; i < 8; i++) {
@@ -886,15 +1139,16 @@ class RailWorld {
         });
         spin.add(wall);
         group.add(spin);
+        this.addBearNeon(group, size.x * s, 0.82, 1.28, depth);
         this.ents.push(this.makeEnt("sign", group, Math.max(0.55, depth), Math.min(0.78, halfW)));
       }
       this.settleLoad();
     }, undefined, () => this.settleLoad());
   }
 
-  private loadBananas() {
+  private loadCoins() {
     const loader = new GLTFLoader();
-    loader.load("/models/banana_buddy.glb", (gltf) => {
+    loader.load("/models/apecat_coin.glb", (gltf) => {
       if (this.disposed) return;
       const src = gltf.scene;
       src.traverse((obj) => {
@@ -903,29 +1157,95 @@ class RailWorld {
         mesh.frustumCulled = false;
         mesh.castShadow = false;
       });
-      const height = 1.9;
-      const target = 1.08;
-      const s = target / height;
+      const box = new THREE.Box3().setFromObject(src);
+      const size = box.getSize(new THREE.Vector3());
+      const center = box.getCenter(new THREE.Vector3());
+      const face = 0.72 * 0.6;
+      const base = face / Math.max(size.x, size.y, size.z);
+      const thin = size.x <= size.y && size.x <= size.z ? "x" : size.y <= size.z ? "y" : "z";
+      const scale = new THREE.Vector3(base, base, base);
+      scale[thin] = (0.72 / Math.max(size.x, size.y, size.z)) * 1.2;
+      const radius = face * 0.52;
+      this.ensureNeonMats();
       for (let i = 0; i < 70; i++) {
         const group = new THREE.Group();
-        const buddy = src.clone(true);
-        buddy.scale.setScalar(s);
-        buddy.position.y = -(height * s) / 2;
-        buddy.traverse((obj) => {
+        const spin = new THREE.Group();
+        const coin = src.clone(true);
+        coin.scale.copy(scale);
+        coin.position.set(-center.x * scale.x, -center.y * scale.y, -center.z * scale.z);
+        coin.traverse((obj) => {
           const mesh = obj as THREE.Mesh;
           if (mesh.isMesh) mesh.frustumCulled = false;
         });
-        group.add(buddy);
-        this.ents.push(this.makeEnt("coin", group, 0.55, 0.42));
+        const halo = new THREE.Mesh(new THREE.CircleGeometry(radius * 1.35, 28), this.coinHalo!);
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(radius, 0.028, 8, 28), this.coinRing!);
+        const rim = new THREE.Mesh(new THREE.TorusGeometry(radius * 1.16, 0.012, 6, 28), this.coinRing!);
+        for (const glow of [halo, ring, rim]) {
+          glow.frustumCulled = false;
+          if (thin === "y") glow.rotation.x = Math.PI / 2;
+          else if (thin === "x") glow.rotation.y = Math.PI / 2;
+          spin.add(glow);
+        }
+        spin.add(coin);
+        group.add(spin);
+        this.ents.push(this.makeEnt("coin", group, 0.4, 0.32));
       }
       this.settleLoad();
     }, undefined, () => this.settleLoad());
   }
 
+  private ensureNeonMats() {
+    if (this.neonCyan) return;
+    const make = (color: number, opacity: number) =>
+      new THREE.MeshBasicMaterial({
+        color,
+        transparent: true,
+        opacity,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+      });
+    this.neonCyan = make(0x3dfff6, 0.95);
+    this.neonMag = make(0xff2bd6, 0.8);
+    this.neonGold = make(0xffc247, 0.9);
+    this.coinRing = make(0x2f6bff, 0.95);
+    this.coinHalo = make(0x2f6bff, 0.28);
+  }
+
+  private addBearNeon(parent: THREE.Object3D, width: number, height: number, footY: number, depth: number) {
+    this.ensureNeonMats();
+    const z = depth * 0.55 + 0.05;
+    const mid = footY + height * 0.5;
+    const t = 0.05;
+    const bar = (mat: THREE.Material, w: number, h: number, x: number, y: number) => {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.04), mat);
+      mesh.position.set(x, y, z);
+      mesh.frustumCulled = false;
+      parent.add(mesh);
+    };
+    bar(this.neonCyan!, t, height + 0.18, -width * 0.54, mid);
+    bar(this.neonMag!, t, height + 0.18, width * 0.54, mid);
+    bar(this.neonGold!, width + 0.18, t, 0, footY + height + 0.08);
+    bar(this.neonCyan!, width * 0.72, t * 0.65, 0, footY + 0.06);
+    const halo = new THREE.Mesh(
+      new THREE.TorusGeometry(Math.max(0.35, width * 0.42), 0.03, 8, 24),
+      this.neonGold!,
+    );
+    halo.rotation.x = Math.PI / 2;
+    halo.position.set(0, footY + 0.04, 0);
+    halo.frustumCulled = false;
+    parent.add(halo);
+    const crown = new THREE.Mesh(new THREE.TorusGeometry(width * 0.28, 0.018, 6, 20), this.neonMag!);
+    crown.rotation.x = Math.PI / 2;
+    crown.position.set(0, footY + height + 0.12, z * 0.3);
+    crown.frustumCulled = false;
+    parent.add(crown);
+  }
+
   private makeEnt(kind: Kind, mesh: THREE.Object3D, len: number, halfW: number): Ent {
     mesh.visible = false;
     this.scene.add(mesh);
-    return { kind, mesh, active: false, lane: 0, z: 0, len, y: 0, halfW, drift: 0, tag: "" };
+    return { kind, mesh, active: false, lane: 0, z: 0, len, y: 0, halfW, drift: 0, tug: 0, tag: "", spin0: 0 };
   }
 
   private take(kind: Kind) {
@@ -943,6 +1263,8 @@ class RailWorld {
     ent.z = z;
     ent.y = y;
     ent.drift = 0;
+    ent.tug = 0;
+    ent.spin0 = (lane * 2.15 + z * 2.51) % (Math.PI * 2);
     ent.mesh.visible = true;
     ent.mesh.position.set(laneX(lane), y, z);
   }
@@ -962,14 +1284,38 @@ class RailWorld {
     this.armSlider(cells, z);
   }
 
+  private nextPower(): Power {
+    const order: Power[] = ["shield", "surge", "magnet"];
+    const tag = order[this.powerI % order.length]!;
+    this.powerI += 1;
+    return tag;
+  }
+
+  private spawnPower(tag: Power, lane: number, z: number) {
+    const ent = this.ents.find((item) => item.kind === "power" && item.tag === tag && !item.active);
+    if (!ent) return;
+    ent.active = true;
+    ent.lane = lane;
+    ent.z = z;
+    ent.y = 1.15;
+    ent.drift = 0;
+    ent.tug = 0;
+    ent.spin0 = (lane * 2.15 + z * 2.51) % (Math.PI * 2);
+    ent.mesh.visible = true;
+    ent.mesh.position.set(laneX(lane), ent.y, z);
+  }
+
   private dropPower(cells: Cell[], z: number) {
-    if (this.heat() < 0.12 || Math.random() > 0.22) return;
+    if (this.spawned === 0) {
+      this.spawnPower("shield", 0, z - 8);
+      return;
+    }
     const open = cells
       .map((cell, index) => (cell === "empty" ? index : -1))
       .filter((index) => index >= 0);
     if (!open.length) return;
-    const index = open[Math.floor(Math.random() * open.length)]!;
-    this.place("power", index - 1, z, 1.15);
+    if (Math.random() > (this.spawned < INTRO.length ? 0.5 : 0.4)) return;
+    this.spawnPower(this.nextPower(), open[Math.floor(Math.random() * open.length)]! - 1, z);
   }
 
   private armSlider(cells: Cell[], z: number) {
@@ -1054,6 +1400,12 @@ class RailWorld {
 
   private start() {
     if (!this.modelReady || this.phase === "run" || this.phase === "loading") return;
+    if (this.lockedRunner(this.runnerName)) {
+      this.flash = "169 Diamond Skulls";
+      this.flashT = 1.6;
+      this.push(true);
+      return;
+    }
     this.sfx.unlock();
     this.sfx.startMusic();
     this.sfx.startRumble();
@@ -1063,9 +1415,15 @@ class RailWorld {
     this.points = 0;
     this.combo = 0;
     this.comboT = 0;
+    this.maxCombo = 0;
+    this.jumps = 0;
+    this.slides = 0;
     this.shield = false;
     this.magnetT = 0;
     this.surgeT = 0;
+    this.pickedShield = 0;
+    this.pickedMagnet = 0;
+    this.pickedSurge = 0;
     this.rushNext = false;
     this.speed = SPEED_MIN;
     this.lane = 0;
@@ -1089,6 +1447,9 @@ class RailWorld {
     this.aliveFor = 0;
     this.introI = 0;
     this.spawned = 0;
+    this.powerI = 0;
+    this.slideLatched = false;
+    this.fullJump = false;
     this.safe = 1;
     this.endZ = 12;
     this.bestAtStart = this.best;
@@ -1119,8 +1480,53 @@ class RailWorld {
     if (this.phase !== "run") return;
     if (dir === -1) this.requestLane(-1);
     else if (dir === 1) this.requestLane(1);
-    else if (dir === "jump") this.queueJump = true;
-    else this.queueSlide = true;
+    else if (dir === "jump") {
+      this.fullJump = true;
+      this.queueJump = true;
+    } else {
+      this.slideLatched = true;
+      this.queueSlide = true;
+    }
+  }
+
+  private toMenu() {
+    if (this.phase !== "dead" && this.phase !== "run") return;
+    this.phase = "menu";
+    this.speed = 0;
+    this.scroll = 0;
+    this.deathT = 0;
+    this.pitch = 0;
+    this.yaw = 0;
+    this.sliding = false;
+    this.slideT = 0;
+    this.slideLatched = false;
+    this.fullJump = false;
+    this.jumpY = 0;
+    this.vy = 0;
+    this.grounded = true;
+    this.shield = false;
+    this.shieldRing.visible = false;
+    this.rig.position.set(0, 0, 0);
+    this.yawGroup.rotation.set(0, 0, 0);
+    this.pitchGroup.rotation.set(0, 0, 0);
+    this.lane = 0;
+    this.x = 0;
+    this.clearEnts();
+    this.introI = 0;
+    this.spawned = 0;
+    this.endZ = 12;
+    this.ensureTrack();
+    this.mixer?.stopAllAction();
+    this.current = null;
+    const run = this.clips.get("Run") ?? this.clips.get("Walk") ?? this.clips.get("Idle");
+    if (run) {
+      run.reset();
+      run.enabled = true;
+      run.setEffectiveWeight(1);
+      run.play();
+      this.current = run;
+    }
+    this.push(true);
   }
 
   private requestLane(dir: -1 | 1) {
@@ -1142,7 +1548,8 @@ class RailWorld {
       return;
     }
     this.sliding = true;
-    this.slideT = 0.66;
+    this.slideT = 0.62;
+    this.slides += 1;
     this.sfx.slide();
   }
 
@@ -1162,8 +1569,19 @@ class RailWorld {
     if (this.score > this.best) this.best = this.score;
     this.runSerial += 1;
     this.sfx.die();
+    this.playDead();
     this.persist();
     this.push(true);
+  }
+
+  private playDead() {
+    const dead = this.clips.get("Dead");
+    if (!dead) return;
+    if (this.current && this.current !== dead) this.current.fadeOut(0.08);
+    dead.setLoop(THREE.LoopOnce, 1);
+    dead.clampWhenFinished = true;
+    dead.reset().fadeIn(0.08).play();
+    this.current = dead;
   }
 
   private frame(t: number) {
@@ -1192,11 +1610,13 @@ class RailWorld {
       const z = (sconce.parent?.position.z ?? 0) + sconce.position.z;
       sconce.visible = z < -4;
     }
-    if (this.mixer && this.phase !== "dead") {
-      const scale = this.phase === "run" ? 0.9 + (this.speed / SPEED_MAX) * 0.65 : 0.75;
+    if (this.mixer) {
+      const scale = this.phase === "run" ? 0.9 + (this.speed / SPEED_MAX) * 0.65 : this.phase === "dead" ? 1 : 0.75;
       this.mixer.timeScale = scale;
       this.mixer.update(dt);
-      if (this.cat) this.cat.rotation.y = MODEL_YAW;
+      if (this.cat && this.phase !== "dead") {
+        this.cat.rotation.y = this.runnerId === "pinky" || this.runnerId === "koko" ? Math.PI : MODEL_YAW;
+      }
     }
 
     this.scroll = 0;
@@ -1252,7 +1672,10 @@ class RailWorld {
 
     if (this.sliding) {
       this.slideT -= dt;
-      if (this.slideT <= 0) this.sliding = false;
+      if (this.slideT <= 0) {
+        this.sliding = false;
+        this.slideLatched = false;
+      }
     }
     if (this.grounded && this.slideBuf > 0 && !this.sliding) this.trySlide();
     if (this.grounded) this.slideBuf = 0;
@@ -1264,21 +1687,24 @@ class RailWorld {
         this.grounded = false;
         this.sliding = false;
         this.jumpBuf = 0;
-        this.jumpCut = 0.2;
+        this.jumpCut = JUMP_CUT_DELAY;
         this.jumpY = 0.01;
+        this.jumps += 1;
         this.sfx.jump();
       }
     }
     if (!this.grounded) {
-      const held = this.keys.has("Space") || this.keys.has("ArrowUp") || this.keys.has("KeyW");
+      const held =
+        this.fullJump || this.keys.has("Space") || this.keys.has("ArrowUp") || this.keys.has("KeyW");
       if (this.jumpCut > 0) this.jumpCut -= dt;
-      else if (!held && this.vy > 8) this.vy = 8;
+      else if (!held && this.vy > JUMP_CUT_V) this.vy = JUMP_CUT_V;
       this.vy -= GRAVITY * dt;
       this.jumpY += this.vy * dt;
       if (this.jumpY <= 0) {
         this.jumpY = 0;
         this.vy = 0;
         this.grounded = true;
+        this.fullJump = false;
       }
     }
 
@@ -1303,17 +1729,21 @@ class RailWorld {
 
   private grantPower(tag: Power | "") {
     if (tag === "shield") {
+      this.pickedShield += 1;
       this.shield = true;
-      this.flash = "SHIELD";
+      this.flash = "SHIELD COLLECTED";
     } else if (tag === "magnet") {
+      this.pickedMagnet += 1;
       this.magnetT = 8;
-      this.flash = "MAGNET";
-    } else {
+      this.flash = "MAGNET COLLECTED";
+    } else if (tag === "surge") {
+      this.pickedSurge += 1;
       this.surgeT = 8;
-      this.flash = "x2";
+      this.flash = "SURGE COLLECTED";
     }
-    this.flashT = 0.7;
+    this.flashT = 2.1;
     this.sfx.power();
+    this.push(true);
   }
 
   private readInput() {
@@ -1334,6 +1764,10 @@ class RailWorld {
     const slideNow =
       this.keys.has("KeyS") || this.keys.has("ArrowDown") || this.keys.has("ControlLeft");
     if ((slideNow && !this.wasSlide) || this.queueSlide) this.trySlide();
+    if (this.sliding && !slideNow && !this.queueSlide && !this.slideLatched) {
+      this.sliding = false;
+      this.slideT = 0;
+    }
     this.wasSlide = slideNow;
     this.queueSlide = false;
   }
@@ -1343,15 +1777,16 @@ class RailWorld {
     for (const ent of this.ents) {
       if (!ent.active) continue;
       ent.z += dz;
+      if (ent.kind === "coin") this.tugCoin(ent, dz);
       const reach = ent.halfW + 0.34;
-      const dx = Math.abs(this.x - this.entX(ent));
+      const dx = Math.abs(this.x - (this.entX(ent) + ent.tug));
       const zHit = overlapZ(ent.z, ent.len, dz);
       if (ent.kind === "coin" || ent.kind === "power") {
-        const magnet = this.magnetT > 0;
+        const magnet = ent.kind === "coin" && this.magnetT > 0 && this.coinInMagnet(ent);
         const high = ent.y > 1.4;
         const yOk = ent.kind === "power" || magnet || !high || this.jumpY > 0.75;
-        const reachX = ent.kind === "power" ? 1.15 : magnet ? LANE * 1.7 : 1.05;
-        const reachZ = ent.kind === "power" ? 1.05 : magnet ? 2.3 : 0.95;
+        const reachX = ent.kind === "power" ? 1.15 : 1.05;
+        const reachZ = ent.kind === "power" ? 1.05 : 0.95;
         if (sweptNear(ent.z, dz, reachZ) && dx < reachX && yOk) {
           ent.active = false;
           ent.mesh.visible = false;
@@ -1360,11 +1795,14 @@ class RailWorld {
           } else {
             this.coins += 1;
             this.combo += 1;
+            if (this.combo > this.maxCombo) this.maxCombo = this.combo;
             this.comboT = 3.2;
             const mult = Math.min(5, 1 + Math.floor(this.combo / 4)) * (this.surgeT > 0 ? 2 : 1);
             this.points += 10 * mult;
-            this.flash = mult > 1 ? `x${mult}` : "+APE";
-            this.flashT = 0.35;
+            if (!this.flash.includes("COLLECTED")) {
+              this.flash = mult > 1 ? `x${mult}` : "+APE";
+              this.flashT = 0.35;
+            }
             this.sfx.coin();
           }
         }
@@ -1378,6 +1816,11 @@ class RailWorld {
       if (zHit && dx < reach && yHit) {
         if (this.shield) {
           this.shield = false;
+          this.magnetT = 0;
+          this.surgeT = 0;
+          for (const coin of this.ents) {
+            if (coin.kind === "coin") coin.tug = 0;
+          }
           ent.active = false;
           ent.mesh.visible = false;
           this.flash = "SAVED";
@@ -1405,11 +1848,12 @@ class RailWorld {
 
   private simDead(dt: number) {
     this.deathT += dt;
-    this.pitch += (SLIDE_PITCH * 0.75 - this.pitch) * Math.min(1, dt * 6);
+    const settle = 1 - Math.exp(-6 * dt);
+    this.pitch += (1.15 - this.pitch) * settle;
     this.pitchGroup.rotation.x = this.pitch;
-    this.yawGroup.rotation.z = Math.sin(this.deathT * 9) * 0.45;
-    this.yawGroup.rotation.y = this.yaw + Math.sin(this.deathT * 3) * 0.2;
-    this.rig.position.set(this.x, Math.max(0, 0.45 - this.deathT * 0.7), 0);
+    this.yawGroup.rotation.z = 0;
+    this.yawGroup.rotation.y = this.yaw;
+    this.rig.position.set(this.x, 0, Math.min(1.35, this.deathT * 2.2));
     this.shadow.position.x = this.x;
     const mat = this.shadow.material as THREE.MeshBasicMaterial;
     mat.opacity = 0.2;
@@ -1431,7 +1875,19 @@ class RailWorld {
     this.pitchGroup.rotation.x = this.pitch;
     this.rig.position.set(this.x, this.sliding ? 0 : this.jumpY, 0);
     this.shieldRing.visible = this.shield;
-    this.shieldRing.rotation.z = this.runTime * 2.4;
+    if (this.shield) {
+      const t = this.runTime;
+      this.shieldRings.forEach((ring, i) => {
+        const spin = t * (i === 1 ? -2.4 : 1.7 + i * 0.45);
+        if (i === 1) ring.rotation.y = spin;
+        else ring.rotation.z = spin;
+        const mat = this.shieldMats[i];
+        if (!mat) return;
+        const hue = 0.5 + 0.4 * (0.5 + 0.5 * Math.sin(t * 0.85 + i * 2.1));
+        mat.color.setHSL(hue, 1, 0.52 + Math.sin(t * 3 + i) * 0.05);
+        mat.opacity = 0.7 + Math.sin(t * 5 + i * 1.4) * 0.2;
+      });
+    }
     this.shadow.position.x = this.x;
     this.shadow.position.z = 0.05;
     const mat = this.shadow.material as THREE.MeshBasicMaterial;
@@ -1439,13 +1895,27 @@ class RailWorld {
   }
 
   private layoutEnts() {
+    if (this.neonCyan && this.neonMag && this.neonGold) {
+      const hue = (this.runTime * 0.07) % 1;
+      this.neonCyan.color.setHSL(hue, 1, 0.55);
+      this.neonMag.color.setHSL((hue + 0.33) % 1, 1, 0.52);
+      this.neonGold.color.setHSL((hue + 0.66) % 1, 1, 0.55);
+      const wave = 0.5 + 0.5 * Math.sin(this.runTime * 1.6);
+      this.neonCyan.opacity = 0.62 + wave * 0.32;
+      this.neonMag.opacity = 0.55 + wave * 0.28;
+      this.neonGold.opacity = 0.58 + wave * 0.3;
+    }
     for (const ent of this.ents) {
       if (!ent.active) continue;
-      if (ent.kind === "coin" || ent.kind === "power") {
-        const spin = ent.kind === "power" ? 2.1 : 0.575;
-        ent.mesh.rotation.y = this.runTime * spin + ent.z;
+      if (ent.kind === "power") {
+        const bob = Math.sin(this.runTime * 4 + ent.z) * 0.1;
+        const icon = ent.mesh.getObjectByName("power-icon");
+        if (icon) icon.rotation.y = this.runTime * 1.6 + ent.spin0;
+        ent.mesh.position.set(this.entX(ent), ent.y + bob, ent.z);
+      } else if (ent.kind === "coin") {
+        ent.mesh.rotation.y = this.runTime * Math.PI * 2 + ent.spin0;
         ent.mesh.position.set(
-          this.entX(ent),
+          this.entX(ent) + ent.tug,
           ent.y + Math.sin(this.runTime * 4 + ent.z) * 0.08,
           ent.z,
         );
@@ -1456,8 +1926,10 @@ class RailWorld {
       if (ent.z - ent.len > 10) {
         ent.active = false;
         ent.mesh.visible = false;
+        ent.tug = 0;
       }
     }
+    this.updateMagnetChains();
   }
 
   private recycleTunnel() {
@@ -1499,7 +1971,7 @@ class RailWorld {
     if (this.combo >= 4) bits.push(`x${Math.min(5, 1 + Math.floor(this.combo / 4))}`);
     if (this.shield) bits.push("SHIELD");
     if (this.magnetT > 0) bits.push("MAGNET");
-    if (this.surgeT > 0) bits.push("x2");
+    if (this.surgeT > 0) bits.push("SURGE");
     return bits.join("  ");
   }
 
@@ -1519,11 +1991,27 @@ class RailWorld {
       loadError: this.loadError,
       runner: this.runnerName,
       runSerial: this.runSerial,
+      seconds: Math.max(0, Math.floor(this.aliveFor)),
+      shields: this.pickedShield,
+      magnets: this.pickedMagnet,
+      surges: this.pickedSurge,
+      jumps: this.jumps,
+      slides: this.slides,
+      maxCombo: this.maxCombo,
     };
     const snap = JSON.stringify(hud);
     if (!force && snap === this.hudSnap) return;
     this.hudSnap = snap;
     this.onHud(hud);
+  }
+
+  private noteBest(score: number) {
+    const next = Math.max(0, Math.floor(score) || 0);
+    if (next <= this.best) return;
+    this.best = next;
+    this.bestAtStart = Math.max(this.bestAtStart, next);
+    this.persist();
+    this.push(true);
   }
 
   private persist() {

@@ -1,5 +1,4 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { GROK_PROVIDERS, authEnabled, signIn } from "@/lib/auth/client";
 
 export const Route = createFileRoute("/login")({ component: Login });
 
@@ -13,24 +12,10 @@ function Login() {
           <br />
           <em>RAIL</em>
         </h1>
-        <p className="rail-lede">Sign in to claim a name. Once it’s yours, nobody else can take it.</p>
-        {authEnabled ? (
-          <div className="rail-login-actions">
-            {GROK_PROVIDERS.map((p) => (
-              <button
-                key={p.providerId}
-                type="button"
-                className="rail-start"
-                onClick={() => signIn(p.providerId, { callbackURL: "/" })}
-              >
-                Continue with {p.label}
-              </button>
-            ))}
-          </div>
-        ) : (
-          <p className="rail-sub">Sign-in is disabled.</p>
-        )}
-        <Link to="/" className="rail-sub">
+        <p className="rail-lede">
+          Claim a name and password in the game. Log in with them on any browser to keep your scores.
+        </p>
+        <Link to="/" className="rail-start">
           Back to the tunnel
         </Link>
       </div>

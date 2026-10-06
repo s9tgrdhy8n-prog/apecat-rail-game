@@ -1,6 +1,6 @@
 export type Phase = "loading" | "menu" | "run" | "dead";
 
-export type RunnerName = "APECAT" | "BOGGO" | "GIMBO";
+export type RunnerName = "APECAT" | "BOGGY" | "GIMBO" | "PINKY" | "KOKO";
 
 export type Hud = {
   phase: Phase;
@@ -17,6 +17,13 @@ export type Hud = {
   loadError: string;
   runner: RunnerName;
   runSerial: number;
+  seconds: number;
+  shields: number;
+  magnets: number;
+  surges: number;
+  jumps: number;
+  slides: number;
+  maxCombo: number;
 };
 
 export type Nudge = -1 | 1 | "jump" | "slide";
@@ -27,8 +34,12 @@ export type RailApi = {
   toggleMute: () => void;
   toggleMusic: () => void;
   nudge: (dir: Nudge) => void;
+  toMenu: () => void;
   swap: () => void;
   pick: (name: RunnerName) => void;
+  noteBest: (score: number) => void;
+  setPinkyUnlocked: (unlocked: boolean) => void;
+  setKokoUnlocked: (unlocked: boolean) => void;
 };
 
 export const EMPTY_HUD: Hud = {
@@ -46,4 +57,11 @@ export const EMPTY_HUD: Hud = {
   loadError: "",
   runner: "APECAT",
   runSerial: 0,
+  seconds: 0,
+  shields: 0,
+  magnets: 0,
+  surges: 0,
+  jumps: 0,
+  slides: 0,
+  maxCombo: 0,
 };
