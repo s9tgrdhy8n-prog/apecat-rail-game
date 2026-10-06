@@ -34,6 +34,7 @@ export type RailApi = {
   toggleMute: () => void;
   toggleMusic: () => void;
   nudge: (dir: Nudge) => void;
+  hold: (action: "jump" | "slide", down: boolean) => void;
   toMenu: () => void;
   swap: () => void;
   pick: (name: RunnerName) => void;

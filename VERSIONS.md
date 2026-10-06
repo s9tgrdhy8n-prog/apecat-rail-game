@@ -27,6 +27,7 @@ The start menu reads `GAME_VERSION` in `src/game/version.ts`. On every productio
 | 1.1.1 | 2026-10-05 | Published to https://apecat-rail-game.com. Long rail is 2,500 meters in one run. Anyone who already reached that since 1.1.0 went live is paid the 2 Diamond Skulls for today. |
 | 1.2.0 | 2026-10-05 | Published to https://apecat-rail-game.com. Every 100 Shield, Magnet, and Surge skulls combined pay 1 Diamond Skull. The meter at the top right fills as you collect them, then shows Diamond Skull +1. |
 | 1.2.1 | 2026-10-05 | Published to https://apecat-rail-game.com. On a phone the five character boxes are smaller and sit in one even row, with Keyboard and Mobile fully on screen. |
+| 1.3.0 | 2026-10-05 | Published to https://apecat-rail-game.com. Diamond Skull count sits on the Achievements row so the menu fits without scrolling. Weekly adds Coin vault: collect 25,000 $APECAT coins for 5 Diamond Skulls. On mobile, Jump and Duck press and release like the keyboard: tap for a short hop or a quick duck, hold for the full move, let go to cancel. |
 
 ## 1.0.5 notes
 

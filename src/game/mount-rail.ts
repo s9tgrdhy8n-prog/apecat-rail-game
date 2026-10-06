@@ -203,6 +203,10 @@ class RailWorld {
   private powerI = 0;
   private slideLatched = false;
   private fullJump = false;
+  private jumpHolds = 0;
+  private slideHolds = 0;
+  private jumpPulse = 0;
+  private slidePulse = 0;
   private neonCyan: THREE.MeshBasicMaterial | null = null;
   private neonMag: THREE.MeshBasicMaterial | null = null;
   private neonGold: THREE.MeshBasicMaterial | null = null;
@@ -319,6 +323,7 @@ class RailWorld {
       toggleMute: () => this.toggleMute(),
       toggleMusic: () => this.toggleMusic(),
       nudge: (dir) => this.nudge(dir),
+      hold: (action, down) => this.hold(action, down),
       toMenu: () => this.toMenu(),
       swap: () => this.swapRunner(),
       pick: (name) => this.pickRunner(name),
@@ -1436,6 +1441,7 @@ class RailWorld {
     this.jumpBuf = 0;
     this.slideBuf = 0;
     this.jumpCut = 0;
+    this.clearHolds();
     this.yaw = 0;
     this.pitch = 0;
     this.deathT = 0;
@@ -1481,12 +1487,35 @@ class RailWorld {
     if (dir === -1) this.requestLane(-1);
     else if (dir === 1) this.requestLane(1);
     else if (dir === "jump") {
-      this.fullJump = true;
       this.queueJump = true;
+      this.jumpPulse = 0.12;
     } else {
-      this.slideLatched = true;
       this.queueSlide = true;
+      this.slidePulse = 0.12;
     }
+  }
+
+  /** Finger down matches a key. Finger up cuts the jump or stands up from a duck. */
+  private hold(action: "jump" | "slide", down: boolean) {
+    if (down) {
+      if (action === "jump") this.jumpHolds += 1;
+      else this.slideHolds += 1;
+      if (this.phase !== "run") return;
+      if (action === "jump") this.queueJump = true;
+      else this.queueSlide = true;
+      return;
+    }
+    if (action === "jump") this.jumpHolds = Math.max(0, this.jumpHolds - 1);
+    else this.slideHolds = Math.max(0, this.slideHolds - 1);
+  }
+
+  private clearHolds() {
+    this.jumpHolds = 0;
+    this.slideHolds = 0;
+    this.jumpPulse = 0;
+    this.slidePulse = 0;
+    this.queueJump = false;
+    this.queueSlide = false;
   }
 
   private toMenu() {
@@ -1511,6 +1540,7 @@ class RailWorld {
     this.pitchGroup.rotation.set(0, 0, 0);
     this.lane = 0;
     this.x = 0;
+    this.clearHolds();
     this.clearEnts();
     this.introI = 0;
     this.spawned = 0;
@@ -1562,6 +1592,7 @@ class RailWorld {
     if (this.phase !== "run") return;
     this.phase = "dead";
     this.speed = 0;
+    this.clearHolds();
     this.shield = false;
     this.shieldRing.visible = false;
     this.trauma = 1;
@@ -1662,7 +1693,7 @@ class RailWorld {
     if (this.magnetT > 0) this.magnetT -= dt;
     if (this.surgeT > 0) this.surgeT -= dt;
 
-    this.readInput();
+    this.readInput(dt);
     this.endZ += dz;
     this.ensureTrack();
 
@@ -1695,7 +1726,12 @@ class RailWorld {
     }
     if (!this.grounded) {
       const held =
-        this.fullJump || this.keys.has("Space") || this.keys.has("ArrowUp") || this.keys.has("KeyW");
+        this.fullJump ||
+        this.jumpHolds > 0 ||
+        this.jumpPulse > 0 ||
+        this.keys.has("Space") ||
+        this.keys.has("ArrowUp") ||
+        this.keys.has("KeyW");
       if (this.jumpCut > 0) this.jumpCut -= dt;
       else if (!held && this.vy > JUMP_CUT_V) this.vy = JUMP_CUT_V;
       this.vy -= GRAVITY * dt;
@@ -1746,7 +1782,9 @@ class RailWorld {
     this.push(true);
   }
 
-  private readInput() {
+  private readInput(dt: number) {
+    if (this.jumpPulse > 0) this.jumpPulse = Math.max(0, this.jumpPulse - dt);
+    if (this.slidePulse > 0) this.slidePulse = Math.max(0, this.slidePulse - dt);
     const leftNow =
       this.keys.has("KeyA") || this.keys.has("ArrowLeft") || this.steerOverride > 0.35;
     const rightNow =
@@ -1756,13 +1794,22 @@ class RailWorld {
     this.wasLeft = leftNow;
     this.wasRight = rightNow;
 
-    const jumpNow = this.keys.has("Space") || this.keys.has("ArrowUp") || this.keys.has("KeyW");
+    const jumpNow =
+      this.jumpHolds > 0 ||
+      this.jumpPulse > 0 ||
+      this.keys.has("Space") ||
+      this.keys.has("ArrowUp") ||
+      this.keys.has("KeyW");
     if ((jumpNow && !this.wasJump) || this.queueJump) this.tryJump();
     this.wasJump = jumpNow;
     this.queueJump = false;
 
     const slideNow =
-      this.keys.has("KeyS") || this.keys.has("ArrowDown") || this.keys.has("ControlLeft");
+      this.slideHolds > 0 ||
+      this.slidePulse > 0 ||
+      this.keys.has("KeyS") ||
+      this.keys.has("ArrowDown") ||
+      this.keys.has("ControlLeft");
     if ((slideNow && !this.wasSlide) || this.queueSlide) this.trySlide();
     if (this.sliding && !slideNow && !this.queueSlide && !this.slideLatched) {
       this.sliding = false;

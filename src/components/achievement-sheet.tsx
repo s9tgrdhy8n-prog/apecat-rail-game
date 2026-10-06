@@ -129,7 +129,6 @@ export function AchievementSheet({
               Close
             </button>
           </div>
-          <SkullBalance save={save} />
           <p className="rail-sub">Resets Monday at midnight UTC.</p>
           <ul className="rail-goals">
             {weekly.map((goal) => (

@@ -507,6 +507,40 @@
   color: var(--color-muted);
 }
 
+.rail-wallet {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  flex: 0 0 auto;
+}
+
+.rail-achieve-row {
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  gap: 0.45rem;
+}
+
+.rail-achieve-row .rail-stats-btn {
+  flex: 1 1 auto;
+}
+
+.rail-wallet img {
+  width: 1.7rem;
+  height: 1.7rem;
+  object-fit: cover;
+  border-radius: 0.35rem;
+}
+
+.rail-wallet strong {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 400;
+  line-height: 1;
+  color: #7ef6ff;
+}
+
 .rail-menu .rail-title,
 .rail-menu .rail-title em {
   color: #7ef6ff;
@@ -1413,6 +1447,11 @@ a.rail-start {
 .rail-action-stack .rail-stats-btn {
   width: 100%;
   align-self: stretch;
+}
+
+.rail-action-stack .rail-achieve-row .rail-stats-btn {
+  width: auto;
+  flex: 1 1 auto;
 }
 
 .rail-stats-btn {

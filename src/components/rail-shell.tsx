@@ -82,7 +82,15 @@ function formatPlay(total: number) {
 export function RailShell() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const apiRef = useRef<RailApi | null>(null);
-  const swipe = useRef<{ x: number; y: number; id: number } | null>(null);
+  const swipe = useRef<{
+    x: number;
+    y: number;
+    id: number;
+    held: "jump" | "slide" | null;
+    used: boolean;
+  } | null>(null);
+  const jumpDown = useRef(false);
+  const slideDown = useRef(false);
   const [hud, setHud] = useState<Hud>(EMPTY_HUD);
   const [token, setToken] = useState("");
   const [board, setBoard] = useState<BoardState | null>(null);
@@ -521,24 +529,71 @@ export function RailShell() {
 
   function onPointerDown(e: React.PointerEvent) {
     if ((e.target as HTMLElement).closest("button, input, textarea, a, .rail-sheet, .rail-menu, .rail-dead")) return;
-    swipe.current = { x: e.clientX, y: e.clientY, id: e.pointerId };
+    swipe.current = { x: e.clientX, y: e.clientY, id: e.pointerId, held: null, used: false };
     e.currentTarget.setPointerCapture(e.pointerId);
   }
 
-  function onPointerUp(e: React.PointerEvent) {
-    const start = swipe.current;
-    if (!start || start.id !== e.pointerId) return;
-    swipe.current = null;
-    const dx = e.clientX - start.x;
-    const dy = e.clientY - start.y;
+  function recognizeSwipe(dx: number, dy: number) {
+    const gesture = swipe.current;
+    if (!gesture || gesture.used) return;
     const adx = Math.abs(dx);
     const ady = Math.abs(dy);
-    if (ady >= 24 && ady > adx * 0.72) {
-      apiRef.current?.nudge(dy > 0 ? "slide" : "jump");
+    if (ady >= 16 && ady > adx * 0.65) {
+      gesture.used = true;
+      gesture.held = dy > 0 ? "slide" : "jump";
+      apiRef.current?.hold(gesture.held, true);
       return;
     }
-    if (adx >= 30 && adx > ady) apiRef.current?.nudge(dx > 0 ? 1 : -1);
+    if (adx >= 20 && adx > ady) {
+      gesture.used = true;
+      apiRef.current?.nudge(dx > 0 ? 1 : -1);
+    }
   }
+
+  function onPointerMove(e: React.PointerEvent) {
+    const gesture = swipe.current;
+    if (!gesture || gesture.id !== e.pointerId || gesture.used) return;
+    recognizeSwipe(e.clientX - gesture.x, e.clientY - gesture.y);
+  }
+
+  function endSwipe(e: React.PointerEvent) {
+    const gesture = swipe.current;
+    if (!gesture || gesture.id !== e.pointerId) return;
+    const startedBeforeUp = gesture.used;
+    if (!gesture.used) recognizeSwipe(e.clientX - gesture.x, e.clientY - gesture.y);
+    swipe.current = null;
+    if (!gesture.held) return;
+    const action = gesture.held;
+    if (startedBeforeUp) apiRef.current?.hold(action, false);
+    else {
+      apiRef.current?.hold(action, false);
+      apiRef.current?.nudge(action);
+    }
+  }
+
+  function pressAction(action: "jump" | "slide", down: boolean) {
+    return (e: React.PointerEvent<HTMLButtonElement>) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const flag = action === "jump" ? jumpDown : slideDown;
+      if (down) {
+        if (flag.current) return;
+        flag.current = true;
+        e.currentTarget.setPointerCapture(e.pointerId);
+        apiRef.current?.hold(action, true);
+        return;
+      }
+      if (!flag.current) return;
+      flag.current = false;
+      apiRef.current?.hold(action, false);
+    };
+  }
+
+  useEffect(() => {
+    if (hud.phase === "run") return;
+    jumpDown.current = false;
+    slideDown.current = false;
+  }, [hud.phase]);
 
   useEffect(() => {
     try {
@@ -573,14 +628,16 @@ export function RailShell() {
   }
   async function onUnlockPinky() {
     if (!token || pinkyUnlocked) return;
+    if ((ach?.skulls ?? 0) < PINKY_COST) return;
     const res = await unlockRunner({ data: { token, runner: "PINKY" } }).catch(() => null);
-    if (res?.daily) applyWallet(token, res);
+    if (res?.ok && res.daily) applyWallet(token, res);
   }
 
   async function onUnlockKoko() {
     if (!token || kokoUnlocked) return;
+    if ((ach?.skulls ?? 0) < KOKO_COST) return;
     const res = await unlockRunner({ data: { token, runner: "KOKO" } }).catch(() => null);
-    if (res?.daily) applyWallet(token, res);
+    if (res?.ok && res.daily) applyWallet(token, res);
   }
 
   function picks() {
@@ -735,10 +792,9 @@ export function RailShell() {
       data-phase={hud.phase}
       data-mobile={mobile ? "1" : "0"}
       onPointerDown={onPointerDown}
-      onPointerUp={onPointerUp}
-      onPointerCancel={() => {
-        swipe.current = null;
-      }}
+      onPointerMove={onPointerMove}
+      onPointerUp={endSwipe}
+      onPointerCancel={endSwipe}
     >
       <canvas ref={canvasRef} className="rail-canvas" />
       <div className="rail-vignette" />
@@ -867,9 +923,15 @@ export function RailShell() {
               <button type="button" className="rail-stats-btn" onClick={() => setLegendOpen(true)}>
                 Legend
               </button>
-              <button type="button" className="rail-stats-btn" onClick={() => setAchOpen(true)}>
-                Achievements
-              </button>
+              <div className="rail-achieve-row">
+                <button type="button" className="rail-stats-btn" onClick={() => setAchOpen(true)}>
+                  Achievements
+                </button>
+                <p className="rail-wallet" aria-label={`${ach?.skulls ?? 0} Diamond Skulls in inventory`}>
+                  <img src={DIAMOND_ICON} alt="" />
+                  <strong>{(ach?.skulls ?? 0).toLocaleString()}</strong>
+                </p>
+              </div>
             </div>
             {picks()}
             {hud.runner === "PINKY" && !pinkyUnlocked ? (
@@ -1254,22 +1316,10 @@ export function RailShell() {
           >
             Left
           </button>
-          <button
-            type="button"
-            onPointerDown={(e) => {
-              e.preventDefault();
-              apiRef.current?.nudge("jump");
-            }}
-          >
+          <button type="button" onPointerDown={pressAction("jump", true)} onPointerUp={pressAction("jump", false)} onPointerCancel={pressAction("jump", false)}>
             Jump
           </button>
-          <button
-            type="button"
-            onPointerDown={(e) => {
-              e.preventDefault();
-              apiRef.current?.nudge("slide");
-            }}
-          >
+          <button type="button" onPointerDown={pressAction("slide", true)} onPointerUp={pressAction("slide", false)} onPointerCancel={pressAction("slide", false)}>
             Duck
           </button>
           <button

@@ -137,6 +137,15 @@ export const GOALS: Goal[] = [
     target: 30,
     read: (tally) => crewProgress(tally, { pinky: false, koko: false }),
   },
+  {
+    id: "week-coins",
+    period: "weekly",
+    title: "Coin vault",
+    detail: "Collect 25,000 $APECAT coins this week.",
+    skulls: 5,
+    target: 25000,
+    read: (tally) => tally.coins,
+  },
 ];
 
 export type UnlockFlags = { pinky: boolean; koko: boolean };
