@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Pause, Play, Volume2, VolumeX } from "lucide-react";
 import { AchievementSheet } from "@/components/achievement-sheet";
-import { adoptServerAchievements, GOALS, KOKO_COST, PINKY_COST, type AchievementSave, type AchievementSnapshot, type Goal } from "@/game/achievements";
+import { adoptServerAchievements, GOALS, KOKO_COST, PINKY_COST, SPOOKY_COST, type AchievementSave, type AchievementSnapshot, type Goal } from "@/game/achievements";
 import { EMPTY_HUD, type Hud, type Nudge, type RailApi, type RunnerName } from "@/game/types";
 import { beginRun, claimName, EMPTY_SKULLS, getBoard, getStats, loginName, recordPlay, setPassword as savePassword, submitRun, syncDiamonds, tickRun, unlockRunner, type BoardState, type RailStats, type SkullCounts } from "@/game/board";
 import { ensurePlayerToken, forgetPlayerToken } from "@/game/player-token";
@@ -66,6 +66,7 @@ const RUNNERS: { name: RunnerName; src: string }[] = [
   { name: "GIMBO", src: "/brand/gimbo.jpg" },
   { name: "PINKY", src: "/brand/pinky.png" },
   { name: "KOKO", src: "/brand/koko.png" },
+  { name: "SPOOKY", src: "/brand/spooky.png" },
 ];
 const MOBILE_KEY = "apecat-rail-mobile";
 
@@ -107,6 +108,7 @@ export function RailShell() {
   const seenBundles = useRef(0);
   const [pinkyUnlocked, setPinkyUnlocked] = useState(false);
   const [kokoUnlocked, setKokoUnlocked] = useState(false);
+  const [spookyUnlocked, setSpookyUnlocked] = useState(false);
   const [stats, setStats] = useState<RailStats | null>(null);
   const [nameDraft, setNameDraft] = useState("");
   const [password, setPassword] = useState("");
@@ -118,6 +120,7 @@ export function RailShell() {
   const posted = useRef(new Set<number>());
   const pinkyRef = useRef(false);
   const kokoRef = useRef(false);
+  const spookyRef = useRef(false);
   const settle = useRef<Promise<unknown>>(Promise.resolve());
   const arming = useRef(false);
   const hudRef = useRef(hud);
@@ -152,6 +155,9 @@ export function RailShell() {
     setKokoUnlocked(save.koko);
     kokoRef.current = save.koko;
     apiRef.current?.setKokoUnlocked(save.koko);
+    setSpookyUnlocked(save.spooky);
+    spookyRef.current = save.spooky;
+    apiRef.current?.setSpookyUnlocked(save.spooky);
     if (typeof res.fill === "number") setPickupFill(Math.max(0, Math.min(99, Math.floor(res.fill))));
     if (runSerial > 0) {
       const live = hudRef.current;
@@ -168,6 +174,8 @@ export function RailShell() {
     pinkyRef.current = false;
     setKokoUnlocked(false);
     kokoRef.current = false;
+    setSpookyUnlocked(false);
+    spookyRef.current = false;
     void syncDiamonds({ data: { token: next } })
       .then((res) => {
         if (!res.daily) return;
@@ -185,6 +193,11 @@ export function RailShell() {
     kokoRef.current = kokoUnlocked;
     apiRef.current?.setKokoUnlocked(kokoUnlocked);
   }, [kokoUnlocked, hud.phase]);
+
+  useEffect(() => {
+    spookyRef.current = spookyUnlocked;
+    apiRef.current?.setSpookyUnlocked(spookyUnlocked);
+  }, [spookyUnlocked, hud.phase]);
 
   useEffect(() => {
     if (hud.phase === "run") setJustEarned([]);
@@ -252,7 +265,8 @@ export function RailShell() {
     if (arming.current || hudRef.current.phase === "run") return;
     if (
       (hudRef.current.runner === "PINKY" && !pinkyRef.current) ||
-      (hudRef.current.runner === "KOKO" && !kokoRef.current)
+      (hudRef.current.runner === "KOKO" && !kokoRef.current) ||
+      (hudRef.current.runner === "SPOOKY" && !spookyRef.current)
     ) {
       apiRef.current?.start();
       return;
@@ -382,6 +396,7 @@ export function RailShell() {
         { name: "GIMBO" as const, seconds: 0 },
         { name: "PINKY" as const, seconds: 0 },
         { name: "KOKO" as const, seconds: 0 },
+        { name: "SPOOKY" as const, seconds: 0 },
       ],
     };
     void (async () => getStats({ data: { token } }))()
@@ -641,13 +656,22 @@ export function RailShell() {
     if (res?.ok && res.daily) applyWallet(token, res);
   }
 
+  async function onUnlockSpooky() {
+    if (!token || spookyUnlocked) return;
+    if ((ach?.skulls ?? 0) < SPOOKY_COST) return;
+    const res = await unlockRunner({ data: { token, runner: "SPOOKY" } }).catch(() => null);
+    if (res?.ok && res.daily) applyWallet(token, res);
+  }
+
   function picks() {
     return (
       <div className="rail-picks" role="group" aria-label="Runners">
         {RUNNERS.map((runner) => {
           const locked =
-            (runner.name === "PINKY" && !pinkyUnlocked) || (runner.name === "KOKO" && !kokoUnlocked);
-          const cost = runner.name === "KOKO" ? KOKO_COST : PINKY_COST;
+            (runner.name === "PINKY" && !pinkyUnlocked) ||
+            (runner.name === "KOKO" && !kokoUnlocked) ||
+            (runner.name === "SPOOKY" && !spookyUnlocked);
+          const cost = runner.name === "KOKO" ? KOKO_COST : runner.name === "SPOOKY" ? SPOOKY_COST : PINKY_COST;
           return (
             <button
               key={runner.name}
@@ -894,8 +918,12 @@ export function RailShell() {
                     ? "Pinky takes the tunnel. "
                     : hud.runner === "KOKO"
                       ? "Koko takes the tunnel. "
-                      : "APECAT takes the tunnel. "}
-              {(hud.runner === "PINKY" && !pinkyUnlocked) || (hud.runner === "KOKO" && !kokoUnlocked)
+                      : hud.runner === "SPOOKY"
+                        ? "Spooky takes the tunnel. "
+                        : "APECAT takes the tunnel. "}
+              {(hud.runner === "PINKY" && !pinkyUnlocked) ||
+              (hud.runner === "KOKO" && !kokoUnlocked) ||
+              (hud.runner === "SPOOKY" && !spookyUnlocked)
                 ? "Unlock him with 169 Diamond Skulls."
                 : "Get the highest score. Don’t kiss the bears."}
             </p>
@@ -946,6 +974,11 @@ export function RailShell() {
             {hud.runner === "KOKO" && !kokoUnlocked ? (
               <button type="button" className="rail-stats-btn" onClick={onUnlockKoko}>
                 {(ach?.skulls ?? 0) >= KOKO_COST ? "Unlock Koko · 169" : "Need 169 Diamond Skulls"}
+              </button>
+            ) : null}
+            {hud.runner === "SPOOKY" && !spookyUnlocked ? (
+              <button type="button" className="rail-stats-btn" onClick={onUnlockSpooky}>
+                {(ach?.skulls ?? 0) >= SPOOKY_COST ? "Unlock Spooky · 169" : "Need 169 Diamond Skulls"}
               </button>
             ) : null}
             {mobile ? null : (

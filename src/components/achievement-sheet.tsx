@@ -22,6 +22,7 @@ function crewLine(tally: Tally, unlocked: UnlockFlags) {
   ];
   if (unlocked.pinky) parts.push(`PINKY ${tally.rides.PINKY}`);
   if (unlocked.koko) parts.push(`KOKO ${tally.rides.KOKO}`);
+  if (unlocked.spooky) parts.push(`SPOOKY ${tally.rides.SPOOKY}`);
   return ` · ${parts.join(" · ")}`;
 }
 
@@ -78,7 +79,7 @@ export function AchievementSheet({
   onClose: () => void;
 }) {
   const [pane, setPane] = useState<"daily" | "weekly" | null>(null);
-  const unlocked = { pinky: save.pinky, koko: save.koko };
+  const unlocked = { pinky: save.pinky, koko: save.koko, spooky: save.spooky };
   const daily = GOALS.filter((goal) => goal.period === "daily");
   const weekly = GOALS.filter((goal) => goal.period === "weekly");
   return (

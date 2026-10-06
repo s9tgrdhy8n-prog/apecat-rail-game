@@ -1,6 +1,6 @@
 export type Phase = "loading" | "menu" | "run" | "dead" | "gallery";
 
-export type RunnerName = "APECAT" | "BOGGY" | "GIMBO" | "PINKY" | "KOKO";
+export type RunnerName = "APECAT" | "BOGGY" | "GIMBO" | "PINKY" | "KOKO" | "SPOOKY";
 
 export type Hud = {
   phase: Phase;
@@ -45,6 +45,7 @@ export type RailApi = {
   noteBest: (score: number) => void;
   setPinkyUnlocked: (unlocked: boolean) => void;
   setKokoUnlocked: (unlocked: boolean) => void;
+  setSpookyUnlocked: (unlocked: boolean) => void;
 };
 
 export const EMPTY_HUD: Hud = {

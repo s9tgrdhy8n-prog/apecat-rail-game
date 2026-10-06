@@ -127,7 +127,7 @@ export function mountRail(canvas: HTMLCanvasElement, onHud: (h: Hud) => void) {
   };
 }
 
-type RunnerId = "apecat" | "boggo" | "gimbo" | "pinky" | "koko";
+type RunnerId = "apecat" | "boggo" | "gimbo" | "pinky" | "koko" | "spooky";
 
 class RailWorld {
   api: RailApi;
@@ -164,7 +164,7 @@ class RailWorld {
   private flashT = 0;
   private newBest = false;
   private loadError = "";
-  private loadsLeft = 9;
+  private loadsLeft = 10;
   private runnerId: RunnerId = "apecat";
   private runnerName: RunnerName = "APECAT";
   private runSerial = 0;
@@ -181,6 +181,7 @@ class RailWorld {
   private deadSource: THREE.AnimationClip | null = null;
   private pinkyUnlocked = false;
   private kokoUnlocked = false;
+  private spookyUnlocked = false;
   private speed = 0;
   private hudAcc = 0;
   private saveDirty = false;
@@ -341,6 +342,9 @@ class RailWorld {
       setKokoUnlocked: (unlocked) => {
         this.kokoUnlocked = unlocked;
       },
+      setSpookyUnlocked: (unlocked) => {
+        this.spookyUnlocked = unlocked;
+      },
     };
   }
 
@@ -464,6 +468,7 @@ class RailWorld {
       { id: "gimbo", name: "GIMBO", url: "/models/gimbo.glb" },
       { id: "pinky", name: "PINKY", url: "/models/pinky.glb" },
       { id: "koko", name: "KOKO", url: "/models/koko.glb" },
+      { id: "spooky", name: "SPOOKY", url: "/models/spooky.glb" },
     ];
     const loader = new GLTFLoader();
     for (const spec of specs) {
@@ -502,8 +507,8 @@ class RailWorld {
           if (spec.id === "pinky") {
             this.deadSource = gltf.animations.find((clip) => clip.name === "Dead") ?? null;
           }
-          const fit = spec.id === "boggo" ? 1.2 : spec.id === "pinky" || spec.id === "koko" ? 1.3 : 0.7;
-          const yaw = spec.id === "pinky" || spec.id === "koko" ? Math.PI : MODEL_YAW;
+          const fit = spec.id === "boggo" ? 1.2 : spec.id === "pinky" || spec.id === "koko" || spec.id === "spooky" ? 1.3 : 0.7;
+          const yaw = spec.id === "pinky" || spec.id === "koko" || spec.id === "spooky" ? Math.PI : MODEL_YAW;
           this.fitModel(model, fit, yaw);
           this.roster.set(spec.id, { id: spec.id, name: spec.name, model, mixer, clips });
           this.giveDeadToAll();
@@ -572,6 +577,7 @@ class RailWorld {
   private lockedRunner(name: RunnerName) {
     if (name === "PINKY") return !this.pinkyUnlocked;
     if (name === "KOKO") return !this.kokoUnlocked;
+    if (name === "SPOOKY") return !this.spookyUnlocked;
     return false;
   }
 
@@ -579,14 +585,24 @@ class RailWorld {
     if (!this.modelReady) return;
     if (this.lockedRunner(name) && this.phase === "run") return;
     const id: RunnerId =
-      name === "APECAT" ? "apecat" : name === "BOGGY" ? "boggo" : name === "PINKY" ? "pinky" : name === "KOKO" ? "koko" : "gimbo";
+      name === "APECAT"
+        ? "apecat"
+        : name === "BOGGY"
+          ? "boggo"
+          : name === "PINKY"
+            ? "pinky"
+            : name === "KOKO"
+              ? "koko"
+              : name === "SPOOKY"
+                ? "spooky"
+                : "gimbo";
     if (!this.roster.has(id) || id === this.runnerId) return;
     this.activate(id, true);
   }
 
   private swapRunner() {
     if (!this.modelReady) return;
-    const order: RunnerId[] = ["apecat", "boggo", "gimbo", "pinky", "koko"];
+    const order: RunnerId[] = ["apecat", "boggo", "gimbo", "pinky", "koko", "spooky"];
     const available = order.filter((id) => {
       if (!this.roster.has(id)) return false;
       const name = this.roster.get(id)?.name;
@@ -1776,7 +1792,7 @@ class RailWorld {
       this.mixer.timeScale = scale;
       this.mixer.update(dt);
       if (this.cat && this.phase !== "dead") {
-        this.cat.rotation.y = this.runnerId === "pinky" || this.runnerId === "koko" ? Math.PI : MODEL_YAW;
+        this.cat.rotation.y = this.runnerId === "pinky" || this.runnerId === "koko" || this.runnerId === "spooky" ? Math.PI : MODEL_YAW;
       }
     }
 

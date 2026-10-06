@@ -299,6 +299,7 @@ function cleanRunner(raw: string | undefined) {
   if (raw === "BOGGY" || raw === "BOGGO") return "BOGGY";
   if (raw === "PINKY") return "PINKY";
   if (raw === "KOKO") return "KOKO";
+  if (raw === "SPOOKY") return "SPOOKY";
   return "APECAT";
 }
 
@@ -306,7 +307,7 @@ function cleanSeconds(raw: unknown) {
   return Math.max(0, Math.min(21_600, Math.floor(Number(raw) || 0)));
 }
 
-const RUNNER_ORDER = ["APECAT", "BOGGY", "GIMBO", "PINKY", "KOKO"] as const;
+const RUNNER_ORDER = ["APECAT", "BOGGY", "GIMBO", "PINKY", "KOKO", "SPOOKY"] as const;
 
 export type PlaySlice = {
   seconds: number;
@@ -540,6 +541,7 @@ function emptyWallet() {
     skulls: 0,
     pinky: false,
     koko: false,
+    spooky: false,
     fill: 0,
     paid: [] as string[],
     daily: emptyTally(),
@@ -569,7 +571,7 @@ async function absorbGuest(hash: string, userId: string) {
   await sql`delete from rail_goal_pay where person_key = ${guest}`;
   await sql`
     with guest_row as (
-      select skulls, pinky, koko, pickup_mark, pickup_paid
+      select skulls, pinky, koko, spooky, pickup_mark, pickup_paid
       from rail_diamond
       where person_key = ${guest}
     ),
@@ -578,19 +580,21 @@ async function absorbGuest(hash: string, userId: string) {
       set skulls = 0, pickup_mark = 0, pickup_paid = 0
       where person_key = ${guest}
     )
-    insert into rail_diamond (person_key, skulls, pinky, koko, pickup_mark, pickup_paid)
-    select ${userId}, skulls, pinky, koko, pickup_mark, pickup_paid from guest_row
+    insert into rail_diamond (person_key, skulls, pinky, koko, spooky, pickup_mark, pickup_paid)
+    select ${userId}, skulls, pinky, koko, spooky, pickup_mark, pickup_paid from guest_row
     on conflict (person_key) do update
     set skulls = rail_diamond.skulls + excluded.skulls,
         pinky = greatest(rail_diamond.pinky, excluded.pinky),
         koko = greatest(rail_diamond.koko, excluded.koko),
+        spooky = greatest(rail_diamond.spooky, excluded.spooky),
         pickup_mark = rail_diamond.pickup_mark + excluded.pickup_mark,
         pickup_paid = rail_diamond.pickup_paid + excluded.pickup_paid
   `;
   await sql`
     update rail_diamond as saved
     set pinky = greatest(saved.pinky, guest.pinky),
-        koko = greatest(saved.koko, guest.koko)
+        koko = greatest(saved.koko, guest.koko),
+        spooky = greatest(saved.spooky, guest.spooky)
     from rail_diamond as guest
     where saved.person_key = ${userId}
       and guest.person_key = ${guest}
@@ -613,6 +617,7 @@ async function playTally(personKey: string, start: string, end: string): Promise
     gimbo: number;
     pinky: number;
     koko: number;
+    spooky: number;
   }>`
     select count(*)::int as runs,
            coalesce(sum(coins), 0)::int as coins,
@@ -626,7 +631,8 @@ async function playTally(personKey: string, start: string, end: string): Promise
            coalesce(sum(case when runner in ('BOGGY', 'BOGGO') then 1 else 0 end), 0)::int as boggy,
            coalesce(sum(case when runner = 'GIMBO' then 1 else 0 end), 0)::int as gimbo,
            coalesce(sum(case when runner = 'PINKY' then 1 else 0 end), 0)::int as pinky,
-           coalesce(sum(case when runner = 'KOKO' then 1 else 0 end), 0)::int as koko
+           coalesce(sum(case when runner = 'KOKO' then 1 else 0 end), 0)::int as koko,
+           coalesce(sum(case when runner = 'SPOOKY' then 1 else 0 end), 0)::int as spooky
     from rail_play
     where person_key = ${personKey}
       and created_at >= ${start}::timestamptz
@@ -652,6 +658,7 @@ async function playTally(personKey: string, start: string, end: string): Promise
     GIMBO: Number(row.gimbo) || 0,
     PINKY: Number(row.pinky) || 0,
     KOKO: Number(row.koko) || 0,
+    SPOOKY: Number(row.spooky) || 0,
   };
   return tally;
 }
@@ -662,14 +669,15 @@ async function creditGoals(personKey: string) {
   const daily = await playTally(personKey, `${day}T00:00:00.000Z`, periodEnd(day, 1));
   const weekly = await playTally(personKey, `${week}T00:00:00.000Z`, periodEnd(week, 7));
   const sql = await getSql();
-  const flags = await sql<{ pinky: number; koko: number }>`
-    select pinky::int as pinky, koko::int as koko
+  const flags = await sql<{ pinky: number; koko: number; spooky: number }>`
+    select pinky::int as pinky, koko::int as koko, spooky::int as spooky
     from rail_diamond
     where person_key = ${personKey}
   `;
   const unlocked = {
     pinky: Number(flags[0]?.pinky) === 1,
     koko: Number(flags[0]?.koko) === 1,
+    spooky: Number(flags[0]?.spooky) === 1,
   };
   const earned: EarnedGoal[] = [];
   for (const goal of GOALS) {
@@ -735,15 +743,16 @@ async function creditPickupSkulls(personKey: string) {
 }
 
 async function runnerAllowed(personKey: string, runner: string) {
-  if (runner !== "PINKY" && runner !== "KOKO") return true;
+  if (runner !== "PINKY" && runner !== "KOKO" && runner !== "SPOOKY") return true;
   const sql = await getSql();
-  const rows = await sql<{ pinky: number; koko: number }>`
-    select pinky::int as pinky, koko::int as koko
+  const rows = await sql<{ pinky: number; koko: number; spooky: number }>`
+    select pinky::int as pinky, koko::int as koko, spooky::int as spooky
     from rail_diamond
     where person_key = ${personKey}
   `;
   if (runner === "PINKY") return Number(rows[0]?.pinky) === 1;
-  return Number(rows[0]?.koko) === 1;
+  if (runner === "KOKO") return Number(rows[0]?.koko) === 1;
+  return Number(rows[0]?.spooky) === 1;
 }
 
 function watchedPickups(held: number, reported: number, meters: number) {
@@ -764,8 +773,8 @@ async function readWallet(token: string, earned: EarnedGoal[] = []) {
     playTally(key, `${week}T00:00:00.000Z`, periodEnd(week, 7)),
   ]);
   const sql = await getSql();
-  const rows = await sql<{ skulls: number; pinky: number; koko: number }>`
-    select skulls::int as skulls, pinky::int as pinky, koko::int as koko
+  const rows = await sql<{ skulls: number; pinky: number; koko: number; spooky: number }>`
+    select skulls::int as skulls, pinky::int as pinky, koko::int as koko, spooky::int as spooky
     from rail_diamond
     where person_key = ${key}
   `;
@@ -781,6 +790,7 @@ async function readWallet(token: string, earned: EarnedGoal[] = []) {
     skulls: Number(rows[0]?.skulls) || 0,
     pinky: Number(rows[0]?.pinky) === 1,
     koko: Number(rows[0]?.koko) === 1,
+    spooky: Number(rows[0]?.spooky) === 1,
     fill: wallet.fill,
     paid: paidRows.map((row) => `${row.period_key}:${row.goal_id}`),
     daily,
@@ -796,7 +806,7 @@ export const syncDiamonds = createServerFn({ method: "POST" })
 export const unlockRunner = createServerFn({ method: "POST" })
   .validator((input: { token?: string; runner?: string } | undefined) => ({
     token: typeof input?.token === "string" ? input.token : "",
-    runner: input?.runner === "KOKO" ? "KOKO" : input?.runner === "PINKY" ? "PINKY" : "",
+    runner: input?.runner === "KOKO" ? "KOKO" : input?.runner === "PINKY" ? "PINKY" : input?.runner === "SPOOKY" ? "SPOOKY" : "",
   }))
   .handler(async ({ data }) => {
     if (!data.runner) return emptyWallet();
@@ -807,23 +817,25 @@ export const unlockRunner = createServerFn({ method: "POST" })
     const key = user?.user_id || (hash ? `g:${hash}` : "");
     if (!key) return emptyWallet();
     const sql = await getSql();
-    const column = data.runner === "PINKY" ? "pinky" : "koko";
+    const column = data.runner === "PINKY" ? "pinky" : data.runner === "KOKO" ? "koko" : "spooky";
     const spent = await sql<{ skulls: number }>`
       update rail_diamond
       set skulls = skulls - ${UNLOCK_COST},
           pinky = case when ${column} = 'pinky' then 1 else pinky end,
-          koko = case when ${column} = 'koko' then 1 else koko end
+          koko = case when ${column} = 'koko' then 1 else koko end,
+          spooky = case when ${column} = 'spooky' then 1 else spooky end
       where person_key = ${key}
         and skulls >= ${UNLOCK_COST}
         and (
           (${column} = 'pinky' and pinky = 0)
           or (${column} = 'koko' and koko = 0)
+          or (${column} = 'spooky' and spooky = 0)
         )
       returning skulls::int as skulls
     `;
     if (!spent[0]) {
       const current = await readWallet(data.token);
-      const already = data.runner === "PINKY" ? current.pinky : current.koko;
+      const already = data.runner === "PINKY" ? current.pinky : data.runner === "KOKO" ? current.koko : current.spooky;
       return already ? { ...current, ok: true as const } : { ...current, ok: false as const };
     }
     return readWallet(data.token);
