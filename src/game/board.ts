@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getSql } from "@/lib/db";
 import { emptyTally, goalDone, GOALS, utcDay, utcWeek, type Tally } from "@/game/achievements";
+import { decodeGhost, type GhostTape } from "@/game/replay";
 import { RUN_SPARE, SPEED_CAP, TICK_WINDOW_SEC, activeSeconds, fitWatchedRun, maxCoinsFor, metersGranted, scoreFits, scoreWithinTime, spareAfter } from "@/game/run-guard";
 
 export type BoardRow = {
@@ -11,6 +12,7 @@ export type BoardRow = {
   coins: number;
   runner: string;
   you: boolean;
+  ghost: boolean;
 };
 
 export type BoardState = {
@@ -92,6 +94,7 @@ type BestRow = {
   coins: number;
   runner: string;
   mine: boolean;
+  ghost: boolean;
 };
 
 type PlayerRow = { user_id: string; name: string; has_password: boolean };
@@ -146,10 +149,12 @@ async function loadBoard(userId: string): Promise<BoardState> {
            coalesce((array_agg(r.meters order by r.score desc, r.id desc))[1], 0)::int as meters,
            coalesce((array_agg(r.coins order by r.score desc, r.id desc))[1], 0)::int as coins,
            coalesce((array_agg(r.runner order by r.score desc, r.id desc))[1], '') as runner,
-           bool_or(p.user_id = ${userId}) as mine
+           bool_or(p.user_id = ${userId}) as mine,
+           (g.user_id is not null) as ghost
     from rail_players p
     left join rail_runs r on r.user_id = p.user_id
-    group by p.user_id, p.name, p.created_at
+    left join rail_ghost g on g.user_id = p.user_id
+    group by p.user_id, p.name, p.created_at, g.user_id
     order by score desc, p.created_at asc
   `;
   const ranked = bests.filter((row) => row.score > 0);
@@ -161,6 +166,7 @@ async function loadBoard(userId: string): Promise<BoardState> {
     coins: row.coins,
     runner: row.runner,
     you: isMine(row.mine),
+    ghost: isMine(row.ghost),
   }));
   const youIndex = ranked.findIndex((row) => isMine(row.mine));
   const mineRow = bests.find((row) => isMine(row.mine));
@@ -173,6 +179,7 @@ async function loadBoard(userId: string): Promise<BoardState> {
         coins: mineRow.coins,
         runner: mineRow.runner,
         you: true,
+        ghost: isMine(mineRow.ghost),
       }
     : null;
   return {
@@ -1114,8 +1121,47 @@ export const recordPlay = createServerFn({ method: "POST" })
     return readWallet(data.token, earned);
   });
 
+async function keepGhost(userId: string, score: number, runner: string, packed: string) {
+  const tape = decodeGhost(packed);
+  if (!tape || tape.runner !== runner) return;
+  const sql = await getSql();
+  const best = await sql<{ best: number }>`
+    select coalesce(max(score), 0)::int as best
+    from rail_runs
+    where user_id = ${userId}
+  `;
+  if (score < (Number(best[0]?.best) || 0)) return;
+  const body = JSON.stringify({ seed: tape.seed, runner: tape.runner, events: tape.events });
+  await sql`
+    insert into rail_ghost (user_id, seed, runner, tape, score)
+    values (${userId}, ${tape.seed}, ${tape.runner}, ${body}, ${score})
+    on conflict (user_id) do update
+    set seed = excluded.seed,
+        runner = excluded.runner,
+        tape = excluded.tape,
+        score = excluded.score,
+        updated_at = now()
+    where rail_ghost.score <= excluded.score
+  `;
+}
+
+export const getGhost = createServerFn({ method: "POST" })
+  .validator((input: { name?: string } | undefined) => (typeof input?.name === "string" ? input.name : ""))
+  .handler(async ({ data: name }): Promise<GhostTape | null> => {
+    const clean = cleanName(name);
+    if (!clean) return null;
+    const sql = await getSql();
+    const rows = await sql<{ tape: string }>`
+      select tape
+      from rail_ghost g
+      join rail_players p on p.user_id = g.user_id
+      where p.name_key = ${clean.toLowerCase()}
+    `;
+    return decodeGhost(rows[0]?.tape ?? "");
+  });
+
 export const submitRun = createServerFn({ method: "POST" })
-  .validator((input: { token?: string; score: number; meters: number; coins: number; runner: string; seconds?: number; shields?: number; magnets?: number; surges?: number }) => {
+  .validator((input: { token?: string; score: number; meters: number; coins: number; runner: string; seconds?: number; shields?: number; magnets?: number; surges?: number; ghost?: string }) => {
     const score = Math.max(0, Math.min(10_000_000, Math.floor(Number(input?.score) || 0)));
     const meters = Math.max(0, Math.min(1_000_000, Math.floor(Number(input?.meters) || 0)));
     const coins = Math.max(0, Math.min(1_000_000, Math.floor(Number(input?.coins) || 0)));
@@ -1132,6 +1178,7 @@ export const submitRun = createServerFn({ method: "POST" })
       shields: clampSkull(cleanCount(input?.shields), meters),
       magnets: clampSkull(cleanCount(input?.magnets), meters),
       surges: clampSkull(cleanCount(input?.surges), meters),
+      ghost: typeof input?.ghost === "string" ? input.ghost.slice(0, 120_000) : "",
     };
   })
   .handler(async ({ data }) => {
@@ -1153,6 +1200,7 @@ export const submitRun = createServerFn({ method: "POST" })
       insert into rail_runs (user_id, score, meters, coins, runner, seconds)
       values (${user.user_id}, ${granted.score}, ${granted.meters}, ${granted.coins}, ${data.runner}, ${granted.seconds})
     `;
+    await keepGhost(user.user_id, granted.score, data.runner, data.ghost);
     await insertPlay(
       user.user_id,
       data.runner,

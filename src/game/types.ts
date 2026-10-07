@@ -1,4 +1,6 @@
-export type Phase = "loading" | "menu" | "run" | "dead" | "gallery";
+import type { GhostTape } from "@/game/replay";
+
+export type Phase = "loading" | "menu" | "run" | "dead" | "gallery" | "replay";
 
 export type RunnerName = "APECAT" | "BOGGY" | "GIMBO" | "PINKY" | "KOKO" | "SPOOKY" | "RAMDAWG" | "OTTER" | "FIGGE" | "THEHODLR";
 
@@ -26,6 +28,14 @@ export type Hud = {
   maxCombo: number;
   /** Gallery speed step, 0 through 4. Unused on a scored run. */
   pace: number;
+  paused: boolean;
+  /** 3, 2, or 1 while a paused run is counting back in. Otherwise 0. */
+  countdown: number;
+  replayDone: boolean;
+  /** Whole seconds left on Magnet. 0 when it is not active. */
+  magnetLeft: number;
+  /** Whole seconds left on Surge. 0 when it is not active. */
+  surgeLeft: number;
 };
 
 export type Nudge = -1 | 1 | "jump" | "slide";
@@ -50,6 +60,10 @@ export type RailApi = {
   setOtterUnlocked: (unlocked: boolean) => void;
   setFiggeUnlocked: (unlocked: boolean) => void;
   setThehodlrUnlocked: (unlocked: boolean) => void;
+  pause: () => void;
+  resume: () => void;
+  playReplay: (tape: GhostTape) => void;
+  takeGhost: () => GhostTape | null;
 };
 
 export const EMPTY_HUD: Hud = {
@@ -75,4 +89,9 @@ export const EMPTY_HUD: Hud = {
   slides: 0,
   maxCombo: 0,
   pace: 1,
+  paused: false,
+  countdown: 0,
+  replayDone: false,
+  magnetLeft: 0,
+  surgeLeft: 0,
 };

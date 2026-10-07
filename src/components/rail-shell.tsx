@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { Pause, Play, Volume2, VolumeX } from "lucide-react";
+import { Pause, Play, Bell, BellOff, Volume2, VolumeX } from "lucide-react";
 import { AchievementSheet } from "@/components/achievement-sheet";
 import { adoptServerAchievements, FIGGE_COST, GOALS, KOKO_COST, OTTER_COST, PINKY_COST, RAMDAWG_COST, SPOOKY_COST, THEHODLR_COST, type AchievementSave, type AchievementSnapshot, type Goal } from "@/game/achievements";
 import { EMPTY_HUD, type Hud, type Nudge, type RailApi, type RunnerName } from "@/game/types";
-import { beginRun, claimName, EMPTY_SKULLS, getBoard, getStats, loginName, recordPlay, setPassword as savePassword, submitRun, syncDiamonds, tickRun, unlockRunner, type BoardState, type RailStats, type SkullCounts } from "@/game/board";
+import { beginRun, claimName, EMPTY_SKULLS, getBoard, getGhost, getStats, loginName, recordPlay, setPassword as savePassword, submitRun, syncDiamonds, tickRun, unlockRunner, type BoardState, type RailStats, type SkullCounts } from "@/game/board";
+import { encodeGhost } from "@/game/replay";
 import { ensurePlayerToken, forgetPlayerToken } from "@/game/player-token";
 import { GAME_VERSION } from "@/game/version";
 const COIN_ICON = "/brand/apecat-coin-face.png";
@@ -15,19 +16,19 @@ const SKULLS: { id: keyof SkullCounts; name: string; src: string; blurb: string 
     id: "shield",
     name: "Shield",
     src: "/brand/skull-shield.png",
-    blurb: "One free hit. Magic rings circle you. That hit clears magnet and surge.",
+    blurb: "One free hit. It stays until that hit, and the rings circle you the whole time. That hit also clears Magnet and Surge.",
   },
   {
     id: "magnet",
     name: "Magnet",
     src: "/brand/skull-magnet.png",
-    blurb: "Grabs coins beside you, above you when you run under them, and below you when you jump over. Stacks with surge.",
+    blurb: "Lasts 8 seconds. Grabs coins beside you, above you when you run under them, and below you when you jump over. Picking up another Magnet sets the clock back to 8. Stacks with Surge.",
   },
   {
     id: "surge",
     name: "Surge",
     src: "/brand/skull-surge.png",
-    blurb: "Doubles coin points. Stacks with magnet until a shield hit.",
+    blurb: "Lasts 8 seconds and doubles coin points. Picking up another Surge sets the clock back to 8. Stacks with Magnet until a Shield hit.",
   },
 ];
 
@@ -73,6 +74,7 @@ const RUNNERS: { name: RunnerName; src: string }[] = [
   { name: "THEHODLR", src: "/brand/thehodlr.png" },
 ];
 const MOBILE_KEY = "apecat-rail-mobile";
+const QUIET_KEY = "apecat-rail-quiet";
 
 function formatPlay(total: number) {
   const seconds = Math.max(0, Math.floor(total));
@@ -140,6 +142,7 @@ export function RailShell() {
   const [nameError, setNameError] = useState("");
   const [claiming, setClaiming] = useState(false);
   const [mobile, setMobile] = useState(false);
+  const [quiet, setQuiet] = useState(false);
   const posted = useRef(new Set<number>());
   const pinkyRef = useRef(false);
   const kokoRef = useRef(false);
@@ -440,6 +443,10 @@ export function RailShell() {
           shields: hud.shields,
           magnets: hud.magnets,
           surges: hud.surges,
+          ghost: (() => {
+            const tape = apiRef.current?.takeGhost();
+            return tape ? encodeGhost(tape) : "";
+          })(),
         },
       })
         .then((res) => {
@@ -619,7 +626,7 @@ export function RailShell() {
 
   function onPointerDown(e: React.PointerEvent) {
     if (hud.phase === "gallery") return;
-    if ((e.target as HTMLElement).closest("button, input, textarea, a, .rail-sheet, .rail-menu, .rail-dead")) return;
+    if ((e.target as HTMLElement).closest("button, input, textarea, a, .rail-sheet, .rail-menu, .rail-dead, .rail-freeze")) return;
     swipe.current = { x: e.clientX, y: e.clientY, id: e.pointerId, held: null, used: false };
     e.currentTarget.setPointerCapture(e.pointerId);
   }
@@ -691,10 +698,23 @@ export function RailShell() {
       const saved = localStorage.getItem(MOBILE_KEY);
       if (saved === "1" || saved === "0") setMobile(saved === "1");
       else setMobile(window.matchMedia("(pointer: coarse)").matches);
+      setQuiet(localStorage.getItem(QUIET_KEY) === "1");
     } catch {
       /* private mode */
     }
   }, []);
+
+  function chooseQuiet() {
+    setQuiet((on) => {
+      const next = !on;
+      try {
+        localStorage.setItem(QUIET_KEY, next ? "1" : "0");
+      } catch {
+        /* private mode */
+      }
+      return next;
+    });
+  }
 
   function chooseControls(next: boolean) {
     setMobile(next);
@@ -929,7 +949,14 @@ export function RailShell() {
     );
   }
 
-  const showHud = hud.phase === "run" || hud.phase === "dead";
+  const showHud = hud.phase === "run" || hud.phase === "dead" || hud.phase === "replay";
+
+  async function watchReplay(name: string) {
+    const tape = await getGhost({ data: { name } }).catch(() => null);
+    if (!tape) return;
+    setBoardOpen(false);
+    apiRef.current?.playReplay(tape);
+  }
 
   return (
     <div
@@ -953,22 +980,35 @@ export function RailShell() {
           <div className="rail-stat rail-stat-mid">
             <strong>{hud.meters}m</strong>
             <span>{hud.score.toLocaleString()} pts</span>
-            {hud.buff ? (
-              <span className="rail-buffs">
-                {hud.buff
-                  .split(/\s+/)
-                  .filter(Boolean)
-                  .map((bit) => (
-                    <span
-                      key={bit}
-                      className="rail-buff"
-                      data-buff={bit.startsWith("x") ? "combo" : bit.toLowerCase()}
-                    >
-                      {bit}
-                    </span>
-                  ))}
+            <span className="rail-buff-row">
+                {hud.buff ? (
+                  <span className="rail-buffs">
+                    {hud.buff
+                      .split(/\s+/)
+                      .filter(Boolean)
+                      .map((bit) => (
+                        <span
+                          key={bit}
+                          className="rail-buff"
+                          data-buff={bit.startsWith("x") ? "combo" : bit.toLowerCase()}
+                        >
+                          {bit}
+                          {bit === "MAGNET" && hud.magnetLeft > 0 ? ` ${hud.magnetLeft}` : ""}
+                          {bit === "SURGE" && hud.surgeLeft > 0 ? ` ${hud.surgeLeft}` : ""}
+                        </span>
+                      ))}
+                  </span>
+                ) : null}
+                <button
+                  type="button"
+                  className={quiet ? "rail-quiet is-on" : "rail-quiet"}
+                  aria-pressed={quiet}
+                  aria-label={quiet ? "Show collect notices" : "Hide collect notices"}
+                  onClick={chooseQuiet}
+                >
+                  {quiet ? <BellOff size={14} /> : <Bell size={14} />}
+                </button>
               </span>
-            ) : null}
           </div>
           <div className="rail-stat rail-stat-end">
             <span>Best</span>
@@ -979,7 +1019,7 @@ export function RailShell() {
 
       {showHud ? <div className="rail-picks rail-picks-bar">{picks()}</div> : null}
 
-      {hud.flash ? (
+      {hud.flash && !(quiet && hud.flash.includes("COLLECTED")) ? (
         <div
           className={hud.flash.includes("COLLECTED") ? "rail-flash is-pickup" : "rail-flash"}
           data-pickup={hud.flash.split(" ")[0]}
@@ -998,7 +1038,7 @@ export function RailShell() {
         </div>
       ) : null}
 
-      {diamondPop > 0 ? (
+      {diamondPop > 0 && !quiet ? (
         <div className="rail-diamond-pop" key={diamondPop}>
           <img src={DIAMOND_MARK} alt="" />
           <strong>Diamond Skull +1</strong>
@@ -1148,6 +1188,9 @@ export function RailShell() {
               <li>
                 <kbd>Tab</kbd> switch
               </li>
+              <li>
+                <kbd>Esc</kbd> pause
+              </li>
               <li>orbs · sliding bears</li>
             </ul>
             )}
@@ -1272,7 +1315,7 @@ export function RailShell() {
                 </div>
                 <div>
                   <dt>Surge skull</dt>
-                  <dd>doubles it</dd>
+                  <dd>doubles points for 8 seconds</dd>
                 </div>
                 <div>
                   <dt>Best coin</dt>
@@ -1451,6 +1494,13 @@ export function RailShell() {
                           {row.coins.toLocaleString()}
                         </em>
                         <em>{row.score.toLocaleString()}</em>
+                        {row.rank != null && row.rank <= 3 && row.ghost ? (
+                          <button type="button" className="rail-watch" onClick={() => watchReplay(row.name)}>
+                            Watch
+                          </button>
+                        ) : (
+                          <span />
+                        )}
                       </li>
                     ))
                   ) : (
@@ -1495,6 +1545,42 @@ export function RailShell() {
               Back
             </button>
           </div>
+        </div>
+      ) : null}
+
+      {hud.phase === "run" && !hud.paused && hud.countdown === 0 ? (
+        <button type="button" className="rail-break" onClick={() => apiRef.current?.pause()}>
+          Pause
+        </button>
+      ) : null}
+
+      {hud.phase === "run" && hud.paused ? (
+        <div className="rail-freeze">
+          <p>Paused</p>
+          <button type="button" onClick={() => apiRef.current?.resume()}>
+            Resume
+          </button>
+          <button type="button" className="rail-freeze-menu" onClick={() => apiRef.current?.toMenu()}>
+            Menu
+          </button>
+          <span>Esc resumes. Then 3, 2, 1.</span>
+        </div>
+      ) : null}
+
+      {hud.phase === "run" && hud.countdown > 0 ? (
+        <div className="rail-freeze">
+          <strong>{hud.countdown}</strong>
+        </div>
+      ) : null}
+
+      {hud.phase === "replay" && !hud.replayDone ? <p className="rail-watch-tag">Watching replay</p> : null}
+
+      {hud.phase === "replay" && hud.replayDone ? (
+        <div className="rail-freeze">
+          <p>Replay over</p>
+          <button type="button" onClick={() => apiRef.current?.toMenu()}>
+            Menu
+          </button>
         </div>
       ) : null}
 

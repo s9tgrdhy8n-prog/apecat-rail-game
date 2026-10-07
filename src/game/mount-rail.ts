@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { mulberry32, type GhostEvent, type GhostInput, type GhostTape } from "@/game/replay";
 import { Sfx } from "@/game/sfx";
 import type { Hud, Nudge, Phase, RailApi, RunnerName } from "@/game/types";
 
@@ -14,6 +15,8 @@ const JUMP_V = 10.2;
 const JUMP_CUT_V = 4.5;
 const JUMP_CUT_DELAY = 0.06;
 const FAST_FALL_V = -14;
+const SIM_STEP = 1 / 60;
+const GHOST_KEYS = ["KeyA", "KeyD", "KeyW", "KeyS", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Space", "ControlLeft"];
 const MODEL_YAW = 0;
 const SLIDE_PITCH = -1.05;
 
@@ -239,6 +242,20 @@ class RailWorld {
   private jumpBuf = 0;
   private slideBuf = 0;
   private jumpCut = 0;
+  private roll: () => number = Math.random;
+  private seed = 0;
+  private hasSeed = false;
+  private tape: GhostEvent[] = [];
+  private tapeI = 0;
+  private simTick = 0;
+  private simAcc = 0;
+  private recording = false;
+  private replaying = false;
+  private applying = false;
+  private paused = false;
+  private countdown = 0;
+  private countdownN = 0;
+  private replayDone = false;
   private yaw = 0;
   private pitch = 0;
   private deathT = 0;
@@ -366,6 +383,10 @@ class RailWorld {
       setThehodlrUnlocked: (unlocked) => {
         this.thehodlrUnlocked = unlocked;
       },
+      pause: () => this.freeze(),
+      resume: () => this.beginCountdown(),
+      playReplay: (tape) => this.playReplay(tape),
+      takeGhost: () => this.takeGhost(),
     };
   }
 
@@ -411,6 +432,14 @@ class RailWorld {
   private onKeyDown = (e: KeyboardEvent) => {
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
     if (e.repeat) return;
+    if (e.code === "Escape") {
+      e.preventDefault();
+      if (this.phase === "gallery" || this.phase === "replay") this.toMenu();
+      else if (this.phase === "run") this.togglePause();
+      return;
+    }
+    if (this.phase === "run" && (this.paused || this.countdown > 0)) return;
+    if (this.phase === "replay") return;
     if (this.phase === "gallery") {
       if (e.code === "Escape" || e.code === "Tab") {
         if (e.code === "Escape") this.toMenu();
@@ -444,14 +473,17 @@ class RailWorld {
       return;
     }
     this.keys.add(e.code);
+    if (GHOST_KEYS.includes(e.code)) this.note({ k: "key", code: e.code, down: true });
   };
 
   private onKeyUp = (e: KeyboardEvent) => {
+    if (!this.keys.has(e.code)) return;
     this.keys.delete(e.code);
+    if (GHOST_KEYS.includes(e.code)) this.note({ k: "key", code: e.code, down: false });
   };
 
   private onBlur = () => {
-    this.keys.clear();
+    this.releaseGhostKeys();
   };
 
   private resize = () => {
@@ -1426,8 +1458,8 @@ class RailWorld {
       .map((cell, index) => (cell === "empty" ? index : -1))
       .filter((index) => index >= 0);
     if (!open.length) return;
-    if (Math.random() > (this.spawned < INTRO.length ? 0.5 : 0.4)) return;
-    this.spawnPower(this.nextPower(), open[Math.floor(Math.random() * open.length)]! - 1, z);
+    if (this.roll() > (this.spawned < INTRO.length ? 0.5 : 0.4)) return;
+    this.spawnPower(this.nextPower(), open[Math.floor(this.roll() * open.length)]! - 1, z);
   }
 
   private armSlider(cells: Cell[], z: number) {
@@ -1443,8 +1475,8 @@ class RailWorld {
         if (next === "empty" || next === "coins" || next === "coinsHigh") opts.push({ index: i, dir });
       }
     }
-    if (!opts.length || Math.random() > 0.25 + this.heat() * 0.5) return;
-    const pick = opts[Math.floor(Math.random() * opts.length)]!;
+    if (!opts.length || this.roll() > 0.25 + this.heat() * 0.5) return;
+    const pick = opts[Math.floor(this.roll() * opts.length)]!;
     const lane = pick.index - 1;
     const ent = this.ents.find(
       (item) => item.active && item.z === z && item.lane === lane && item.kind !== "coin" && item.kind !== "power",
@@ -1480,13 +1512,13 @@ class RailWorld {
       return true;
     });
     if (!pool.length) pool = LIBRARY.filter((row) => row[this.safe] !== "train");
-    const row = pool[Math.floor(Math.random() * pool.length)] ?? ["empty", "coins", "empty"];
+    const row = pool[Math.floor(this.roll() * pool.length)] ?? ["empty", "coins", "empty"];
     const shift = 0.28 + h * 0.45;
-    if (Math.random() < shift) {
+    if (this.roll() < shift) {
       const neigh = [this.safe - 1, this.safe + 1].filter(
         (j) => j >= 0 && j < 3 && row[j] !== "train",
       );
-      if (neigh.length) this.safe = neigh[Math.floor(Math.random() * neigh.length)]!;
+      if (neigh.length) this.safe = neigh[Math.floor(this.roll() * neigh.length)]!;
     }
     return row;
   }
@@ -1496,7 +1528,7 @@ class RailWorld {
     while (this.endZ > -AHEAD && guard++ < 20) {
       let gap = this.gap();
       if (this.rushNext) gap = Math.max(15, gap * 0.58);
-      this.rushNext = this.heat() > 0.38 && Math.random() < 0.36;
+      this.rushNext = this.heat() > 0.38 && this.roll() < 0.36;
       this.endZ -= gap;
       this.placePattern(this.takePattern(), this.endZ);
       this.spawned += 1;
@@ -1511,7 +1543,7 @@ class RailWorld {
   }
 
   private start() {
-    if (!this.modelReady || this.phase === "run" || this.phase === "loading" || this.phase === "gallery") return;
+    if (!this.modelReady || this.phase === "run" || this.phase === "replay" || this.phase === "loading" || this.phase === "gallery") return;
     if (this.lockedRunner(this.runnerName)) {
       this.flash = "169 Diamond Skulls";
       this.flashT = 1.6;
@@ -1521,6 +1553,28 @@ class RailWorld {
     this.sfx.unlock();
     this.sfx.startMusic();
     this.sfx.startRumble();
+    this.beginAttempt(Math.floor(Math.random() * 0x100000000));
+    this.recording = true;
+    this.phase = "run";
+    this.play("Run");
+    this.push(true);
+  }
+
+  private beginAttempt(seed: number) {
+    this.roll = mulberry32(seed);
+    this.seed = seed >>> 0;
+    this.hasSeed = true;
+    this.tape = [];
+    this.tapeI = 0;
+    this.simTick = 0;
+    this.simAcc = 0;
+    this.recording = false;
+    this.replaying = false;
+    this.applying = false;
+    this.paused = false;
+    this.countdown = 0;
+    this.countdownN = 0;
+    this.replayDone = false;
     this.coins = 0;
     this.meters = 0;
     this.score = 0;
@@ -1571,9 +1625,109 @@ class RailWorld {
     this.keys.delete("ArrowUp");
     this.clearEnts();
     this.ensureTrack();
-    this.phase = "run";
+  }
+
+  private playReplay(tape: GhostTape) {
+    if (!this.modelReady || this.phase === "loading") return;
+    const id = this.runnerIdFor(tape.runner);
+    if (!this.roster.has(id)) return;
+    this.activate(id, false);
+    this.beginAttempt(tape.seed);
+    this.tape = tape.events;
+    this.recording = false;
+    this.replaying = true;
+    this.phase = "replay";
+    this.sfx.unlock();
+    this.sfx.startMusic();
+    this.sfx.startRumble();
     this.play("Run");
     this.push(true);
+  }
+
+  private runnerIdFor(name: RunnerName): RunnerId {
+    if (name === "APECAT") return "apecat";
+    if (name === "BOGGY") return "boggo";
+    if (name === "PINKY") return "pinky";
+    if (name === "KOKO") return "koko";
+    if (name === "SPOOKY") return "spooky";
+    if (name === "RAMDAWG") return "ramdawg";
+    if (name === "OTTER") return "otter";
+    if (name === "FIGGE") return "figge";
+    if (name === "THEHODLR") return "thehodlr";
+    return "gimbo";
+  }
+
+  private takeGhost(): GhostTape | null {
+    if (!this.hasSeed || this.replaying) return null;
+    const tape: GhostTape = { seed: this.seed, runner: this.runnerName, events: this.tape };
+    this.recording = false;
+    return tape;
+  }
+
+  private note(event: GhostInput) {
+    if (!this.recording || this.replaying || this.applying || this.paused || this.countdown > 0) return;
+    if (this.phase !== "run") return;
+    if (this.tape.length >= 8000) return;
+    this.tape.push({ ...event, t: this.simTick } as GhostEvent);
+  }
+
+  private releaseGhostKeys() {
+    for (const code of GHOST_KEYS) {
+      if (!this.keys.has(code)) continue;
+      this.keys.delete(code);
+      this.note({ k: "key", code, down: false });
+    }
+    if (this.jumpHolds > 0) {
+      this.jumpHolds = 0;
+      this.note({ k: "hold", action: "jump", down: false });
+    }
+    if (this.slideHolds > 0) {
+      this.slideHolds = 0;
+      this.note({ k: "hold", action: "slide", down: false });
+    }
+  }
+
+  private freeze() {
+    if (this.phase !== "run" || this.paused || this.countdown > 0) return;
+    this.releaseGhostKeys();
+    this.paused = true;
+    this.simAcc = 0;
+    this.push(true);
+  }
+
+  private beginCountdown() {
+    if (this.phase !== "run" || !this.paused || this.countdown > 0) return;
+    this.paused = false;
+    this.countdown = 3;
+    this.countdownN = 3;
+    this.simAcc = 0;
+    this.releaseGhostKeys();
+    this.push(true);
+  }
+
+  private togglePause() {
+    if (this.phase === "replay") {
+      this.toMenu();
+      return;
+    }
+    if (this.phase !== "run" || this.countdown > 0) return;
+    if (this.paused) this.beginCountdown();
+    else this.freeze();
+  }
+
+  private applyTape() {
+    this.applying = true;
+    while (this.tapeI < this.tape.length && this.tape[this.tapeI]!.t <= this.simTick) {
+      const event = this.tape[this.tapeI]!;
+      this.tapeI += 1;
+      if (event.t !== this.simTick) continue;
+      if (event.k === "key") {
+        if (event.down) this.keys.add(event.code);
+        else this.keys.delete(event.code);
+      } else if (event.k === "hold") this.hold(event.action, event.down);
+      else this.nudge(event.dir);
+    }
+    this.applying = false;
   }
 
   private toggleMute() {
@@ -1590,7 +1744,9 @@ class RailWorld {
   }
 
   private nudge(dir: Nudge) {
-    if (this.phase !== "run") return;
+    const live = this.phase === "run" || (this.phase === "replay" && this.applying);
+    if (!live || this.paused || this.countdown > 0) return;
+    if (this.phase === "run" && !this.applying) this.note({ k: "nudge", dir });
     if (dir === -1) this.requestLane(-1);
     else if (dir === 1) this.requestLane(1);
     else if (dir === "jump") {
@@ -1604,16 +1760,20 @@ class RailWorld {
 
   /** Finger down matches a key. Finger up cuts the jump or stands up from a duck. */
   private hold(action: "jump" | "slide", down: boolean) {
+    if (this.replaying && !this.applying) return;
+    if (this.paused || this.countdown > 0) return;
     if (down) {
       if (action === "jump") this.jumpHolds += 1;
       else this.slideHolds += 1;
-      if (this.phase !== "run") return;
+      if (this.phase === "run" && !this.applying) this.note({ k: "hold", action, down: true });
+      if (this.phase !== "run" && this.phase !== "replay") return;
       if (action === "jump") this.queueJump = true;
       else this.queueSlide = true;
       return;
     }
     if (action === "jump") this.jumpHolds = Math.max(0, this.jumpHolds - 1);
     else this.slideHolds = Math.max(0, this.slideHolds - 1);
+    if (this.phase === "run" && !this.applying) this.note({ k: "hold", action, down: false });
   }
 
   private clearHolds() {
@@ -1702,8 +1862,15 @@ class RailWorld {
       this.push(true);
       return;
     }
-    if (this.phase !== "dead" && this.phase !== "run") return;
+    if (this.phase !== "dead" && this.phase !== "run" && this.phase !== "replay") return;
     this.phase = "menu";
+    this.paused = false;
+    this.countdown = 0;
+    this.countdownN = 0;
+    this.recording = false;
+    this.replaying = false;
+    this.replayDone = false;
+    this.simAcc = 0;
     this.speed = 0;
     this.scroll = 0;
     this.deathT = 0;
@@ -1773,8 +1940,25 @@ class RailWorld {
   }
 
   private die() {
+    if (this.phase === "replay") {
+      if (this.replayDone) return;
+      this.replayDone = true;
+      this.recording = false;
+      this.speed = 0;
+      this.clearHolds();
+      this.shield = false;
+      this.shieldRing.visible = false;
+      this.trauma = 1;
+      this.sfx.die();
+      this.playDead();
+      this.flash = "Replay over";
+      this.flashT = 2.4;
+      this.push(true);
+      return;
+    }
     if (this.phase !== "run") return;
     this.phase = "dead";
+    this.recording = false;
     this.speed = 0;
     this.clearHolds();
     this.shield = false;
@@ -1813,7 +1997,8 @@ class RailWorld {
   }
 
   private step(dt: number) {
-    this.runTime += dt;
+    const holding = this.phase === "run" && (this.paused || this.countdown > 0);
+    if (!holding) this.runTime += dt;
     const pulse = this.runTime;
     for (const fx of this.lightFx) {
       fx.mat.opacity = fx.base * (0.72 + 0.28 * Math.sin(pulse * 2.4 + fx.phase));
@@ -1825,8 +2010,9 @@ class RailWorld {
       const z = (sconce.parent?.position.z ?? 0) + sconce.position.z;
       sconce.visible = z < -4;
     }
-    if (this.mixer) {
-      const scale = this.phase === "run" ? 0.9 + (this.speed / SPEED_MAX) * 0.65 : this.phase === "dead" ? 1 : 0.75;
+    if (this.mixer && !holding) {
+      const athletic = (this.phase === "run" || this.phase === "replay") && !this.replayDone;
+      const scale = athletic ? 0.9 + (this.speed / SPEED_MAX) * 0.65 : this.phase === "dead" || this.replayDone ? 1 : 0.75;
       this.mixer.timeScale = scale;
       this.mixer.update(dt);
       if (this.cat && this.phase !== "dead") {
@@ -1839,10 +2025,33 @@ class RailWorld {
     this.shadow.visible = showRunner;
 
     this.scroll = 0;
-    if (this.phase === "run") this.simRun(dt);
-    else if (this.phase === "dead") this.simDead(dt);
+    if (this.countdown > 0 && this.phase === "run") {
+      this.countdown = Math.max(0, this.countdown - dt);
+      const next = this.countdown > 0 ? Math.ceil(this.countdown) : 0;
+      if (next !== this.countdownN) {
+        this.countdownN = next;
+        this.push(true);
+      }
+      if (this.countdown <= 0) {
+        this.simAcc = 0;
+        this.releaseGhostKeys();
+        this.push(true);
+      }
+    } else if ((this.phase === "run" || this.phase === "replay") && !this.paused && !this.replayDone) {
+      this.simAcc += dt;
+      if (this.simAcc > 0.2) this.simAcc = 0.2;
+      let steps = 0;
+      while (this.simAcc >= SIM_STEP && steps < 8) {
+        if (this.replaying) this.applyTape();
+        this.simRun(SIM_STEP);
+        this.simTick += 1;
+        this.simAcc -= SIM_STEP;
+        steps += 1;
+        if ((this.phase !== "run" && this.phase !== "replay") || this.replayDone) break;
+      }
+    } else if (this.phase === "dead") this.simDead(dt);
     else if (this.phase === "gallery") this.simGallery(dt);
-    else {
+    else if (!this.paused) {
       this.scroll = this.phase === "menu" ? 2.4 * dt : 0;
       this.poseCharacter(dt);
     }
@@ -2195,7 +2404,7 @@ class RailWorld {
     }
     const target = this.x * 0.62;
     this.camX += (target - this.camX) * (1 - Math.exp(-4.5 * dt));
-    const bob = Math.sin(this.runTime * (this.phase === "run" ? 11 : 2)) * (this.phase === "run" ? 0.045 : 0.02);
+    const bob = Math.sin(this.runTime * (this.phase === "run" || this.phase === "replay" ? 11 : 2)) * (this.phase === "run" || this.phase === "replay" ? 0.045 : 0.02);
     let sx = 0;
     let sy = 0;
     if (this.trauma > 0) {
@@ -2241,6 +2450,11 @@ class RailWorld {
       slides: this.slides,
       maxCombo: this.maxCombo,
       pace: this.galleryGear,
+      paused: this.paused,
+      countdown: this.countdownN,
+      replayDone: this.replayDone,
+      magnetLeft: this.magnetT > 0 ? Math.ceil(this.magnetT) : 0,
+      surgeLeft: this.surgeT > 0 ? Math.ceil(this.surgeT) : 0,
     };
     const snap = JSON.stringify(hud);
     if (!force && snap === this.hudSnap) return;

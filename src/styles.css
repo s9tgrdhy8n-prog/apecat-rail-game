@@ -276,6 +276,31 @@
   gap: 0.4rem 0.55rem;
 }
 
+.rail-buff-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+}
+
+.rail-quiet {
+  pointer-events: auto;
+  width: 1.45rem;
+  height: 1.45rem;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  border: 1px solid var(--color-line);
+  background: rgba(9, 8, 13, 0.55);
+  color: var(--color-cream);
+}
+
+.rail-quiet.is-on {
+  color: var(--color-muted);
+  border-color: var(--color-muted);
+}
+
 .rail-stat span.rail-buff {
   color: #fff7ee;
   font-size: 0.72rem;
@@ -2141,7 +2166,7 @@ a.rail-start {
 
 .rail-board-list li {
   display: grid;
-  grid-template-columns: 2.7rem minmax(0, 1fr) auto auto;
+  grid-template-columns: 2.7rem minmax(0, 1fr) auto auto auto;
   gap: 0.45rem;
   align-items: center;
   padding: 0.45rem 0.15rem 0.45rem 0;
@@ -2159,7 +2184,7 @@ a.rail-start {
   white-space: nowrap;
 }
 
-.rail-board-list li > em:last-child {
+.rail-board-list li > em:nth-child(4) {
   min-width: 4.6rem;
   text-align: right;
   color: var(--color-cream);
@@ -2196,6 +2221,108 @@ a.rail-start {
 .rail-board-empty {
   display: block !important;
   color: var(--color-muted);
+}
+
+.rail-watch {
+  height: 1.7rem;
+  padding: 0 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-gold);
+  background: transparent;
+  color: var(--color-gold);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  font-size: 0.72rem;
+}
+
+.rail-break {
+  position: absolute;
+  z-index: 6;
+  left: 50%;
+  bottom: max(0.7rem, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  height: 2.2rem;
+  padding: 0 0.9rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-line);
+  background: rgba(9, 8, 13, 0.72);
+  color: var(--color-cream);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.rail-root[data-mobile="1"][data-phase="run"] .rail-break {
+  bottom: calc(5.4rem + env(safe-area-inset-bottom));
+}
+
+.rail-freeze {
+  position: absolute;
+  z-index: 8;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  background: rgba(8, 6, 14, 0.45);
+  pointer-events: auto;
+}
+
+.rail-freeze p,
+.rail-freeze strong {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  color: var(--color-cream);
+}
+
+.rail-freeze p {
+  font-size: clamp(2.4rem, 8vw, 4.2rem);
+}
+
+.rail-freeze strong {
+  font-size: clamp(5rem, 18vw, 8rem);
+  line-height: 0.9;
+  color: var(--color-gold);
+}
+
+.rail-freeze button {
+  min-width: 9rem;
+  height: 2.6rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-gold);
+  color: #1a1208;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.rail-freeze-menu {
+  background: transparent !important;
+  color: var(--color-cream) !important;
+  border: 1px solid var(--color-line) !important;
+}
+
+.rail-freeze span {
+  color: var(--color-muted);
+  font-size: 0.85rem;
+}
+
+.rail-watch-tag {
+  position: absolute;
+  z-index: 6;
+  top: max(0.8rem, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(9, 8, 13, 0.72);
+  color: var(--color-gold);
+  letter-spacing: 0.12em;
+  font-size: 0.75rem;
+  font-weight: 700;
 }
 
 .rail-login {
