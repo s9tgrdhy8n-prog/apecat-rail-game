@@ -23,6 +23,10 @@ function crewLine(tally: Tally, unlocked: UnlockFlags) {
   if (unlocked.pinky) parts.push(`PINKY ${tally.rides.PINKY}`);
   if (unlocked.koko) parts.push(`KOKO ${tally.rides.KOKO}`);
   if (unlocked.spooky) parts.push(`SPOOKY ${tally.rides.SPOOKY}`);
+  if (unlocked.ramdawg) parts.push(`RAMDAWG ${tally.rides.RAMDAWG}`);
+  if (unlocked.otter) parts.push(`OTTER ${tally.rides.OTTER}`);
+  if (unlocked.figge) parts.push(`FIGGE ${tally.rides.FIGGE}`);
+  if (unlocked.thehodlr) parts.push(`THEHODLR ${tally.rides.THEHODLR}`);
   return ` · ${parts.join(" · ")}`;
 }
 
@@ -79,7 +83,7 @@ export function AchievementSheet({
   onClose: () => void;
 }) {
   const [pane, setPane] = useState<"daily" | "weekly" | null>(null);
-  const unlocked = { pinky: save.pinky, koko: save.koko, spooky: save.spooky };
+  const unlocked = { pinky: save.pinky, koko: save.koko, spooky: save.spooky, ramdawg: save.ramdawg, otter: save.otter, figge: save.figge, thehodlr: save.thehodlr };
   const daily = GOALS.filter((goal) => goal.period === "daily");
   const weekly = GOALS.filter((goal) => goal.period === "weekly");
   return (

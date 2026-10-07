@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Pause, Play, Volume2, VolumeX } from "lucide-react";
 import { AchievementSheet } from "@/components/achievement-sheet";
-import { adoptServerAchievements, GOALS, KOKO_COST, PINKY_COST, SPOOKY_COST, type AchievementSave, type AchievementSnapshot, type Goal } from "@/game/achievements";
+import { adoptServerAchievements, FIGGE_COST, GOALS, KOKO_COST, OTTER_COST, PINKY_COST, RAMDAWG_COST, SPOOKY_COST, THEHODLR_COST, type AchievementSave, type AchievementSnapshot, type Goal } from "@/game/achievements";
 import { EMPTY_HUD, type Hud, type Nudge, type RailApi, type RunnerName } from "@/game/types";
 import { beginRun, claimName, EMPTY_SKULLS, getBoard, getStats, loginName, recordPlay, setPassword as savePassword, submitRun, syncDiamonds, tickRun, unlockRunner, type BoardState, type RailStats, type SkullCounts } from "@/game/board";
 import { ensurePlayerToken, forgetPlayerToken } from "@/game/player-token";
@@ -67,6 +67,10 @@ const RUNNERS: { name: RunnerName; src: string }[] = [
   { name: "PINKY", src: "/brand/pinky.png" },
   { name: "KOKO", src: "/brand/koko.png" },
   { name: "SPOOKY", src: "/brand/spooky.png" },
+  { name: "RAMDAWG", src: "/brand/ramdawg.png" },
+  { name: "OTTER", src: "/brand/otter.png" },
+  { name: "FIGGE", src: "/brand/figge.png" },
+  { name: "THEHODLR", src: "/brand/thehodlr.png" },
 ];
 const MOBILE_KEY = "apecat-rail-mobile";
 
@@ -78,6 +82,21 @@ function formatPlay(total: number) {
   if (hours > 0) return `${hours}h ${minutes}m`;
   if (minutes > 0) return `${minutes}m ${secs}s`;
   return `${secs}s`;
+}
+
+function RunnerTimes({ rows }: { rows: { name: string; seconds: number }[] }) {
+  return (
+    <div className="rail-runner-times">
+      <dl className="rail-stats">
+        {rows.map((row) => (
+          <div key={row.name}>
+            <dt>{row.name}</dt>
+            <dd>{formatPlay(row.seconds)}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
 }
 
 export function RailShell() {
@@ -109,6 +128,10 @@ export function RailShell() {
   const [pinkyUnlocked, setPinkyUnlocked] = useState(false);
   const [kokoUnlocked, setKokoUnlocked] = useState(false);
   const [spookyUnlocked, setSpookyUnlocked] = useState(false);
+  const [ramdawgUnlocked, setRamdawgUnlocked] = useState(false);
+  const [otterUnlocked, setOtterUnlocked] = useState(false);
+  const [figgeUnlocked, setFiggeUnlocked] = useState(false);
+  const [thehodlrUnlocked, setThehodlrUnlocked] = useState(false);
   const [stats, setStats] = useState<RailStats | null>(null);
   const [nameDraft, setNameDraft] = useState("");
   const [password, setPassword] = useState("");
@@ -121,6 +144,10 @@ export function RailShell() {
   const pinkyRef = useRef(false);
   const kokoRef = useRef(false);
   const spookyRef = useRef(false);
+  const ramdawgRef = useRef(false);
+  const otterRef = useRef(false);
+  const figgeRef = useRef(false);
+  const thehodlrRef = useRef(false);
   const settle = useRef<Promise<unknown>>(Promise.resolve());
   const arming = useRef(false);
   const hudRef = useRef(hud);
@@ -158,6 +185,18 @@ export function RailShell() {
     setSpookyUnlocked(save.spooky);
     spookyRef.current = save.spooky;
     apiRef.current?.setSpookyUnlocked(save.spooky);
+    setRamdawgUnlocked(save.ramdawg);
+    ramdawgRef.current = save.ramdawg;
+    apiRef.current?.setRamdawgUnlocked(save.ramdawg);
+    setOtterUnlocked(save.otter);
+    otterRef.current = save.otter;
+    apiRef.current?.setOtterUnlocked(save.otter);
+    setFiggeUnlocked(save.figge);
+    figgeRef.current = save.figge;
+    apiRef.current?.setFiggeUnlocked(save.figge);
+    setThehodlrUnlocked(save.thehodlr);
+    thehodlrRef.current = save.thehodlr;
+    apiRef.current?.setThehodlrUnlocked(save.thehodlr);
     if (typeof res.fill === "number") setPickupFill(Math.max(0, Math.min(99, Math.floor(res.fill))));
     if (runSerial > 0) {
       const live = hudRef.current;
@@ -176,6 +215,14 @@ export function RailShell() {
     kokoRef.current = false;
     setSpookyUnlocked(false);
     spookyRef.current = false;
+    setRamdawgUnlocked(false);
+    ramdawgRef.current = false;
+    setOtterUnlocked(false);
+    otterRef.current = false;
+    setFiggeUnlocked(false);
+    figgeRef.current = false;
+    setThehodlrUnlocked(false);
+    thehodlrRef.current = false;
     void syncDiamonds({ data: { token: next } })
       .then((res) => {
         if (!res.daily) return;
@@ -198,6 +245,26 @@ export function RailShell() {
     spookyRef.current = spookyUnlocked;
     apiRef.current?.setSpookyUnlocked(spookyUnlocked);
   }, [spookyUnlocked, hud.phase]);
+
+  useEffect(() => {
+    ramdawgRef.current = ramdawgUnlocked;
+    apiRef.current?.setRamdawgUnlocked(ramdawgUnlocked);
+  }, [ramdawgUnlocked, hud.phase]);
+
+  useEffect(() => {
+    otterRef.current = otterUnlocked;
+    apiRef.current?.setOtterUnlocked(otterUnlocked);
+  }, [otterUnlocked, hud.phase]);
+
+  useEffect(() => {
+    figgeRef.current = figgeUnlocked;
+    apiRef.current?.setFiggeUnlocked(figgeUnlocked);
+  }, [figgeUnlocked, hud.phase]);
+
+  useEffect(() => {
+    thehodlrRef.current = thehodlrUnlocked;
+    apiRef.current?.setThehodlrUnlocked(thehodlrUnlocked);
+  }, [thehodlrUnlocked, hud.phase]);
 
   useEffect(() => {
     if (hud.phase === "run") setJustEarned([]);
@@ -266,7 +333,11 @@ export function RailShell() {
     if (
       (hudRef.current.runner === "PINKY" && !pinkyRef.current) ||
       (hudRef.current.runner === "KOKO" && !kokoRef.current) ||
-      (hudRef.current.runner === "SPOOKY" && !spookyRef.current)
+      (hudRef.current.runner === "SPOOKY" && !spookyRef.current) ||
+      (hudRef.current.runner === "RAMDAWG" && !ramdawgRef.current) ||
+      (hudRef.current.runner === "OTTER" && !otterRef.current) ||
+      (hudRef.current.runner === "FIGGE" && !figgeRef.current) ||
+      (hudRef.current.runner === "THEHODLR" && !thehodlrRef.current)
     ) {
       apiRef.current?.start();
       return;
@@ -397,6 +468,10 @@ export function RailShell() {
         { name: "PINKY" as const, seconds: 0 },
         { name: "KOKO" as const, seconds: 0 },
         { name: "SPOOKY" as const, seconds: 0 },
+        { name: "RAMDAWG" as const, seconds: 0 },
+        { name: "OTTER" as const, seconds: 0 },
+        { name: "FIGGE" as const, seconds: 0 },
+        { name: "THEHODLR" as const, seconds: 0 },
       ],
     };
     void (async () => getStats({ data: { token } }))()
@@ -663,6 +738,34 @@ export function RailShell() {
     if (res?.ok && res.daily) applyWallet(token, res);
   }
 
+  async function onUnlockRamdawg() {
+    if (!token || ramdawgUnlocked) return;
+    if ((ach?.skulls ?? 0) < RAMDAWG_COST) return;
+    const res = await unlockRunner({ data: { token, runner: "RAMDAWG" } }).catch(() => null);
+    if (res?.ok && res.daily) applyWallet(token, res);
+  }
+
+  async function onUnlockOtter() {
+    if (!token || otterUnlocked) return;
+    if ((ach?.skulls ?? 0) < OTTER_COST) return;
+    const res = await unlockRunner({ data: { token, runner: "OTTER" } }).catch(() => null);
+    if (res?.ok && res.daily) applyWallet(token, res);
+  }
+
+  async function onUnlockFigge() {
+    if (!token || figgeUnlocked) return;
+    if ((ach?.skulls ?? 0) < FIGGE_COST) return;
+    const res = await unlockRunner({ data: { token, runner: "FIGGE" } }).catch(() => null);
+    if (res?.ok && res.daily) applyWallet(token, res);
+  }
+
+  async function onUnlockThehodlr() {
+    if (!token || thehodlrUnlocked) return;
+    if ((ach?.skulls ?? 0) < THEHODLR_COST) return;
+    const res = await unlockRunner({ data: { token, runner: "THEHODLR" } }).catch(() => null);
+    if (res?.ok && res.daily) applyWallet(token, res);
+  }
+
   function picks() {
     return (
       <div className="rail-picks" role="group" aria-label="Runners">
@@ -670,8 +773,25 @@ export function RailShell() {
           const locked =
             (runner.name === "PINKY" && !pinkyUnlocked) ||
             (runner.name === "KOKO" && !kokoUnlocked) ||
-            (runner.name === "SPOOKY" && !spookyUnlocked);
-          const cost = runner.name === "KOKO" ? KOKO_COST : runner.name === "SPOOKY" ? SPOOKY_COST : PINKY_COST;
+            (runner.name === "SPOOKY" && !spookyUnlocked) ||
+            (runner.name === "RAMDAWG" && !ramdawgUnlocked) ||
+            (runner.name === "OTTER" && !otterUnlocked) ||
+            (runner.name === "FIGGE" && !figgeUnlocked) ||
+            (runner.name === "THEHODLR" && !thehodlrUnlocked);
+          const cost =
+            runner.name === "KOKO"
+              ? KOKO_COST
+              : runner.name === "SPOOKY"
+                ? SPOOKY_COST
+                : runner.name === "RAMDAWG"
+                  ? RAMDAWG_COST
+                  : runner.name === "OTTER"
+                  ? OTTER_COST
+                  : runner.name === "FIGGE"
+                    ? FIGGE_COST
+                    : runner.name === "THEHODLR"
+                      ? THEHODLR_COST
+                      : PINKY_COST;
           return (
             <button
               key={runner.name}
@@ -920,11 +1040,23 @@ export function RailShell() {
                       ? "Koko takes the tunnel. "
                       : hud.runner === "SPOOKY"
                         ? "Spooky takes the tunnel. "
-                        : "APECAT takes the tunnel. "}
+                        : hud.runner === "RAMDAWG"
+                          ? "Ramdawg takes the tunnel. "
+                          : hud.runner === "OTTER"
+                            ? "Otter takes the tunnel. "
+                            : hud.runner === "FIGGE"
+                              ? "Figge takes the tunnel. "
+                              : hud.runner === "THEHODLR"
+                                ? "Thehodlr takes the tunnel. "
+                                : "APECAT takes the tunnel. "}
               {(hud.runner === "PINKY" && !pinkyUnlocked) ||
               (hud.runner === "KOKO" && !kokoUnlocked) ||
-              (hud.runner === "SPOOKY" && !spookyUnlocked)
-                ? "Unlock him with 169 Diamond Skulls."
+              (hud.runner === "SPOOKY" && !spookyUnlocked) ||
+              (hud.runner === "RAMDAWG" && !ramdawgUnlocked) ||
+              (hud.runner === "OTTER" && !otterUnlocked) ||
+              (hud.runner === "FIGGE" && !figgeUnlocked) ||
+              (hud.runner === "THEHODLR" && !thehodlrUnlocked)
+                ? "Unlock for 169 Diamond Skulls."
                 : "Get the highest score. Don’t kiss the bears."}
             </p>
             <button
@@ -979,6 +1111,26 @@ export function RailShell() {
             {hud.runner === "SPOOKY" && !spookyUnlocked ? (
               <button type="button" className="rail-stats-btn" onClick={onUnlockSpooky}>
                 {(ach?.skulls ?? 0) >= SPOOKY_COST ? "Unlock Spooky · 169" : "Need 169 Diamond Skulls"}
+              </button>
+            ) : null}
+            {hud.runner === "RAMDAWG" && !ramdawgUnlocked ? (
+              <button type="button" className="rail-stats-btn" onClick={onUnlockRamdawg}>
+                {(ach?.skulls ?? 0) >= RAMDAWG_COST ? "Unlock Ramdawg · 169" : "Need 169 Diamond Skulls"}
+              </button>
+            ) : null}
+            {hud.runner === "OTTER" && !otterUnlocked ? (
+              <button type="button" className="rail-stats-btn" onClick={onUnlockOtter}>
+                {(ach?.skulls ?? 0) >= OTTER_COST ? "Unlock Otter · 169" : "Need 169 Diamond Skulls"}
+              </button>
+            ) : null}
+            {hud.runner === "FIGGE" && !figgeUnlocked ? (
+              <button type="button" className="rail-stats-btn" onClick={onUnlockFigge}>
+                {(ach?.skulls ?? 0) >= FIGGE_COST ? "Unlock Figge · 169" : "Need 169 Diamond Skulls"}
+              </button>
+            ) : null}
+            {hud.runner === "THEHODLR" && !thehodlrUnlocked ? (
+              <button type="button" className="rail-stats-btn" onClick={onUnlockThehodlr}>
+                {(ach?.skulls ?? 0) >= THEHODLR_COST ? "Unlock Thehodlr · 169" : "Need 169 Diamond Skulls"}
               </button>
             ) : null}
             {mobile ? null : (
@@ -1217,13 +1369,8 @@ export function RailShell() {
                     <dt>Total coins collected</dt>
                     <dd>{stats.global.coins.toLocaleString()}</dd>
                   </div>
-                  {stats.global.runners.map((row) => (
-                    <div key={row.name}>
-                      <dt>{row.name}</dt>
-                      <dd>{formatPlay(row.seconds)}</dd>
-                    </div>
-                  ))}
                 </dl>
+                <RunnerTimes rows={stats.global.runners} />
                 <h3 className="rail-kicker">Skulls collected, all time</h3>
                 <SkullCountsList counts={stats.global.skulls} />
                 <DiamondCollected count={stats.global.diamonds} />
@@ -1252,13 +1399,8 @@ export function RailShell() {
                     <dt>Total coins collected</dt>
                     <dd>{stats.personal.coins.toLocaleString()}</dd>
                   </div>
-                  {stats.personal.runners.map((row) => (
-                    <div key={row.name}>
-                      <dt>{row.name}</dt>
-                      <dd>{formatPlay(row.seconds)}</dd>
-                    </div>
-                  ))}
                 </dl>
+                <RunnerTimes rows={stats.personal.runners} />
                 <h3 className="rail-kicker">Skulls you collected</h3>
                 <SkullCountsList counts={stats.personal.skulls} />
                 <DiamondCollected count={stats.personal.diamonds} />

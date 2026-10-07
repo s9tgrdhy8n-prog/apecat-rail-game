@@ -12,6 +12,18 @@ export const KOKO_COST = 169;
 /** Diamond Skulls to unlock Spooky for good. */
 export const SPOOKY_COST = 169;
 
+/** Diamond Skulls to unlock Ramdawg for good. */
+export const RAMDAWG_COST = 169;
+
+/** Diamond Skulls to unlock Otter for good. */
+export const OTTER_COST = 169;
+
+/** Diamond Skulls to unlock Figge for good. */
+export const FIGGE_COST = 169;
+
+/** Diamond Skulls to unlock Thehodlr for good. */
+export const THEHODLR_COST = 169;
+
 export type RunFacts = {
   score: number;
   meters: number;
@@ -59,6 +71,10 @@ export type AchievementSave = {
   pinky: boolean;
   koko: boolean;
   spooky: boolean;
+  ramdawg: boolean;
+  otter: boolean;
+  figge: boolean;
+  thehodlr: boolean;
   claims: string[];
   dailyKey: string;
   weeklyKey: string;
@@ -136,10 +152,10 @@ export const GOALS: Goal[] = [
     id: "week-crew",
     period: "weekly",
     title: "The whole crew",
-    detail: "Finish 30 runs as APECAT, 30 as BOGGY, and 30 as GIMBO. Pinky, Koko, and Spooky count after you unlock them.",
+    detail: "Finish 30 runs as APECAT, 30 as BOGGY, and 30 as GIMBO. Pinky, Koko, Spooky, Ramdawg, Otter, Figge, and Thehodlr count after you unlock them.",
     skulls: 5,
     target: 30,
-    read: (tally) => crewProgress(tally, { pinky: false, koko: false, spooky: false }),
+    read: (tally) => crewProgress(tally, { pinky: false, koko: false, spooky: false, ramdawg: false, otter: false, figge: false, thehodlr: false }),
   },
   {
     id: "week-coins",
@@ -152,14 +168,18 @@ export const GOALS: Goal[] = [
   },
 ];
 
-export type UnlockFlags = { pinky: boolean; koko: boolean; spooky: boolean };
+export type UnlockFlags = { pinky: boolean; koko: boolean; spooky: boolean; ramdawg: boolean; otter: boolean; figge: boolean; thehodlr: boolean };
 
-/** Lowest finished-run count across the crew. Pinky, Koko, and Spooky join after unlock. */
+/** Lowest finished-run count across the crew. Paid runners join after unlock. */
 export function crewProgress(tally: Tally, unlocked: UnlockFlags) {
   const counts = [tally.rides.APECAT, tally.rides.BOGGY, tally.rides.GIMBO];
   if (unlocked.pinky) counts.push(tally.rides.PINKY);
   if (unlocked.koko) counts.push(tally.rides.KOKO);
   if (unlocked.spooky) counts.push(tally.rides.SPOOKY);
+  if (unlocked.ramdawg) counts.push(tally.rides.RAMDAWG);
+  if (unlocked.otter) counts.push(tally.rides.OTTER);
+  if (unlocked.figge) counts.push(tally.rides.FIGGE);
+  if (unlocked.thehodlr) counts.push(tally.rides.THEHODLR);
   return Math.min(...counts);
 }
 
@@ -168,6 +188,10 @@ export function crewDetail(unlocked: UnlockFlags) {
   if (unlocked.pinky) bits.push("30 as PINKY");
   if (unlocked.koko) bits.push("30 as KOKO");
   if (unlocked.spooky) bits.push("30 as SPOOKY");
+  if (unlocked.ramdawg) bits.push("30 as RAMDAWG");
+  if (unlocked.otter) bits.push("30 as OTTER");
+  if (unlocked.figge) bits.push("30 as FIGGE");
+  if (unlocked.thehodlr) bits.push("30 as THEHODLR");
   return `Finish ${bits.slice(0, -1).join(", ")}, and ${bits[bits.length - 1]}.`;
 }
 
@@ -187,7 +211,7 @@ export function emptyTally(): Tally {
     bestCoins: 0,
     maxCombo: 0,
     runners: [],
-    rides: { APECAT: 0, BOGGY: 0, GIMBO: 0, PINKY: 0, KOKO: 0, SPOOKY: 0 },
+    rides: { APECAT: 0, BOGGY: 0, GIMBO: 0, PINKY: 0, KOKO: 0, SPOOKY: 0, RAMDAWG: 0, OTTER: 0, FIGGE: 0, THEHODLR: 0 },
   };
 }
 
@@ -208,6 +232,10 @@ function freshSave(now = new Date()): AchievementSave {
     pinky: false,
     koko: false,
     spooky: false,
+    ramdawg: false,
+    otter: false,
+    figge: false,
+    thehodlr: false,
     claims: [],
     dailyKey: utcDay(now),
     weeklyKey: utcWeek(now),
@@ -224,7 +252,7 @@ function num(value: unknown) {
 function tallyFrom(raw: unknown): Tally {
   const row = raw && typeof raw === "object" ? (raw as Partial<Tally>) : {};
   const runners = Array.isArray(row.runners)
-    ? row.runners.filter((name): name is RunnerName => name === "APECAT" || name === "BOGGY" || name === "GIMBO" || name === "PINKY" || name === "KOKO" || name === "SPOOKY")
+    ? row.runners.filter((name): name is RunnerName => name === "APECAT" || name === "BOGGY" || name === "GIMBO" || name === "PINKY" || name === "KOKO" || name === "SPOOKY" || name === "RAMDAWG" || name === "OTTER" || name === "FIGGE" || name === "THEHODLR")
     : [];
   return {
     runs: num(row.runs),
@@ -248,6 +276,10 @@ function tallyFrom(raw: unknown): Tally {
       PINKY: num(row.rides?.PINKY),
       KOKO: num(row.rides?.KOKO),
       SPOOKY: num(row.rides?.SPOOKY),
+      RAMDAWG: num(row.rides?.RAMDAWG),
+      OTTER: num(row.rides?.OTTER),
+      FIGGE: num(row.rides?.FIGGE),
+      THEHODLR: num(row.rides?.THEHODLR),
     },
   };
 }
@@ -276,6 +308,10 @@ function readRaw(token: string): AchievementSave {
       pinky: parsed.pinky === true,
       koko: parsed.koko === true,
       spooky: parsed.spooky === true,
+      ramdawg: parsed.ramdawg === true,
+      otter: parsed.otter === true,
+      figge: parsed.figge === true,
+      thehodlr: parsed.thehodlr === true,
       claims: Array.isArray(parsed.claims) ? parsed.claims.filter((claim) => typeof claim === "string") : [],
       dailyKey: typeof parsed.dailyKey === "string" ? parsed.dailyKey : "",
       weeklyKey: typeof parsed.weeklyKey === "string" ? parsed.weeklyKey : "",
@@ -351,11 +387,11 @@ export function unlockKoko(token: string) {
   return { ok: true as const, save: next };
 }
 
-export function goalProgress(goal: Goal, tally: Tally, unlocked: UnlockFlags = { pinky: false, koko: false, spooky: false }) {
+export function goalProgress(goal: Goal, tally: Tally, unlocked: UnlockFlags = { pinky: false, koko: false, spooky: false, ramdawg: false, otter: false, figge: false, thehodlr: false }) {
   return Math.min(goal.target, Math.max(0, goalValue(goal, tally, unlocked)));
 }
 
-export function goalDone(goal: Goal, tally: Tally, unlocked: UnlockFlags = { pinky: false, koko: false, spooky: false }) {
+export function goalDone(goal: Goal, tally: Tally, unlocked: UnlockFlags = { pinky: false, koko: false, spooky: false, ramdawg: false, otter: false, figge: false, thehodlr: false }) {
   return goalValue(goal, tally, unlocked) >= goal.target;
 }
 
@@ -373,6 +409,10 @@ export type AchievementSnapshot = {
   pinky: boolean;
   koko: boolean;
   spooky: boolean;
+  ramdawg: boolean;
+  otter: boolean;
+  figge: boolean;
+  thehodlr: boolean;
   paid: string[];
   daily: Tally;
   weekly: Tally;
@@ -387,6 +427,10 @@ export function adoptServerAchievements(token: string, snap: AchievementSnapshot
     pinky: snap.pinky === true,
     koko: snap.koko === true,
     spooky: snap.spooky === true,
+    ramdawg: snap.ramdawg === true,
+    otter: snap.otter === true,
+    figge: snap.figge === true,
+    thehodlr: snap.thehodlr === true,
     claims: Array.isArray(snap.paid) ? snap.paid.filter((claim) => typeof claim === "string") : [],
     daily: snap.daily,
     weekly: snap.weekly,

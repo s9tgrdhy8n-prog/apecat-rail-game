@@ -30,6 +30,7 @@ The start menu reads `GAME_VERSION` in `src/game/version.ts`. On every productio
 | 1.3.0 | 2026-10-05 | Published to https://apecat-rail-game.com. Diamond Skull count sits on the Achievements row so the menu fits without scrolling. Weekly adds Coin vault: collect 25,000 $APECAT coins for 5 Diamond Skulls. On mobile, Jump and Duck press and release like the keyboard: tap for a short hop or a quick duck, hold for the full move, let go to cancel. |
 | 1.4.0 | 2026-10-06 | Published to https://apecat-rail-game.com. Gallery is a first-person walk down the hall with no score. Drag to look, and Slower or Faster changes the pace. Delusional to Win It plays only in the gallery. Twenty-six new Ape pictures are mixed into the walls. On a phone the gallery controls stay on screen. |
 | 1.5.0 | 2026-10-06 | Published to https://apecat-rail-game.com. Spooky joins the runners and unlocks for 169 Diamond Skulls. Finished Spooky runs count in Stats and in The whole crew after unlock. The menu, including all six portraits, fits the screen on desktop and on a phone. |
+| 1.6.0 | 2026-10-06 | Published to https://apecat-rail-game.com. Ramdawg, Otter, Figge, and Thehodlr join the runners and each unlocks for 169 Diamond Skulls. Finished runs count in Stats and in The whole crew after unlock. Character time played scrolls inside its own box. Ducking during a jump drops you faster. The menu, including all ten portraits, fits the screen on desktop and on a phone. |
 
 ## 1.0.5 notes
 
