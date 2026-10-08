@@ -9,6 +9,7 @@ import {
   type Tally,
   type UnlockFlags,
 } from "@/game/achievements";
+import { runnerLabel } from "@/game/runners";
 
 function CrystalMark() {
   return <img className="rail-crystal-mark" src="/brand/diamond-skull.png" alt="" />;
@@ -16,17 +17,19 @@ function CrystalMark() {
 
 function crewLine(tally: Tally, unlocked: UnlockFlags) {
   const parts = [
-    `APECAT ${tally.rides.APECAT}`,
-    `BOGGY ${tally.rides.BOGGY}`,
-    `GIMBO ${tally.rides.GIMBO}`,
+    `${runnerLabel("APECAT")} ${tally.rides.APECAT}`,
+    `${runnerLabel("BOGGY")} ${tally.rides.BOGGY}`,
+    `${runnerLabel("GIMBO")} ${tally.rides.GIMBO}`,
   ];
-  if (unlocked.pinky) parts.push(`PINKY ${tally.rides.PINKY}`);
-  if (unlocked.koko) parts.push(`KOKO ${tally.rides.KOKO}`);
-  if (unlocked.spooky) parts.push(`SPOOKY ${tally.rides.SPOOKY}`);
-  if (unlocked.ramdawg) parts.push(`RAMDAWG ${tally.rides.RAMDAWG}`);
-  if (unlocked.otter) parts.push(`OTTER ${tally.rides.OTTER}`);
-  if (unlocked.figge) parts.push(`FIGGE ${tally.rides.FIGGE}`);
-  if (unlocked.thehodlr) parts.push(`THEHODLR ${tally.rides.THEHODLR}`);
+  if (unlocked.pinky) parts.push(`${runnerLabel("PINKY")} ${tally.rides.PINKY}`);
+  if (unlocked.koko) parts.push(`${runnerLabel("KOKO")} ${tally.rides.KOKO}`);
+  if (unlocked.spooky) parts.push(`${runnerLabel("SPOOKY")} ${tally.rides.SPOOKY}`);
+  if (unlocked.ramdawg) parts.push(`${runnerLabel("RAMDAWG")} ${tally.rides.RAMDAWG}`);
+  if (unlocked.otter) parts.push(`${runnerLabel("OTTER")} ${tally.rides.OTTER}`);
+  if (unlocked.figge) parts.push(`${runnerLabel("FIGGE")} ${tally.rides.FIGGE}`);
+  if (unlocked.thehodlr) parts.push(`${runnerLabel("THEHODLR")} ${tally.rides.THEHODLR}`);
+  if (unlocked.afterape) parts.push(`${runnerLabel("AFTERAPE")} ${tally.rides.AFTERAPE}`);
+  if (unlocked.deadbeaver) parts.push(`${runnerLabel("DEADBEAVER")} ${tally.rides.DEADBEAVER}`);
   return ` · ${parts.join(" · ")}`;
 }
 
@@ -83,7 +86,7 @@ export function AchievementSheet({
   onClose: () => void;
 }) {
   const [pane, setPane] = useState<"daily" | "weekly" | null>(null);
-  const unlocked = { pinky: save.pinky, koko: save.koko, spooky: save.spooky, ramdawg: save.ramdawg, otter: save.otter, figge: save.figge, thehodlr: save.thehodlr };
+  const unlocked = { pinky: save.pinky, koko: save.koko, spooky: save.spooky, ramdawg: save.ramdawg, otter: save.otter, figge: save.figge, thehodlr: save.thehodlr, afterape: save.afterape, deadbeaver: save.deadbeaver };
   const daily = GOALS.filter((goal) => goal.period === "daily");
   const weekly = GOALS.filter((goal) => goal.period === "weekly");
   return (

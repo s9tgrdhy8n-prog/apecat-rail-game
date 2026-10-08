@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from "react";
-import { Pause, Play, Bell, BellOff, Volume2, VolumeX } from "lucide-react";
+import { Pause, Play, Bell, BellOff, Volume2, VolumeX, SkipForward } from "lucide-react";
 import { AchievementSheet } from "@/components/achievement-sheet";
-import { adoptServerAchievements, FIGGE_COST, GOALS, KOKO_COST, OTTER_COST, PINKY_COST, RAMDAWG_COST, SPOOKY_COST, THEHODLR_COST, type AchievementSave, type AchievementSnapshot, type Goal } from "@/game/achievements";
-import { EMPTY_HUD, type Hud, type Nudge, type RailApi, type RunnerName } from "@/game/types";
+import { adoptServerAchievements, AFTERAPE_COST, DEADBEAVER_COST, FIGGE_COST, GOALS, KOKO_COST, OTTER_COST, PINKY_COST, RAMDAWG_COST, SPOOKY_COST, THEHODLR_COST, type AchievementSave, type AchievementSnapshot, type Goal } from "@/game/achievements";
+import { RunnerStage } from "@/components/runner-stage";
+import { EMPTY_HUD, type Hud, type Nudge, type RailApi, type RunnerName, type StageBundle } from "@/game/types";
 import { beginRun, claimName, EMPTY_SKULLS, getBoard, getGhost, getStats, loginName, recordPlay, setPassword as savePassword, submitRun, syncDiamonds, tickRun, unlockRunner, type BoardState, type RailStats, type SkullCounts } from "@/game/board";
 import { encodeGhost } from "@/game/replay";
 import { ensurePlayerToken, forgetPlayerToken } from "@/game/player-token";
 import { GAME_VERSION } from "@/game/version";
+import { runnerHandle, runnerLabel } from "@/game/runners";
 const COIN_ICON = "/brand/apecat-coin-face.png";
 const DIAMOND_ICON = "/brand/diamond-skull.png";
 const DIAMOND_MARK = "/brand/diamond-skull-clear.png";
@@ -72,6 +74,8 @@ const RUNNERS: { name: RunnerName; src: string }[] = [
   { name: "OTTER", src: "/brand/otter.png" },
   { name: "FIGGE", src: "/brand/figge.png" },
   { name: "THEHODLR", src: "/brand/thehodlr.png" },
+  { name: "AFTERAPE", src: "/brand/afterape.png" },
+  { name: "DEADBEAVER", src: "/brand/deadbeaver.png" },
 ];
 const MOBILE_KEY = "apecat-rail-mobile";
 const QUIET_KEY = "apecat-rail-quiet";
@@ -92,7 +96,7 @@ function RunnerTimes({ rows }: { rows: { name: string; seconds: number }[] }) {
       <dl className="rail-stats">
         {rows.map((row) => (
           <div key={row.name}>
-            <dt>{row.name}</dt>
+            <dt>{runnerLabel(row.name)}</dt>
             <dd>{formatPlay(row.seconds)}</dd>
           </div>
         ))}
@@ -134,6 +138,8 @@ export function RailShell() {
   const [otterUnlocked, setOtterUnlocked] = useState(false);
   const [figgeUnlocked, setFiggeUnlocked] = useState(false);
   const [thehodlrUnlocked, setThehodlrUnlocked] = useState(false);
+  const [afterapeUnlocked, setAfterapeUnlocked] = useState(false);
+  const [deadbeaverUnlocked, setDeadbeaverUnlocked] = useState(false);
   const [stats, setStats] = useState<RailStats | null>(null);
   const [nameDraft, setNameDraft] = useState("");
   const [password, setPassword] = useState("");
@@ -143,6 +149,7 @@ export function RailShell() {
   const [claiming, setClaiming] = useState(false);
   const [mobile, setMobile] = useState(false);
   const [quiet, setQuiet] = useState(false);
+  const [stage, setStage] = useState<StageBundle | null>(null);
   const posted = useRef(new Set<number>());
   const pinkyRef = useRef(false);
   const kokoRef = useRef(false);
@@ -151,10 +158,18 @@ export function RailShell() {
   const otterRef = useRef(false);
   const figgeRef = useRef(false);
   const thehodlrRef = useRef(false);
+  const afterapeRef = useRef(false);
+  const deadbeaverRef = useRef(false);
   const settle = useRef<Promise<unknown>>(Promise.resolve());
   const arming = useRef(false);
   const hudRef = useRef(hud);
   hudRef.current = hud;
+
+  useEffect(() => {
+    const open = stage != null && hud.phase === "menu";
+    apiRef.current?.holdStage(open);
+    return () => apiRef.current?.holdStage(false);
+  }, [stage, hud.phase]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -200,6 +215,12 @@ export function RailShell() {
     setThehodlrUnlocked(save.thehodlr);
     thehodlrRef.current = save.thehodlr;
     apiRef.current?.setThehodlrUnlocked(save.thehodlr);
+    setAfterapeUnlocked(save.afterape);
+    afterapeRef.current = save.afterape;
+    apiRef.current?.setAfterapeUnlocked(save.afterape);
+    setDeadbeaverUnlocked(save.deadbeaver);
+    deadbeaverRef.current = save.deadbeaver;
+    apiRef.current?.setDeadbeaverUnlocked(save.deadbeaver);
     if (typeof res.fill === "number") setPickupFill(Math.max(0, Math.min(99, Math.floor(res.fill))));
     if (runSerial > 0) {
       const live = hudRef.current;
@@ -226,6 +247,10 @@ export function RailShell() {
     figgeRef.current = false;
     setThehodlrUnlocked(false);
     thehodlrRef.current = false;
+    setAfterapeUnlocked(false);
+    afterapeRef.current = false;
+    setDeadbeaverUnlocked(false);
+    deadbeaverRef.current = false;
     void syncDiamonds({ data: { token: next } })
       .then((res) => {
         if (!res.daily) return;
@@ -268,6 +293,16 @@ export function RailShell() {
     thehodlrRef.current = thehodlrUnlocked;
     apiRef.current?.setThehodlrUnlocked(thehodlrUnlocked);
   }, [thehodlrUnlocked, hud.phase]);
+
+  useEffect(() => {
+    afterapeRef.current = afterapeUnlocked;
+    apiRef.current?.setAfterapeUnlocked(afterapeUnlocked);
+  }, [afterapeUnlocked, hud.phase]);
+
+  useEffect(() => {
+    deadbeaverRef.current = deadbeaverUnlocked;
+    apiRef.current?.setDeadbeaverUnlocked(deadbeaverUnlocked);
+  }, [deadbeaverUnlocked, hud.phase]);
 
   useEffect(() => {
     if (hud.phase === "run") setJustEarned([]);
@@ -340,7 +375,9 @@ export function RailShell() {
       (hudRef.current.runner === "RAMDAWG" && !ramdawgRef.current) ||
       (hudRef.current.runner === "OTTER" && !otterRef.current) ||
       (hudRef.current.runner === "FIGGE" && !figgeRef.current) ||
-      (hudRef.current.runner === "THEHODLR" && !thehodlrRef.current)
+      (hudRef.current.runner === "THEHODLR" && !thehodlrRef.current) ||
+      (hudRef.current.runner === "AFTERAPE" && !afterapeRef.current) ||
+      (hudRef.current.runner === "DEADBEAVER" && !deadbeaverRef.current)
     ) {
       apiRef.current?.start();
       return;
@@ -479,6 +516,8 @@ export function RailShell() {
         { name: "OTTER" as const, seconds: 0 },
         { name: "FIGGE" as const, seconds: 0 },
         { name: "THEHODLR" as const, seconds: 0 },
+        { name: "AFTERAPE" as const, seconds: 0 },
+        { name: "DEADBEAVER" as const, seconds: 0 },
       ],
     };
     void (async () => getStats({ data: { token } }))()
@@ -626,7 +665,7 @@ export function RailShell() {
 
   function onPointerDown(e: React.PointerEvent) {
     if (hud.phase === "gallery") return;
-    if ((e.target as HTMLElement).closest("button, input, textarea, a, .rail-sheet, .rail-menu, .rail-dead, .rail-freeze")) return;
+    if ((e.target as HTMLElement).closest("button, input, textarea, a, .rail-sheet, .rail-menu, .rail-dead, .rail-freeze, .rail-stage")) return;
     swipe.current = { x: e.clientX, y: e.clientY, id: e.pointerId, held: null, used: false };
     e.currentTarget.setPointerCapture(e.pointerId);
   }
@@ -786,6 +825,20 @@ export function RailShell() {
     if (res?.ok && res.daily) applyWallet(token, res);
   }
 
+  async function onUnlockAfterape() {
+    if (!token || afterapeUnlocked) return;
+    if ((ach?.skulls ?? 0) < AFTERAPE_COST) return;
+    const res = await unlockRunner({ data: { token, runner: "AFTERAPE" } }).catch(() => null);
+    if (res?.ok && res.daily) applyWallet(token, res);
+  }
+
+  async function onUnlockDeadbeaver() {
+    if (!token || deadbeaverUnlocked) return;
+    if ((ach?.skulls ?? 0) < DEADBEAVER_COST) return;
+    const res = await unlockRunner({ data: { token, runner: "DEADBEAVER" } }).catch(() => null);
+    if (res?.ok && res.daily) applyWallet(token, res);
+  }
+
   function picks() {
     return (
       <div className="rail-picks" role="group" aria-label="Runners">
@@ -797,7 +850,9 @@ export function RailShell() {
             (runner.name === "RAMDAWG" && !ramdawgUnlocked) ||
             (runner.name === "OTTER" && !otterUnlocked) ||
             (runner.name === "FIGGE" && !figgeUnlocked) ||
-            (runner.name === "THEHODLR" && !thehodlrUnlocked);
+            (runner.name === "THEHODLR" && !thehodlrUnlocked) ||
+            (runner.name === "AFTERAPE" && !afterapeUnlocked) ||
+            (runner.name === "DEADBEAVER" && !deadbeaverUnlocked);
           const cost =
             runner.name === "KOKO"
               ? KOKO_COST
@@ -811,18 +866,22 @@ export function RailShell() {
                     ? FIGGE_COST
                     : runner.name === "THEHODLR"
                       ? THEHODLR_COST
-                      : PINKY_COST;
+                      : runner.name === "AFTERAPE"
+                        ? AFTERAPE_COST
+                        : runner.name === "DEADBEAVER"
+                          ? DEADBEAVER_COST
+                          : PINKY_COST;
           return (
             <button
               key={runner.name}
               type="button"
               className={runner.name === hud.runner ? (locked ? "is-on is-locked" : "is-on") : locked ? "is-locked" : ""}
-              aria-label={locked ? `${runner.name} locked` : runner.name}
+              aria-label={locked ? `${runnerLabel(runner.name)} locked` : runnerLabel(runner.name)}
               aria-pressed={runner.name === hud.runner}
               onClick={() => apiRef.current?.pick(runner.name)}
             >
               <img src={runner.src} alt="" />
-              <span>{runner.name}</span>
+              <span>{runnerLabel(runner.name)}</span>
               {locked ? (
                 <em>
                   <img src={DIAMOND_MARK} alt="" />
@@ -1074,28 +1133,18 @@ export function RailShell() {
                 ? "Boggy takes the tunnel. "
                 : hud.runner === "GIMBO"
                   ? "Gimbo takes the tunnel. "
-                  : hud.runner === "PINKY"
-                    ? "Pinky takes the tunnel. "
-                    : hud.runner === "KOKO"
-                      ? "Koko takes the tunnel. "
-                      : hud.runner === "SPOOKY"
-                        ? "Spooky takes the tunnel. "
-                        : hud.runner === "RAMDAWG"
-                          ? "Ramdawg takes the tunnel. "
-                          : hud.runner === "OTTER"
-                            ? "Otter takes the tunnel. "
-                            : hud.runner === "FIGGE"
-                              ? "Figge takes the tunnel. "
-                              : hud.runner === "THEHODLR"
-                                ? "Thehodlr takes the tunnel. "
-                                : "APECAT takes the tunnel. "}
+                  : hud.runner === "OTTER"
+                    ? "Otter takes the tunnel. "
+                    : `${runnerLabel(hud.runner)} takes the tunnel. `}
               {(hud.runner === "PINKY" && !pinkyUnlocked) ||
               (hud.runner === "KOKO" && !kokoUnlocked) ||
               (hud.runner === "SPOOKY" && !spookyUnlocked) ||
               (hud.runner === "RAMDAWG" && !ramdawgUnlocked) ||
               (hud.runner === "OTTER" && !otterUnlocked) ||
               (hud.runner === "FIGGE" && !figgeUnlocked) ||
-              (hud.runner === "THEHODLR" && !thehodlrUnlocked)
+              (hud.runner === "THEHODLR" && !thehodlrUnlocked) ||
+              (hud.runner === "AFTERAPE" && !afterapeUnlocked) ||
+              (hud.runner === "DEADBEAVER" && !deadbeaverUnlocked)
                 ? "Unlock for 169 Diamond Skulls."
                 : "Get the highest score. Don’t kiss the bears."}
             </p>
@@ -1137,25 +1186,34 @@ export function RailShell() {
                 </p>
               </div>
             </div>
-            {picks()}
+            <div className="rail-pick-block">
+              <button
+                type="button"
+                className="rail-view-open"
+                onClick={() => setStage(apiRef.current?.takeStage(hud.runner) ?? null)}
+              >
+                View Character
+              </button>
+              {picks()}
+            </div>
             {hud.runner === "PINKY" && !pinkyUnlocked ? (
               <button type="button" className="rail-stats-btn" onClick={onUnlockPinky}>
-                {(ach?.skulls ?? 0) >= PINKY_COST ? "Unlock Pinky · 169" : "Need 169 Diamond Skulls"}
+                {(ach?.skulls ?? 0) >= PINKY_COST ? `Unlock ${runnerLabel("PINKY")} · 169` : "Need 169 Diamond Skulls"}
               </button>
             ) : null}
             {hud.runner === "KOKO" && !kokoUnlocked ? (
               <button type="button" className="rail-stats-btn" onClick={onUnlockKoko}>
-                {(ach?.skulls ?? 0) >= KOKO_COST ? "Unlock Koko · 169" : "Need 169 Diamond Skulls"}
+                {(ach?.skulls ?? 0) >= KOKO_COST ? `Unlock ${runnerLabel("KOKO")} · 169` : "Need 169 Diamond Skulls"}
               </button>
             ) : null}
             {hud.runner === "SPOOKY" && !spookyUnlocked ? (
               <button type="button" className="rail-stats-btn" onClick={onUnlockSpooky}>
-                {(ach?.skulls ?? 0) >= SPOOKY_COST ? "Unlock Spooky · 169" : "Need 169 Diamond Skulls"}
+                {(ach?.skulls ?? 0) >= SPOOKY_COST ? `Unlock ${runnerLabel("SPOOKY")} · 169` : "Need 169 Diamond Skulls"}
               </button>
             ) : null}
             {hud.runner === "RAMDAWG" && !ramdawgUnlocked ? (
               <button type="button" className="rail-stats-btn" onClick={onUnlockRamdawg}>
-                {(ach?.skulls ?? 0) >= RAMDAWG_COST ? "Unlock Ramdawg · 169" : "Need 169 Diamond Skulls"}
+                {(ach?.skulls ?? 0) >= RAMDAWG_COST ? `Unlock ${runnerLabel("RAMDAWG")} · 169` : "Need 169 Diamond Skulls"}
               </button>
             ) : null}
             {hud.runner === "OTTER" && !otterUnlocked ? (
@@ -1165,12 +1223,22 @@ export function RailShell() {
             ) : null}
             {hud.runner === "FIGGE" && !figgeUnlocked ? (
               <button type="button" className="rail-stats-btn" onClick={onUnlockFigge}>
-                {(ach?.skulls ?? 0) >= FIGGE_COST ? "Unlock Figge · 169" : "Need 169 Diamond Skulls"}
+                {(ach?.skulls ?? 0) >= FIGGE_COST ? `Unlock ${runnerLabel("FIGGE")} · 169` : "Need 169 Diamond Skulls"}
               </button>
             ) : null}
             {hud.runner === "THEHODLR" && !thehodlrUnlocked ? (
               <button type="button" className="rail-stats-btn" onClick={onUnlockThehodlr}>
-                {(ach?.skulls ?? 0) >= THEHODLR_COST ? "Unlock Thehodlr · 169" : "Need 169 Diamond Skulls"}
+                {(ach?.skulls ?? 0) >= THEHODLR_COST ? `Unlock ${runnerLabel("THEHODLR")} · 169` : "Need 169 Diamond Skulls"}
+              </button>
+            ) : null}
+            {hud.runner === "AFTERAPE" && !afterapeUnlocked ? (
+              <button type="button" className="rail-stats-btn" onClick={onUnlockAfterape}>
+                {(ach?.skulls ?? 0) >= AFTERAPE_COST ? `Unlock ${runnerLabel("AFTERAPE")} · 169` : "Need 169 Diamond Skulls"}
+              </button>
+            ) : null}
+            {hud.runner === "DEADBEAVER" && !deadbeaverUnlocked ? (
+              <button type="button" className="rail-stats-btn" onClick={onUnlockDeadbeaver}>
+                {(ach?.skulls ?? 0) >= DEADBEAVER_COST ? `Unlock ${runnerLabel("DEADBEAVER")} · 169` : "Need 169 Diamond Skulls"}
               </button>
             ) : null}
             {mobile ? null : (
@@ -1515,6 +1583,15 @@ export function RailShell() {
 
       <button
         type="button"
+        className="rail-mute rail-track"
+        aria-label={`Song: ${hud.track}. Next song`}
+        onClick={() => apiRef.current?.nextTrack()}
+      >
+        <SkipForward size={16} />
+        <span>{hud.track}</span>
+      </button>
+      <button
+        type="button"
         className="rail-mute rail-pause"
         aria-label={hud.musicPaused ? "Play music" : "Pause music"}
         onClick={() => apiRef.current?.toggleMusic()}
@@ -1582,6 +1659,16 @@ export function RailShell() {
             Menu
           </button>
         </div>
+      ) : null}
+
+      {stage && hud.phase === "menu" ? (
+        <RunnerStage
+          label={runnerLabel(hud.runner)}
+          handle={runnerHandle(hud.runner)}
+          portrait={RUNNERS.find((runner) => runner.name === hud.runner)?.src ?? "/brand/apecat.jpg"}
+          bundle={stage}
+          onClose={() => setStage(null)}
+        />
       ) : null}
 
       {hud.phase === "menu" || hud.phase === "run" || hud.phase === "dead" ? (

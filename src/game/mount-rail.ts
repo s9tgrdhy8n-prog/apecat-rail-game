@@ -1,8 +1,10 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { clone as cloneSkinned } from "three/addons/utils/SkeletonUtils.js";
 import { mulberry32, type GhostEvent, type GhostInput, type GhostTape } from "@/game/replay";
 import { Sfx } from "@/game/sfx";
-import type { Hud, Nudge, Phase, RailApi, RunnerName } from "@/game/types";
+import type { Hud, Nudge, Phase, RailApi, RunnerName, StageBundle } from "@/game/types";
+import { runnerLabel } from "@/game/runners";
 
 const SAVE_KEY = "apecat-rail-v1";
 const LANE = 2.2;
@@ -131,10 +133,15 @@ export function mountRail(canvas: HTMLCanvasElement, onHud: (h: Hud) => void) {
   };
 }
 
-type RunnerId = "apecat" | "boggo" | "gimbo" | "pinky" | "koko" | "spooky" | "ramdawg" | "otter" | "figge" | "thehodlr";
+type RunnerId = "apecat" | "boggo" | "gimbo" | "pinky" | "koko" | "spooky" | "ramdawg" | "otter" | "figge" | "thehodlr" | "afterape" | "deadbeaver";
 
 function meshyRunner(id: RunnerId) {
-  return id === "pinky" || id === "koko" || id === "spooky" || id === "ramdawg" || id === "otter" || id === "figge" || id === "thehodlr";
+  return id === "pinky" || id === "koko" || id === "spooky" || id === "ramdawg" || id === "otter" || id === "figge" || id === "thehodlr" || id === "afterape" || id === "deadbeaver";
+}
+
+/** Meshy rigs, including the new APECAT, face down the tunnel. */
+function runnerYaw(id: RunnerId) {
+  return id === "apecat" || id === "gimbo" || meshyRunner(id) ? Math.PI : MODEL_YAW;
 }
 
 class RailWorld {
@@ -146,6 +153,7 @@ class RailWorld {
   private scene = new THREE.Scene();
   private camera: THREE.PerspectiveCamera;
   private clockLast = -1;
+  private stageHold = false;
   private sfx = new Sfx();
   private keys = new Set<string>();
   private steerOverride = 0;
@@ -172,7 +180,7 @@ class RailWorld {
   private flashT = 0;
   private newBest = false;
   private loadError = "";
-  private loadsLeft = 14;
+  private loadsLeft = 16;
   private runnerId: RunnerId = "apecat";
   private runnerName: RunnerName = "APECAT";
   private runSerial = 0;
@@ -187,6 +195,10 @@ class RailWorld {
     }
   >();
   private deadSource: THREE.AnimationClip | null = null;
+  private deadHipsRest = new THREE.Vector3();
+  private danceSource: THREE.AnimationClip | null = null;
+  private danceHipsRest = new THREE.Vector3();
+  private danceRest = new Map<string, THREE.Quaternion>();
   private pinkyUnlocked = false;
   private kokoUnlocked = false;
   private spookyUnlocked = false;
@@ -194,6 +206,8 @@ class RailWorld {
   private otterUnlocked = false;
   private figgeUnlocked = false;
   private thehodlrUnlocked = false;
+  private afterapeUnlocked = false;
+  private deadbeaverUnlocked = false;
   private speed = 0;
   private hudAcc = 0;
   private saveDirty = false;
@@ -297,6 +311,7 @@ class RailWorld {
     this.bestAtStart = saved.best;
     this.muted = saved.muted;
     this.sfx.setMuted(saved.muted);
+    this.sfx.onTrack = () => this.push(true);
 
     this.renderer = new THREE.WebGLRenderer({
       canvas,
@@ -354,6 +369,7 @@ class RailWorld {
       kickMusic: () => this.sfx.startMusic(),
       toggleMute: () => this.toggleMute(),
       toggleMusic: () => this.toggleMusic(),
+      nextTrack: () => this.nextTrack(),
       nudge: (dir) => this.nudge(dir),
       hold: (action, down) => this.hold(action, down),
       toMenu: () => this.toMenu(),
@@ -383,10 +399,21 @@ class RailWorld {
       setThehodlrUnlocked: (unlocked) => {
         this.thehodlrUnlocked = unlocked;
       },
+      setAfterapeUnlocked: (unlocked) => {
+        this.afterapeUnlocked = unlocked;
+      },
+      setDeadbeaverUnlocked: (unlocked) => {
+        this.deadbeaverUnlocked = unlocked;
+      },
       pause: () => this.freeze(),
       resume: () => this.beginCountdown(),
       playReplay: (tape) => this.playReplay(tape),
       takeGhost: () => this.takeGhost(),
+      takeStage: (name) => this.takeStage(name),
+      holdStage: (on) => {
+        this.stageHold = on;
+        if (!on) this.clockLast = -1;
+      },
     };
   }
 
@@ -425,7 +452,7 @@ class RailWorld {
 
   private onGesture = (e: PointerEvent) => {
     const target = e.target as HTMLElement | null;
-    if (target?.closest?.(".rail-pause")) return;
+    if (target?.closest?.(".rail-pause, .rail-track")) return;
     this.sfx.startMusic();
   };
 
@@ -526,6 +553,8 @@ class RailWorld {
       { id: "otter", name: "OTTER", url: "/models/otter.glb" },
       { id: "figge", name: "FIGGE", url: "/models/figge.glb" },
       { id: "thehodlr", name: "THEHODLR", url: "/models/thehodlr.glb" },
+      { id: "afterape", name: "AFTERAPE", url: "/models/afterape.glb" },
+      { id: "deadbeaver", name: "DEADBEAVER", url: "/models/deadbeaver.glb" },
     ];
     const loader = new GLTFLoader();
     for (const spec of specs) {
@@ -536,11 +565,38 @@ class RailWorld {
           for (const clip of gltf.animations) lockRootXZ(clip);
           const model = gltf.scene;
           model.visible = false;
+          const anisotropy = this.renderer.capabilities.getMaxAnisotropy();
           model.traverse((obj) => {
             const mesh = obj as THREE.Mesh;
             if (!mesh.isMesh) return;
             mesh.frustumCulled = false;
             mesh.castShadow = false;
+            const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+            for (const mat of mats) {
+              const maps = [
+                (mat as THREE.MeshStandardMaterial).map,
+                (mat as THREE.MeshStandardMaterial).normalMap,
+                (mat as THREE.MeshStandardMaterial).roughnessMap,
+                (mat as THREE.MeshStandardMaterial).metalnessMap,
+                (mat as THREE.MeshStandardMaterial).aoMap,
+                (mat as THREE.MeshStandardMaterial).emissiveMap,
+              ];
+              for (const tex of maps) {
+                if (!tex) continue;
+                tex.anisotropy = anisotropy;
+                tex.magFilter = THREE.LinearFilter;
+                tex.minFilter = THREE.LinearMipmapLinearFilter;
+                tex.generateMipmaps = true;
+                tex.needsUpdate = true;
+              }
+              // This export paints the fur as metal, which hides the color map in the tunnel.
+              if (spec.id === "gimbo") {
+                const std = mat as THREE.MeshStandardMaterial;
+                std.metalnessMap = null;
+                std.metalness = 0;
+                std.needsUpdate = true;
+              }
+            }
           });
           this.fitGroup.add(model);
           const mixer = new THREE.AnimationMixer(model);
@@ -563,12 +619,27 @@ class RailWorld {
           }
           if (spec.id === "pinky") {
             this.deadSource = gltf.animations.find((clip) => clip.name === "Dead") ?? null;
+            const hips = model.getObjectByName("mixamorig:Hips");
+            if (hips) this.deadHipsRest.copy(hips.position);
+          }
+          if (!this.danceSource) {
+            const dance = gltf.animations.find((clip) => /dance/i.test(clip.name)) ?? null;
+            if (dance) {
+              this.danceSource = dance;
+              const hips = model.getObjectByName("mixamorig:Hips");
+              if (hips) this.danceHipsRest.copy(hips.position);
+              this.danceRest.clear();
+              model.traverse((obj) => {
+                if (obj.name) this.danceRest.set(obj.name, obj.quaternion.clone());
+              });
+            }
           }
           const fit = spec.id === "boggo" ? 1.2 : meshyRunner(spec.id) ? 1.3 : 0.7;
-          const yaw = meshyRunner(spec.id) ? Math.PI : MODEL_YAW;
+          const yaw = runnerYaw(spec.id);
           this.fitModel(model, fit, yaw);
           this.roster.set(spec.id, { id: spec.id, name: spec.name, model, mixer, clips });
           this.giveDeadToAll();
+          this.giveDanceToAll();
           this.settleLoad();
         },
         undefined,
@@ -589,10 +660,71 @@ class RailWorld {
         existing.clampWhenFinished = true;
         continue;
       }
-      const action = runner.mixer.clipAction(this.deadSource);
+      const clip = this.retargetClip(this.deadSource, runner.model, this.deadHipsRest);
+      const action = runner.mixer.clipAction(clip);
       action.setLoop(THREE.LoopOnce, 1);
       action.clampWhenFinished = true;
       runner.clips.set("Dead", action);
+    }
+  }
+
+  /** Keep this rig's bone lengths. Another character's position tracks stretch the neck and limbs. */
+  private retargetClip(source: THREE.AnimationClip, model: THREE.Object3D, sourceHips: THREE.Vector3) {
+    const clip = source.clone();
+    const hips = model.getObjectByName("mixamorig:Hips");
+    const rest = hips ? hips.position : sourceHips;
+    clip.tracks = clip.tracks.filter((track) => {
+      if (!track.name.endsWith(".position")) return true;
+      if (!/hips/i.test(track.name)) return false;
+      const values = track.values;
+      for (let i = 0; i < values.length; i += 3) {
+        const bounce = values[i + 1] - sourceHips.y;
+        values[i] = rest.x;
+        values[i + 1] = rest.y + bounce;
+        values[i + 2] = rest.z;
+      }
+      return true;
+    });
+    return clip;
+  }
+
+  /** TheHoldr's head bone is already turned in the bind pose. Dance keys from another rig replace that and pull the neck. */
+  private keepHeadRest(clip: THREE.AnimationClip, model: THREE.Object3D) {
+    const dest = new Map<string, THREE.Quaternion>();
+    model.traverse((obj) => {
+      if (obj.name) dest.set(obj.name, obj.quaternion);
+    });
+    const key = new THREE.Quaternion();
+    const delta = new THREE.Quaternion();
+    const out = new THREE.Quaternion();
+    for (const track of clip.tracks) {
+      if (!track.name.endsWith(".quaternion")) continue;
+      const bone = track.name.slice(0, -".quaternion".length);
+      if (!/head|neck/i.test(bone)) continue;
+      const srcRest = this.danceRest.get(bone);
+      const dstRest = dest.get(bone);
+      if (!srcRest || !dstRest) continue;
+      const values = track.values;
+      for (let i = 0; i < values.length; i += 4) {
+        key.fromArray(values, i);
+        delta.copy(srcRest).invert().multiply(key);
+        out.copy(dstRest).multiply(delta).normalize();
+        out.toArray(values, i);
+      }
+    }
+  }
+
+  private giveDanceToAll() {
+    if (!this.danceSource) return;
+    for (const runner of this.roster.values()) {
+      const hasDance = [...runner.clips.keys()].some((name) => /dance/i.test(name));
+      if (hasDance) continue;
+      const clip = this.retargetClip(this.danceSource, runner.model, this.danceHipsRest);
+      if (runner.id === "thehodlr") this.keepHeadRest(clip, runner.model);
+      const action = runner.mixer.clipAction(clip);
+      action.loop = THREE.LoopRepeat;
+      action.clampWhenFinished = false;
+      runner.clips.set(clip.name, action);
     }
   }
 
@@ -625,7 +757,7 @@ class RailWorld {
     this.current = null;
     this.play(this.phase === "dead" ? "Dead" : "Run", 0);
     if (announce) {
-      this.flash = next.name;
+      this.flash = runnerLabel(next.name);
       this.flashT = 0.8;
     }
     this.push(true);
@@ -639,6 +771,8 @@ class RailWorld {
     if (name === "OTTER") return !this.otterUnlocked;
     if (name === "FIGGE") return !this.figgeUnlocked;
     if (name === "THEHODLR") return !this.thehodlrUnlocked;
+    if (name === "AFTERAPE") return !this.afterapeUnlocked;
+    if (name === "DEADBEAVER") return !this.deadbeaverUnlocked;
     return false;
   }
 
@@ -664,14 +798,18 @@ class RailWorld {
                     ? "figge"
                     : name === "THEHODLR"
                       ? "thehodlr"
-                      : "gimbo";
+                      : name === "AFTERAPE"
+                        ? "afterape"
+                        : name === "DEADBEAVER"
+                          ? "deadbeaver"
+                          : "gimbo";
     if (!this.roster.has(id) || id === this.runnerId) return;
     this.activate(id, true);
   }
 
   private swapRunner() {
     if (!this.modelReady) return;
-    const order: RunnerId[] = ["apecat", "boggo", "gimbo", "pinky", "koko", "spooky", "ramdawg", "otter", "figge", "thehodlr"];
+    const order: RunnerId[] = ["apecat", "boggo", "gimbo", "pinky", "koko", "spooky", "ramdawg", "otter", "figge", "thehodlr", "afterape", "deadbeaver"];
     const available = order.filter((id) => {
       if (!this.roster.has(id)) return false;
       const name = this.roster.get(id)?.name;
@@ -1654,7 +1792,22 @@ class RailWorld {
     if (name === "OTTER") return "otter";
     if (name === "FIGGE") return "figge";
     if (name === "THEHODLR") return "thehodlr";
+    if (name === "AFTERAPE") return "afterape";
+    if (name === "DEADBEAVER") return "deadbeaver";
     return "gimbo";
+  }
+
+  private takeStage(name: RunnerName): StageBundle | null {
+    const runner = this.roster.get(this.runnerIdFor(name));
+    if (!runner) return null;
+    const model = cloneSkinned(runner.model) as THREE.Object3D;
+    model.visible = true;
+    let run: THREE.AnimationClip | null = runner.clips.get("Run")?.getClip() ?? runner.clips.get("Walk")?.getClip() ?? null;
+    let dance: THREE.AnimationClip | null = null;
+    for (const [clipName, action] of runner.clips) {
+      if (/dance/i.test(clipName)) dance = action.getClip();
+    }
+    return { model, run, dance };
   }
 
   private takeGhost(): GhostTape | null {
@@ -1740,6 +1893,11 @@ class RailWorld {
 
   private toggleMusic() {
     this.sfx.toggleMusic();
+    this.push(true);
+  }
+
+  private nextTrack() {
+    this.sfx.nextTrack();
     this.push(true);
   }
 
@@ -1986,7 +2144,7 @@ class RailWorld {
   private frame(t: number) {
     if (this.disposed) return;
     if (this.clockLast < 0) this.clockLast = t;
-    if (document.hidden) {
+    if (document.hidden || this.stageHold) {
       this.clockLast = t;
       return;
     }
@@ -2016,7 +2174,7 @@ class RailWorld {
       this.mixer.timeScale = scale;
       this.mixer.update(dt);
       if (this.cat && this.phase !== "dead") {
-        this.cat.rotation.y = meshyRunner(this.runnerId) ? Math.PI : MODEL_YAW;
+        this.cat.rotation.y = runnerYaw(this.runnerId);
       }
     }
 
@@ -2436,6 +2594,7 @@ class RailWorld {
       speed: this.speed,
       muted: this.muted,
       musicPaused: this.sfx.musicPaused,
+      track: this.sfx.trackName,
       flash: this.flash,
       buff: this.buffLabel(),
       newBest: this.newBest,

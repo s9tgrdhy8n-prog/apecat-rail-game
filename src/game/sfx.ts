@@ -1,4 +1,9 @@
-const TRACKS = ["/music/pulsing-2.mp3", "/music/pulsing-1.mp3"];
+const TRACKS = [
+  { src: "/music/pulsing-energy.mp3", name: "DJ Ape Cat 1" },
+  { src: "/music/pulsing-fire.mp3", name: "DJ Ape Cat 2" },
+  { src: "/music/pulsing-2.mp3", name: "DJ Ape Cat 3" },
+  { src: "/music/pulsing-1.mp3", name: "DJ Ape Cat 4" },
+];
 const GALLERY_TRACK = "/music/delusional-to-win-it.mp3";
 const MUSIC_VOL = 0.58;
 
@@ -13,9 +18,14 @@ export class Sfx {
   private gallery = false;
   private musicHeld = false;
   private gestured = false;
+  onTrack: (() => void) | null = null;
 
   get musicPaused() {
     return this.musicHeld;
+  }
+
+  get trackName() {
+    return TRACKS[this.track]?.name ?? TRACKS[0].name;
   }
 
   unlock() {
@@ -32,21 +42,30 @@ export class Sfx {
     this.spin();
   }
 
-  /** Gallery only. The two run tracks stay off until you leave. */
+  /** Gallery only. The run tracks stay off until you leave. */
   playGallery() {
     this.gallery = true;
     this.spin();
   }
 
-  /** Back to the two run tracks. */
+  /** Back to the run tracks. */
   useRunMusic() {
     this.gallery = false;
     this.spin();
   }
 
+  /** Step to the next run song. Starts on DJ Ape Cat 1 and cycles through 4. */
+  nextTrack() {
+    this.gallery = false;
+    this.track = (this.track + 1) % TRACKS.length;
+    this.musicHeld = false;
+    this.spin();
+    return this.trackName;
+  }
+
   private spin() {
     this.gestured = true;
-    const src = this.gallery ? GALLERY_TRACK : TRACKS[this.track] ?? TRACKS[0];
+    const src = this.gallery ? GALLERY_TRACK : (TRACKS[this.track] ?? TRACKS[0]).src;
     if (!this.music) {
       const audio = document.createElement("audio");
       audio.preload = "auto";
@@ -56,8 +75,9 @@ export class Sfx {
         if (this.gallery) return;
         this.track = (this.track + 1) % TRACKS.length;
         audio.loop = false;
-        audio.src = TRACKS[this.track] ?? TRACKS[0];
+        audio.src = (TRACKS[this.track] ?? TRACKS[0]).src;
         if (!this.muted && !this.musicHeld) void audio.play().catch(() => {});
+        this.onTrack?.();
       });
       document.body.appendChild(audio);
       this.music = audio;
