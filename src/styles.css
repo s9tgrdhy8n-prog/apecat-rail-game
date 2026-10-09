@@ -256,6 +256,104 @@
   height: 0.58rem;
 }
 
+/* Mobile run HUD: small thumbs on the left, swipe for more. */
+.rail-root[data-mobile="1"] .rail-picks-bar {
+  left: max(0.45rem, env(safe-area-inset-left));
+  right: auto;
+  width: min(11.25rem, calc(100vw - 6.5rem));
+  top: max(6.35rem, calc(env(safe-area-inset-top) + 5.85rem));
+  pointer-events: none;
+}
+
+.rail-root[data-mobile="1"] .rail-picks-bar .rail-pick-scroll {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x pan-y;
+  mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 0.65rem), transparent 100%);
+  pointer-events: auto;
+}
+
+.rail-root[data-mobile="1"] .rail-picks-bar .rail-pick-scroll > .rail-picks {
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-start;
+  width: max-content;
+  min-width: 0;
+  gap: 0.22rem;
+  padding: 0 0.65rem 0 0;
+}
+
+.rail-root[data-mobile="1"] .rail-picks-bar .rail-pick-scroll > .rail-picks > button {
+  flex: 0 0 2rem;
+  width: 2rem;
+  min-width: 2rem;
+  height: 2.15rem;
+  padding: 0.1rem;
+  gap: 0;
+  font-size: 0;
+  letter-spacing: 0;
+  border-radius: 0.45rem;
+  border-width: 1.5px;
+  scroll-snap-align: start;
+  box-sizing: border-box;
+}
+
+.rail-root[data-mobile="1"] .rail-picks-bar .rail-pick-scroll > .rail-picks > button > img {
+  aspect-ratio: 1 / 1;
+  width: 1.85rem;
+  height: 1.85rem;
+  max-width: 1.85rem;
+  max-height: 1.85rem;
+  object-fit: cover;
+  border-radius: 0.32rem;
+  display: block;
+}
+
+.rail-root[data-mobile="1"] .rail-picks-bar .rail-pick-scroll > .rail-picks > button span,
+.rail-root[data-mobile="1"] .rail-picks-bar .rail-pick-scroll > .rail-picks > button.is-locked em {
+  display: none;
+}
+
+.rail-root[data-mobile="1"][data-phase="run"] .rail-break,
+.rail-root[data-mobile="1"][data-phase="replay"] .rail-break {
+  display: none;
+}
+
+.rail-root[data-mobile="1"] .rail-diamond-meter {
+  top: max(3.85rem, calc(env(safe-area-inset-top) + 3.35rem));
+  left: auto;
+  right: max(0.45rem, env(safe-area-inset-right));
+  gap: 0.22rem;
+  padding: 0.16rem 0.38rem 0.16rem 0.22rem;
+  box-shadow: 0 0 10px rgba(126, 246, 255, 0.22);
+}
+
+.rail-root[data-mobile="1"] .rail-diamond-meter img {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
+.rail-root[data-mobile="1"] .rail-diamond-meter-track {
+  width: 2.75rem;
+  height: 0.4rem;
+}
+
+.rail-root[data-mobile="1"] .rail-diamond-meter em {
+  font-size: 0.56rem;
+  letter-spacing: 0.02em;
+}
+
+.rail-root[data-mobile="1"] .rail-stat-mid .rail-buff-row {
+  flex-wrap: wrap;
+  justify-content: center;
+  row-gap: 0.12rem;
+  max-width: min(11.5rem, 46vw);
+}
+
 .rail-stat-mid {
   align-items: center;
   text-align: center;

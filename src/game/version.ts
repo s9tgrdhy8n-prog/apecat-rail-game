@@ -1,2 +1,2 @@
 /** major.minor.patch — bump in VERSIONS.md on every production publish. */
-export const GAME_VERSION = "1.8.1";
+export const GAME_VERSION = "1.8.2";

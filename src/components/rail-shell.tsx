@@ -842,10 +842,14 @@ export function RailShell() {
   const pickScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const strip = pickScrollRef.current;
-    if (!strip || !window.matchMedia("(max-width: 820px)").matches) return;
-    const active = strip.querySelector<HTMLElement>(".rail-picks button.is-on");
-    active?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+    const activeSel = ".rail-picks button.is-on";
+    document.querySelectorAll<HTMLElement>(".rail-pick-scroll").forEach((strip) => {
+      strip.querySelector<HTMLElement>(activeSel)?.scrollIntoView({
+        behavior: "smooth",
+        inline: "center",
+        block: "nearest",
+      });
+    });
   }, [hud.runner]);
 
   function picks() {
@@ -1085,7 +1089,13 @@ export function RailShell() {
         </div>
       ) : null}
 
-      {showHud ? <div className="rail-picks rail-picks-bar">{picks()}</div> : null}
+      {showHud ? (
+        <div className="rail-picks-bar">
+          <div className="rail-pick-scroll">
+            {picks()}
+          </div>
+        </div>
+      ) : null}
 
       {hud.flash && !(quiet && hud.flash.includes("COLLECTED")) ? (
         <div
@@ -1685,7 +1695,7 @@ export function RailShell() {
         />
       ) : null}
 
-      {hud.phase === "menu" || hud.phase === "run" || hud.phase === "dead" ? (
+      {hud.phase === "menu" || hud.phase === "dead" ? (
         <div className="rail-modes rail-modes-dock">{controlPick()}</div>
       ) : null}
 

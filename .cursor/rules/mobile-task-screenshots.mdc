@@ -1,0 +1,19 @@
+---
+description: After any mobile UI/layout task on APECAT Rail, capture and show menu + run screenshots.
+globs:
+  - src/components/rail-shell.tsx
+  - src/styles.css
+---
+
+# Mobile task handoff shots
+
+When you finish a **mobile** UI or layout change (CSS, rail-shell HUD, touch controls, portrait strip, meters, etc.):
+
+1. Capture **two** portrait phone shots from the local dev server (`npm run dev`, Mobile mode, `390×844`, `deviceScaleFactor: 2` or `3`):
+   - **Main menu** — after tapping **Mobile** on the dock.
+   - **Playing** — after **Start**; wait for the run HUD (picks bar + diamond meter).
+2. Save under `/tmp/rail-mobile-menu-latest.png` and `/tmp/rail-mobile-run-latest.png`.
+3. **Show both images in the reply** (read the PNGs so they render in chat) and give the file paths.
+4. If the dev server is down, start it, then capture.
+
+Do not skip this when the user asked for mobile work, even for small CSS tweaks.
