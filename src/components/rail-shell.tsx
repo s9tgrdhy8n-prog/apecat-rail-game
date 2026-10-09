@@ -839,6 +839,15 @@ export function RailShell() {
     if (res?.ok && res.daily) applyWallet(token, res);
   }
 
+  const pickScrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const strip = pickScrollRef.current;
+    if (!strip || !window.matchMedia("(max-width: 820px)").matches) return;
+    const active = strip.querySelector<HTMLElement>(".rail-picks button.is-on");
+    active?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+  }, [hud.runner]);
+
   function picks() {
     return (
       <div className="rail-picks" role="group" aria-label="Runners">
@@ -1194,7 +1203,10 @@ export function RailShell() {
               >
                 View Character
               </button>
-              {picks()}
+              <div className="rail-pick-scroll" ref={pickScrollRef}>
+                {picks()}
+              </div>
+              <p className="rail-pick-hint">Swipe the row for more runners</p>
             </div>
             {hud.runner === "PINKY" && !pinkyUnlocked ? (
               <button type="button" className="rail-stats-btn" onClick={onUnlockPinky}>
@@ -1581,31 +1593,33 @@ export function RailShell() {
         </div>
       ) : null}
 
-      <button
-        type="button"
-        className="rail-mute rail-track"
-        aria-label={`Song: ${hud.track}. Next song`}
-        onClick={() => apiRef.current?.nextTrack()}
-      >
-        <SkipForward size={16} />
-        <span>{hud.track}</span>
-      </button>
-      <button
-        type="button"
-        className="rail-mute rail-pause"
-        aria-label={hud.musicPaused ? "Play music" : "Pause music"}
-        onClick={() => apiRef.current?.toggleMusic()}
-      >
-        {hud.musicPaused ? <Play size={18} /> : <Pause size={18} />}
-      </button>
-      <button
-        type="button"
-        className="rail-mute"
-        aria-label={hud.muted ? "Unmute" : "Mute"}
-        onClick={() => apiRef.current?.toggleMute()}
-      >
-        {hud.muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
-      </button>
+      <div className="rail-audio-dock">
+        <button
+          type="button"
+          className="rail-mute"
+          aria-label={hud.muted ? "Unmute" : "Mute"}
+          onClick={() => apiRef.current?.toggleMute()}
+        >
+          {hud.muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+        </button>
+        <button
+          type="button"
+          className="rail-mute rail-pause"
+          aria-label={hud.musicPaused ? "Play music" : "Pause music"}
+          onClick={() => apiRef.current?.toggleMusic()}
+        >
+          {hud.musicPaused ? <Play size={18} /> : <Pause size={18} />}
+        </button>
+        <button
+          type="button"
+          className="rail-mute rail-track"
+          aria-label={`Song: ${hud.track}. Next song`}
+          onClick={() => apiRef.current?.nextTrack()}
+        >
+          <SkipForward size={16} />
+          <span>{hud.track}</span>
+        </button>
+      </div>
 
       {hud.phase === "gallery" ? (
         <div className="rail-gallery">
