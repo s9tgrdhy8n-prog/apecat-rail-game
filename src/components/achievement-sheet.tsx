@@ -30,6 +30,10 @@ function crewLine(tally: Tally, unlocked: UnlockFlags) {
   if (unlocked.thehodlr) parts.push(`${runnerLabel("THEHODLR")} ${tally.rides.THEHODLR}`);
   if (unlocked.afterape) parts.push(`${runnerLabel("AFTERAPE")} ${tally.rides.AFTERAPE}`);
   if (unlocked.deadbeaver) parts.push(`${runnerLabel("DEADBEAVER")} ${tally.rides.DEADBEAVER}`);
+  if (unlocked.quit) parts.push(`${runnerLabel("QUIT")} ${tally.rides.QUIT}`);
+  if (unlocked.dupes) parts.push(`${runnerLabel("DUPES")} ${tally.rides.DUPES}`);
+  if (unlocked.boggybond) parts.push(`${runnerLabel("BOGGYBOND")} ${tally.rides.BOGGYBOND}`);
+  if (unlocked.gigatron) parts.push(`${runnerLabel("GIGATRON")} ${tally.rides.GIGATRON}`);
   return ` · ${parts.join(" · ")}`;
 }
 
@@ -86,7 +90,21 @@ export function AchievementSheet({
   onClose: () => void;
 }) {
   const [pane, setPane] = useState<"daily" | "weekly" | null>(null);
-  const unlocked = { pinky: save.pinky, koko: save.koko, spooky: save.spooky, ramdawg: save.ramdawg, otter: save.otter, figge: save.figge, thehodlr: save.thehodlr, afterape: save.afterape, deadbeaver: save.deadbeaver };
+  const unlocked = {
+    pinky: save.pinky,
+    koko: save.koko,
+    spooky: save.spooky,
+    ramdawg: save.ramdawg,
+    otter: save.otter,
+    figge: save.figge,
+    thehodlr: save.thehodlr,
+    afterape: save.afterape,
+    deadbeaver: save.deadbeaver,
+    quit: save.quit,
+    dupes: save.dupes,
+    boggybond: save.boggybond,
+    gigatron: save.gigatron,
+  };
   const daily = GOALS.filter((goal) => goal.period === "daily");
   const weekly = GOALS.filter((goal) => goal.period === "weekly");
   return (

@@ -56,6 +56,27 @@ const INTRO: Cell[][] = [
   ["empty", "train", "empty"],
 ];
 
+const DODGE_INTRO: Cell[][] = [
+  ["coins", "coins", "coins"],
+  ["train", "coins", "empty"],
+  ["empty", "coins", "train"],
+  ["coins", "empty", "coins"],
+  ["empty", "train", "empty"],
+  ["train", "empty", "coins"],
+];
+
+const DODGE_LIBRARY: Cell[][] = [
+  ["train", "empty", "empty"],
+  ["empty", "train", "empty"],
+  ["empty", "empty", "train"],
+  ["train", "coins", "empty"],
+  ["empty", "coins", "train"],
+  ["coins", "empty", "train"],
+  ["train", "empty", "coins"],
+  ["coins", "train", "empty"],
+  ["empty", "train", "coins"],
+];
+
 const LIBRARY: Cell[][] = [
   ["train", "empty", "empty"],
   ["empty", "train", "empty"],
@@ -133,10 +154,40 @@ export function mountRail(canvas: HTMLCanvasElement, onHud: (h: Hud) => void) {
   };
 }
 
-type RunnerId = "apecat" | "boggo" | "gimbo" | "pinky" | "koko" | "spooky" | "ramdawg" | "otter" | "figge" | "thehodlr" | "afterape" | "deadbeaver";
+type RunnerId =
+  | "apecat"
+  | "boggo"
+  | "gimbo"
+  | "pinky"
+  | "koko"
+  | "spooky"
+  | "ramdawg"
+  | "otter"
+  | "figge"
+  | "thehodlr"
+  | "afterape"
+  | "deadbeaver"
+  | "quit"
+  | "dupes"
+  | "boggybond"
+  | "gigatron";
 
 function meshyRunner(id: RunnerId) {
-  return id === "pinky" || id === "koko" || id === "spooky" || id === "ramdawg" || id === "otter" || id === "figge" || id === "thehodlr" || id === "afterape" || id === "deadbeaver";
+  return (
+    id === "pinky" ||
+    id === "koko" ||
+    id === "spooky" ||
+    id === "ramdawg" ||
+    id === "otter" ||
+    id === "figge" ||
+    id === "thehodlr" ||
+    id === "afterape" ||
+    id === "deadbeaver" ||
+    id === "quit" ||
+    id === "dupes" ||
+    id === "boggybond" ||
+    id === "gigatron"
+  );
 }
 
 /** Meshy rigs, including the new APECAT, face down the tunnel. */
@@ -180,7 +231,7 @@ class RailWorld {
   private flashT = 0;
   private newBest = false;
   private loadError = "";
-  private loadsLeft = 16;
+  private loadsLeft = 0;
   private runnerId: RunnerId = "apecat";
   private runnerName: RunnerName = "APECAT";
   private runSerial = 0;
@@ -208,6 +259,15 @@ class RailWorld {
   private thehodlrUnlocked = false;
   private afterapeUnlocked = false;
   private deadbeaverUnlocked = false;
+  private quitUnlocked = false;
+  private dupesUnlocked = false;
+  private boggybondUnlocked = false;
+  private gigatronUnlocked = false;
+  private kidsOn = false;
+  private kidsDodge = false;
+  private kidsMult = 1;
+  private kidsBest = 0;
+  private kidsBestAtStart = 0;
   private speed = 0;
   private hudAcc = 0;
   private saveDirty = false;
@@ -405,6 +465,18 @@ class RailWorld {
       setDeadbeaverUnlocked: (unlocked) => {
         this.deadbeaverUnlocked = unlocked;
       },
+      setQuitUnlocked: (unlocked) => {
+        this.quitUnlocked = unlocked;
+      },
+      setDupesUnlocked: (unlocked) => {
+        this.dupesUnlocked = unlocked;
+      },
+      setBoggybondUnlocked: (unlocked) => {
+        this.boggybondUnlocked = unlocked;
+      },
+      setGigatronUnlocked: (unlocked) => {
+        this.gigatronUnlocked = unlocked;
+      },
       pause: () => this.freeze(),
       resume: () => this.beginCountdown(),
       playReplay: (tape) => this.playReplay(tape),
@@ -413,6 +485,12 @@ class RailWorld {
       holdStage: (on) => {
         this.stageHold = on;
         if (!on) this.clockLast = -1;
+      },
+      setPractice: (opts) => {
+        this.kidsOn = opts.on;
+        this.kidsDodge = opts.dodge;
+        this.kidsMult = Math.max(0.25, Math.min(5, opts.speed || 1));
+        this.push(true);
       },
     };
   }
@@ -541,6 +619,116 @@ class RailWorld {
     };
   }
 
+  private armLoad() {
+    this.loadsLeft += 1;
+  }
+
+  private ingestRunner(spec: { id: RunnerId; name: RunnerName }, gltf: { scene: THREE.Object3D; animations: THREE.AnimationClip[] }) {
+    for (const clip of gltf.animations) lockRootXZ(clip);
+    const model = gltf.scene;
+    model.visible = false;
+    const anisotropy = this.renderer.capabilities.getMaxAnisotropy();
+    model.traverse((obj) => {
+      const mesh = obj as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      mesh.frustumCulled = false;
+      mesh.castShadow = false;
+      const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+      for (const mat of mats) {
+        const maps = [
+          (mat as THREE.MeshStandardMaterial).map,
+          (mat as THREE.MeshStandardMaterial).normalMap,
+          (mat as THREE.MeshStandardMaterial).roughnessMap,
+          (mat as THREE.MeshStandardMaterial).metalnessMap,
+          (mat as THREE.MeshStandardMaterial).aoMap,
+          (mat as THREE.MeshStandardMaterial).emissiveMap,
+        ];
+        for (const tex of maps) {
+          if (!tex) continue;
+          tex.anisotropy = anisotropy;
+          tex.magFilter = THREE.LinearFilter;
+          tex.minFilter = THREE.LinearMipmapLinearFilter;
+          tex.generateMipmaps = true;
+          tex.needsUpdate = true;
+        }
+        if (spec.id === "gimbo") {
+          const std = mat as THREE.MeshStandardMaterial;
+          std.metalnessMap = null;
+          std.metalness = 0;
+          std.needsUpdate = true;
+        }
+      }
+    });
+    this.fitGroup.add(model);
+    const mixer = new THREE.AnimationMixer(model);
+    const clips = new Map<string, THREE.AnimationAction>();
+    for (const clip of gltf.animations) {
+      const action = mixer.clipAction(clip);
+      const canon = clip.name === "Running" ? "Run" : clip.name === "Walking" ? "Walk" : clip.name;
+      if (canon === "Dead") {
+        action.setLoop(THREE.LoopOnce, 1);
+        action.clampWhenFinished = true;
+      } else {
+        action.loop = THREE.LoopRepeat;
+        action.clampWhenFinished = false;
+      }
+      clips.set(canon, action);
+    }
+    if (!clips.has("Idle")) {
+      const idle = clips.get("Walk") ?? clips.get("Run");
+      if (idle) clips.set("Idle", idle);
+    }
+    if (spec.id === "pinky") {
+      this.deadSource = gltf.animations.find((clip) => clip.name === "Dead") ?? null;
+      const hips = model.getObjectByName("mixamorig:Hips");
+      if (hips) this.deadHipsRest.copy(hips.position);
+    }
+    if (!this.danceSource) {
+      const dance = gltf.animations.find((clip) => /dance/i.test(clip.name)) ?? null;
+      if (dance) {
+        this.danceSource = dance;
+        const hips = model.getObjectByName("mixamorig:Hips");
+        if (hips) this.danceHipsRest.copy(hips.position);
+        this.danceRest.clear();
+        model.traverse((obj) => {
+          if (obj.name) this.danceRest.set(obj.name, obj.quaternion.clone());
+        });
+      }
+    }
+    const fit = spec.id === "boggo" ? 1.2 : meshyRunner(spec.id) ? 1.3 : 0.7;
+    const yaw = runnerYaw(spec.id);
+    this.fitModel(model, fit, yaw);
+    this.roster.set(spec.id, { id: spec.id, name: spec.name, model, mixer, clips });
+    this.giveDeadToAll();
+    this.giveDanceToAll();
+  }
+
+  private loadRunnerGltf(spec: { id: RunnerId; name: RunnerName; url: string }, loader: GLTFLoader, gateMenu: boolean) {
+    if (gateMenu) this.armLoad();
+    loader.load(
+      spec.url,
+      (gltf) => {
+        try {
+          if (!this.disposed) {
+            this.ingestRunner(spec, gltf);
+            if (!gateMenu && this.modelReady && this.runnerName === spec.name) {
+              this.activate(spec.id, false);
+              this.push(true);
+            }
+          }
+        } catch {
+          /* bad export — skip this runner */
+        } finally {
+          if (gateMenu && !this.disposed) this.settleLoad();
+        }
+      },
+      undefined,
+      () => {
+        if (gateMenu && !this.disposed) this.settleLoad();
+      },
+    );
+  }
+
   private loadRunners() {
     const specs: { id: RunnerId; name: RunnerName; url: string }[] = [
       { id: "apecat", name: "APECAT", url: "/models/apecat_rail.glb" },
@@ -556,99 +744,15 @@ class RailWorld {
       { id: "afterape", name: "AFTERAPE", url: "/models/afterape.glb" },
       { id: "deadbeaver", name: "DEADBEAVER", url: "/models/deadbeaver.glb" },
     ];
+    const deferred: { id: RunnerId; name: RunnerName; url: string }[] = [
+      { id: "quit", name: "QUIT", url: "/models/quit.glb" },
+      { id: "dupes", name: "DUPES", url: "/models/dupes.glb" },
+      { id: "boggybond", name: "BOGGYBOND", url: "/models/boggybond.glb" },
+      { id: "gigatron", name: "GIGATRON", url: "/models/gigatron.glb" },
+    ];
     const loader = new GLTFLoader();
-    for (const spec of specs) {
-      loader.load(
-        spec.url,
-        (gltf) => {
-          if (this.disposed) return;
-          for (const clip of gltf.animations) lockRootXZ(clip);
-          const model = gltf.scene;
-          model.visible = false;
-          const anisotropy = this.renderer.capabilities.getMaxAnisotropy();
-          model.traverse((obj) => {
-            const mesh = obj as THREE.Mesh;
-            if (!mesh.isMesh) return;
-            mesh.frustumCulled = false;
-            mesh.castShadow = false;
-            const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-            for (const mat of mats) {
-              const maps = [
-                (mat as THREE.MeshStandardMaterial).map,
-                (mat as THREE.MeshStandardMaterial).normalMap,
-                (mat as THREE.MeshStandardMaterial).roughnessMap,
-                (mat as THREE.MeshStandardMaterial).metalnessMap,
-                (mat as THREE.MeshStandardMaterial).aoMap,
-                (mat as THREE.MeshStandardMaterial).emissiveMap,
-              ];
-              for (const tex of maps) {
-                if (!tex) continue;
-                tex.anisotropy = anisotropy;
-                tex.magFilter = THREE.LinearFilter;
-                tex.minFilter = THREE.LinearMipmapLinearFilter;
-                tex.generateMipmaps = true;
-                tex.needsUpdate = true;
-              }
-              // This export paints the fur as metal, which hides the color map in the tunnel.
-              if (spec.id === "gimbo") {
-                const std = mat as THREE.MeshStandardMaterial;
-                std.metalnessMap = null;
-                std.metalness = 0;
-                std.needsUpdate = true;
-              }
-            }
-          });
-          this.fitGroup.add(model);
-          const mixer = new THREE.AnimationMixer(model);
-          const clips = new Map<string, THREE.AnimationAction>();
-          for (const clip of gltf.animations) {
-            const action = mixer.clipAction(clip);
-            const canon = clip.name === "Running" ? "Run" : clip.name === "Walking" ? "Walk" : clip.name;
-            if (canon === "Dead") {
-              action.setLoop(THREE.LoopOnce, 1);
-              action.clampWhenFinished = true;
-            } else {
-              action.loop = THREE.LoopRepeat;
-              action.clampWhenFinished = false;
-            }
-            clips.set(canon, action);
-          }
-          if (!clips.has("Idle")) {
-            const idle = clips.get("Walk") ?? clips.get("Run");
-            if (idle) clips.set("Idle", idle);
-          }
-          if (spec.id === "pinky") {
-            this.deadSource = gltf.animations.find((clip) => clip.name === "Dead") ?? null;
-            const hips = model.getObjectByName("mixamorig:Hips");
-            if (hips) this.deadHipsRest.copy(hips.position);
-          }
-          if (!this.danceSource) {
-            const dance = gltf.animations.find((clip) => /dance/i.test(clip.name)) ?? null;
-            if (dance) {
-              this.danceSource = dance;
-              const hips = model.getObjectByName("mixamorig:Hips");
-              if (hips) this.danceHipsRest.copy(hips.position);
-              this.danceRest.clear();
-              model.traverse((obj) => {
-                if (obj.name) this.danceRest.set(obj.name, obj.quaternion.clone());
-              });
-            }
-          }
-          const fit = spec.id === "boggo" ? 1.2 : meshyRunner(spec.id) ? 1.3 : 0.7;
-          const yaw = runnerYaw(spec.id);
-          this.fitModel(model, fit, yaw);
-          this.roster.set(spec.id, { id: spec.id, name: spec.name, model, mixer, clips });
-          this.giveDeadToAll();
-          this.giveDanceToAll();
-          this.settleLoad();
-        },
-        undefined,
-        () => {
-          if (this.disposed) return;
-          this.settleLoad();
-        },
-      );
-    }
+    for (const spec of specs) this.loadRunnerGltf(spec, loader, true);
+    for (const spec of deferred) this.loadRunnerGltf(spec, loader, false);
   }
 
   private giveDeadToAll() {
@@ -773,43 +877,41 @@ class RailWorld {
     if (name === "THEHODLR") return !this.thehodlrUnlocked;
     if (name === "AFTERAPE") return !this.afterapeUnlocked;
     if (name === "DEADBEAVER") return !this.deadbeaverUnlocked;
+    if (name === "QUIT") return !this.quitUnlocked;
+    if (name === "DUPES") return !this.dupesUnlocked;
+    if (name === "BOGGYBOND") return !this.boggybondUnlocked;
+    if (name === "GIGATRON") return !this.gigatronUnlocked;
     return false;
   }
 
   private pickRunner(name: RunnerName) {
     if (!this.modelReady) return;
     if (this.lockedRunner(name) && this.phase === "run") return;
-    const id: RunnerId =
-      name === "APECAT"
-        ? "apecat"
-        : name === "BOGGY"
-          ? "boggo"
-          : name === "PINKY"
-            ? "pinky"
-            : name === "KOKO"
-              ? "koko"
-              : name === "SPOOKY"
-                ? "spooky"
-                : name === "RAMDAWG"
-                  ? "ramdawg"
-                  : name === "OTTER"
-                  ? "otter"
-                  : name === "FIGGE"
-                    ? "figge"
-                    : name === "THEHODLR"
-                      ? "thehodlr"
-                      : name === "AFTERAPE"
-                        ? "afterape"
-                        : name === "DEADBEAVER"
-                          ? "deadbeaver"
-                          : "gimbo";
+    const id = this.runnerIdFor(name);
     if (!this.roster.has(id) || id === this.runnerId) return;
     this.activate(id, true);
   }
 
   private swapRunner() {
     if (!this.modelReady) return;
-    const order: RunnerId[] = ["apecat", "boggo", "gimbo", "pinky", "koko", "spooky", "ramdawg", "otter", "figge", "thehodlr", "afterape", "deadbeaver"];
+    const order: RunnerId[] = [
+      "apecat",
+      "boggo",
+      "gimbo",
+      "pinky",
+      "koko",
+      "spooky",
+      "ramdawg",
+      "otter",
+      "figge",
+      "thehodlr",
+      "afterape",
+      "deadbeaver",
+      "quit",
+      "dupes",
+      "boggybond",
+      "gigatron",
+    ];
     const available = order.filter((id) => {
       if (!this.roster.has(id)) return false;
       const name = this.roster.get(id)?.name;
@@ -1259,6 +1361,7 @@ class RailWorld {
       { tag: "surge", color: 0xffe14a, url: "/models/Surge_Skull_AC.glb" },
     ];
     const loader = new GLTFLoader();
+    this.armLoad();
     let pending = specs.length;
     const finish = () => {
       pending -= 1;
@@ -1317,6 +1420,7 @@ class RailWorld {
 
   private loadBearWalls() {
     const loader = new GLTFLoader();
+    this.armLoad();
     loader.load("/models/bear_wall_slider.glb", (gltf) => {
       if (this.disposed) return;
       const src = gltf.scene;
@@ -1365,6 +1469,7 @@ class RailWorld {
 
   private loadShortBears() {
     const loader = new GLTFLoader();
+    this.armLoad();
     loader.load("/models/short_bear_wall.glb", (gltf) => {
       if (this.disposed) return;
       const src = gltf.scene;
@@ -1430,6 +1535,7 @@ class RailWorld {
 
   private loadCoins() {
     const loader = new GLTFLoader();
+    this.armLoad();
     loader.load("/models/apecat_coin.glb", (gltf) => {
       if (this.disposed) return;
       const src = gltf.scene;
@@ -1601,6 +1707,7 @@ class RailWorld {
   }
 
   private armSlider(cells: Cell[], z: number) {
+    if (this.kidsOn && this.kidsDodge) return;
     if (this.heat() < 0.2) return;
     const opts: { index: number; dir: number }[] = [];
     for (let i = 0; i < 3; i++) {
@@ -1632,6 +1739,18 @@ class RailWorld {
   }
 
   private takePattern(): Cell[] {
+    if (this.kidsOn && this.kidsDodge) {
+      if (this.introI < DODGE_INTRO.length) {
+        const row = DODGE_INTRO[this.introI]!;
+        this.introI += 1;
+        return row;
+      }
+      const pool = DODGE_LIBRARY.filter((row) => row[this.safe] !== "train");
+      const row = pool[Math.floor(this.roll() * pool.length)] ?? ["empty", "coins", "empty"];
+      const neigh = [this.safe - 1, this.safe + 1].filter((j) => j >= 0 && j < 3 && row[j] !== "train");
+      if (neigh.length && this.roll() < 0.45) this.safe = neigh[Math.floor(this.roll() * neigh.length)]!;
+      return row;
+    }
     if (this.introI < INTRO.length) {
       const row = INTRO[this.introI]!;
       this.introI += 1;
@@ -1692,7 +1811,7 @@ class RailWorld {
     this.sfx.startMusic();
     this.sfx.startRumble();
     this.beginAttempt(Math.floor(Math.random() * 0x100000000));
-    this.recording = true;
+    this.recording = !this.kidsOn;
     this.phase = "run";
     this.play("Run");
     this.push(true);
@@ -1758,6 +1877,7 @@ class RailWorld {
     this.safe = 1;
     this.endZ = 12;
     this.bestAtStart = this.best;
+    this.kidsBestAtStart = this.kidsBest;
     this.keys.delete("Space");
     this.keys.delete("KeyW");
     this.keys.delete("ArrowUp");
@@ -1794,6 +1914,10 @@ class RailWorld {
     if (name === "THEHODLR") return "thehodlr";
     if (name === "AFTERAPE") return "afterape";
     if (name === "DEADBEAVER") return "deadbeaver";
+    if (name === "QUIT") return "quit";
+    if (name === "DUPES") return "dupes";
+    if (name === "BOGGYBOND") return "boggybond";
+    if (name === "GIGATRON") return "gigatron";
     return "gimbo";
   }
 
@@ -1904,6 +2028,7 @@ class RailWorld {
   private nudge(dir: Nudge) {
     const live = this.phase === "run" || (this.phase === "replay" && this.applying);
     if (!live || this.paused || this.countdown > 0) return;
+    if (this.kidsOn && this.kidsDodge && (dir === "jump" || dir === "slide")) return;
     if (this.phase === "run" && !this.applying) this.note({ k: "nudge", dir });
     if (dir === -1) this.requestLane(-1);
     else if (dir === 1) this.requestLane(1);
@@ -1918,6 +2043,7 @@ class RailWorld {
 
   /** Finger down matches a key. Finger up cuts the jump or stands up from a duck. */
   private hold(action: "jump" | "slide", down: boolean) {
+    if (this.kidsOn && this.kidsDodge) return;
     if (this.replaying && !this.applying) return;
     if (this.paused || this.countdown > 0) return;
     if (down) {
@@ -2122,12 +2248,17 @@ class RailWorld {
     this.shield = false;
     this.shieldRing.visible = false;
     this.trauma = 1;
-    this.newBest = this.score > this.bestAtStart && this.score > 0;
-    if (this.score > this.best) this.best = this.score;
+    if (this.kidsOn) {
+      this.newBest = this.score > this.kidsBestAtStart && this.score > 0;
+      if (this.score > this.kidsBest) this.kidsBest = this.score;
+    } else {
+      this.newBest = this.score > this.bestAtStart && this.score > 0;
+      if (this.score > this.best) this.best = this.score;
+      this.persist();
+    }
     this.runSerial += 1;
     this.sfx.die();
     this.playDead();
-    this.persist();
     this.push(true);
   }
 
@@ -2235,8 +2366,12 @@ class RailWorld {
   }
 
   private simRun(dt: number) {
-    const ramp = 1 - Math.exp(-this.meters / 340);
-    this.speed = SPEED_MIN + (SPEED_MAX - SPEED_MIN) * ramp;
+    if (this.kidsOn) {
+      this.speed = SPEED_MIN * this.kidsMult;
+    } else {
+      const ramp = 1 - Math.exp(-this.meters / 340);
+      this.speed = SPEED_MIN + (SPEED_MAX - SPEED_MIN) * ramp;
+    }
     this.sfx.setSpeed(this.speed);
     const dz = this.speed * dt;
     this.scroll = dz;
@@ -2307,6 +2442,10 @@ class RailWorld {
 
   private tally() {
     this.score = Math.floor(this.meters) + this.points;
+    if (this.kidsOn) {
+      if (this.score > this.kidsBest) this.kidsBest = this.score;
+      return;
+    }
     if (this.score > this.best) {
       this.best = this.score;
       this.saveDirty = true;
@@ -2356,7 +2495,7 @@ class RailWorld {
       this.keys.has("Space") ||
       this.keys.has("ArrowUp") ||
       this.keys.has("KeyW");
-    if ((jumpNow && !this.wasJump) || this.queueJump) this.tryJump();
+    if (!(this.kidsOn && this.kidsDodge) && ((jumpNow && !this.wasJump) || this.queueJump)) this.tryJump();
     this.wasJump = jumpNow;
     this.queueJump = false;
 
@@ -2366,7 +2505,7 @@ class RailWorld {
       this.keys.has("KeyS") ||
       this.keys.has("ArrowDown") ||
       this.keys.has("ControlLeft");
-    if ((slideNow && !this.wasSlide) || this.queueSlide) this.trySlide();
+    if (!(this.kidsOn && this.kidsDodge) && ((slideNow && !this.wasSlide) || this.queueSlide)) this.trySlide();
     if (this.sliding && !slideNow && !this.queueSlide && !this.slideLatched) {
       this.sliding = false;
       this.slideT = 0;
@@ -2590,7 +2729,7 @@ class RailWorld {
       coins: this.coins,
       meters: Math.floor(this.meters),
       score: this.score,
-      best: this.best,
+      best: this.kidsOn ? this.kidsBest : this.best,
       speed: this.speed,
       muted: this.muted,
       musicPaused: this.sfx.musicPaused,

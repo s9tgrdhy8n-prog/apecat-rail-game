@@ -161,6 +161,66 @@
   max-width: none;
 }
 
+.rail-menu .rail-pick-block,
+.rail-dead .rail-pick-block {
+  width: 100%;
+  align-items: stretch;
+}
+
+.rail-menu .rail-pick-scroll,
+.rail-dead .rail-pick-scroll {
+  container-type: inline-size;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x pan-y;
+  mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 1.5rem), transparent 100%);
+}
+
+.rail-menu .rail-pick-scroll > .rail-picks,
+.rail-dead .rail-pick-scroll > .rail-picks {
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  width: max-content;
+  min-width: 100%;
+  gap: 0.32rem;
+  padding: 0.05rem 1.5rem 0.1rem 0.05rem;
+}
+
+.rail-menu .rail-pick-scroll > .rail-picks > button,
+.rail-dead .rail-pick-scroll > .rail-picks > button {
+  --pick-gap: 0.32rem;
+  flex: 0 0 calc((100cqw - 4 * var(--pick-gap)) / 5);
+  width: calc((100cqw - 4 * var(--pick-gap)) / 5);
+  min-width: calc((100cqw - 4 * var(--pick-gap)) / 5);
+  max-width: none;
+  scroll-snap-align: center;
+}
+
+.rail-menu .rail-pick-scroll > .rail-picks > button > img,
+.rail-dead .rail-pick-scroll > .rail-picks > button > img {
+  aspect-ratio: 3 / 4;
+  width: 100%;
+  height: auto;
+  max-height: none;
+  object-fit: cover;
+}
+
+.rail-menu .rail-pick-hint,
+.rail-dead .rail-pick-hint {
+  display: block;
+  margin: 0;
+  width: 100%;
+  text-align: center;
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+  color: rgba(255, 248, 232, 0.62);
+}
+
 .rail-picks button.is-locked em {
   display: inline-flex;
   align-items: center;
@@ -780,6 +840,94 @@
 .rail-touch button:focus-visible {
   outline: 2px solid var(--color-cream);
   outline-offset: 3px;
+}
+
+.rail-kids-open,
+.rail-kids-mark {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  pointer-events: auto;
+  align-self: center;
+  width: min(42%, 7.5rem);
+}
+
+.rail-kids-mark {
+  width: min(46%, 8.5rem);
+}
+
+.rail-kids-open img,
+.rail-kids-mark img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 0.85rem;
+  box-shadow: 0 0 16px rgba(61, 255, 246, 0.35);
+}
+
+.rail-kids {
+  align-items: center;
+}
+
+.rail-kids-toggle,
+.rail-kids-speeds {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.35rem;
+  width: 100%;
+}
+
+.rail-kids-toggle button,
+.rail-kids-speeds button {
+  appearance: none;
+  border: 1.5px solid rgba(61, 255, 246, 0.45);
+  background: rgba(4, 24, 30, 0.72);
+  color: #e8fffe;
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  letter-spacing: 0.03em;
+  border-radius: 999px;
+  padding: 0.28rem 0.7rem;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.rail-kids-toggle button.is-on,
+.rail-kids-speeds button.is-on {
+  background: #04181e;
+  border-color: #3dfff6;
+  box-shadow: 0 0 12px #3dfff6;
+  text-shadow: 0 0 8px #3dfff6;
+}
+
+.rail-kids-board {
+  width: 100%;
+  text-align: left;
+}
+
+.rail-kids-board ol {
+  list-style: none;
+  margin: 0.2rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.rail-kids-board li {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 0.6rem;
+  align-items: baseline;
+  font-size: 0.82rem;
+}
+
+.rail-kids-board em {
+  font-style: normal;
+  color: rgba(255, 248, 232, 0.62);
 }
 
 .rail-modes {
@@ -1605,9 +1753,8 @@
 
   .rail-menu .rail-view-open,
   .rail-dead .rail-view-open {
-    font-size: 0.92rem;
-    padding: 0.18rem 0.7rem;
-    box-shadow: 0 0.12rem 0 var(--color-gold-2);
+    font-size: 0.68rem;
+    padding: 0.08rem 0.55rem;
   }
 
   .rail-dead .rail-picks button > img {
@@ -2097,25 +2244,32 @@ a.rail-start {
 }
 
 .rail-view-open {
+  align-self: center;
   width: auto;
   height: auto;
   display: inline-flex;
   align-items: center;
-  border: 0;
+  border: 1.5px solid #3dfff6;
   border-radius: 999px;
-  background: var(--color-gold);
-  color: var(--color-ink);
+  background: #04181e;
+  color: #e8fffe;
   font-family: var(--font-display);
-  font-size: 1.05rem;
-  letter-spacing: 0.03em;
-  padding: 0.35rem 0.85rem;
-  box-shadow: 0 0.18rem 0 var(--color-gold-2);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  padding: 0.12rem 0.62rem;
+  box-shadow:
+    0 0 10px #3dfff6,
+    0 0.1rem 0 #128ea0;
+  text-shadow: 0 0 8px #3dfff6;
   cursor: pointer;
   pointer-events: auto;
 }
 
 .rail-view-open:hover {
   transform: translateY(-1px);
+  box-shadow:
+    0 0 16px #3dfff6,
+    0 0.1rem 0 #128ea0;
 }
 
 .rail-stage {

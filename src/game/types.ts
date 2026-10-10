@@ -3,7 +3,23 @@ import type { GhostTape } from "@/game/replay";
 
 export type Phase = "loading" | "menu" | "run" | "dead" | "gallery" | "replay";
 
-export type RunnerName = "APECAT" | "BOGGY" | "GIMBO" | "PINKY" | "KOKO" | "SPOOKY" | "RAMDAWG" | "OTTER" | "FIGGE" | "THEHODLR" | "AFTERAPE" | "DEADBEAVER";
+export type RunnerName =
+  | "APECAT"
+  | "BOGGY"
+  | "GIMBO"
+  | "PINKY"
+  | "KOKO"
+  | "SPOOKY"
+  | "RAMDAWG"
+  | "OTTER"
+  | "FIGGE"
+  | "THEHODLR"
+  | "AFTERAPE"
+  | "DEADBEAVER"
+  | "QUIT"
+  | "DUPES"
+  | "BOGGYBOND"
+  | "GIGATRON";
 
 export type Hud = {
   phase: Phase;
@@ -72,6 +88,10 @@ export type RailApi = {
   setThehodlrUnlocked: (unlocked: boolean) => void;
   setAfterapeUnlocked: (unlocked: boolean) => void;
   setDeadbeaverUnlocked: (unlocked: boolean) => void;
+  setQuitUnlocked: (unlocked: boolean) => void;
+  setDupesUnlocked: (unlocked: boolean) => void;
+  setBoggybondUnlocked: (unlocked: boolean) => void;
+  setGigatronUnlocked: (unlocked: boolean) => void;
   pause: () => void;
   resume: () => void;
   playReplay: (tape: GhostTape) => void;
@@ -80,6 +100,8 @@ export type RailApi = {
   takeStage: (name: RunnerName) => StageBundle | null;
   /** Freeze the tunnel while the view box is open so only that window is drawing. */
   holdStage: (on: boolean) => void;
+  /** Practice tunnel. Scores stay off the ranked rail. */
+  setPractice: (opts: { on: boolean; dodge: boolean; speed: number }) => void;
 };
 
 export const EMPTY_HUD: Hud = {

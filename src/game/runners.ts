@@ -13,10 +13,15 @@ const LABELS: Record<RunnerName, string> = {
   THEHODLR: "TheHoldr\u200bCollective",
   AFTERAPE: "AFTER APES",
   DEADBEAVER: "deadbeaver\u200b.eth",
+  QUIT: "Quit",
+  DUPES: "Dupes",
+  BOGGYBOND: "Boggy Bond",
+  GIGATRON: "GIGATRON",
 };
 
 const HANDLES: Partial<Record<RunnerName, string>> = {
   APECAT: "apecatsol",
+  BOGGY: "BoggyCoinSol",
   PINKY: "2577pink",
   KOKO: "Bayc364",
   SPOOKY: "SpookyB0nez",
@@ -25,6 +30,10 @@ const HANDLES: Partial<Record<RunnerName, string>> = {
   THEHODLR: "HodlrCollective",
   AFTERAPE: "AFTER_APES",
   DEADBEAVER: "Niffshockcollar",
+  QUIT: "0xQuit",
+  DUPES: "acdupes",
+  BOGGYBOND: "BoggyCoinSol",
+  GIGATRON: "web3smb",
 };
 
 export function runnerLabel(name: RunnerName | string) {

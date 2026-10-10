@@ -31,6 +31,18 @@ export const AFTERAPE_COST = 169;
 /** Diamond Skulls to unlock Dead Beaver for good. */
 export const DEADBEAVER_COST = 169;
 
+/** Diamond Skulls to unlock Quit for good. */
+export const QUIT_COST = 169;
+
+/** Diamond Skulls to unlock Dupes for good. */
+export const DUPES_COST = 169;
+
+/** Diamond Skulls to unlock Boggy Bond for good. */
+export const BOGGYBOND_COST = 169;
+
+/** Diamond Skulls to unlock GIGATRON for good. */
+export const GIGATRON_COST = 169;
+
 export type RunFacts = {
   score: number;
   meters: number;
@@ -84,6 +96,10 @@ export type AchievementSave = {
   thehodlr: boolean;
   afterape: boolean;
   deadbeaver: boolean;
+  quit: boolean;
+  dupes: boolean;
+  boggybond: boolean;
+  gigatron: boolean;
   claims: string[];
   dailyKey: string;
   weeklyKey: string;
@@ -99,7 +115,7 @@ export const GOALS: Goal[] = [
     period: "daily",
     title: "Take the tunnel",
     detail: "Finish 25 runs.",
-    skulls: 1,
+    skulls: 3,
     target: 25,
     read: (tally) => tally.runs,
   },
@@ -108,7 +124,7 @@ export const GOALS: Goal[] = [
     period: "daily",
     title: "Coin pocket",
     detail: "Collect 1,200 $APECAT coins today.",
-    skulls: 2,
+    skulls: 6,
     target: 1200,
     read: (tally) => tally.coins,
   },
@@ -117,7 +133,7 @@ export const GOALS: Goal[] = [
     period: "daily",
     title: "Long rail",
     detail: "Reach 2,500 meters in one run.",
-    skulls: 2,
+    skulls: 6,
     target: 2500,
     read: (tally) => tally.bestMeters,
   },
@@ -126,7 +142,7 @@ export const GOALS: Goal[] = [
     period: "daily",
     title: "Skull touch",
     detail: "Pick up 60 shield, magnet, or surge skulls.",
-    skulls: 1,
+    skulls: 3,
     target: 60,
     read: (tally) => tally.shields + tally.magnets + tally.surges,
   },
@@ -135,7 +151,7 @@ export const GOALS: Goal[] = [
     period: "weekly",
     title: "450 rides",
     detail: "Finish 450 runs this week.",
-    skulls: 4,
+    skulls: 12,
     target: 450,
     read: (tally) => tally.runs,
   },
@@ -144,7 +160,7 @@ export const GOALS: Goal[] = [
     period: "weekly",
     title: "Distance week",
     detail: "Cover 180,000 meters this week.",
-    skulls: 5,
+    skulls: 15,
     target: 180000,
     read: (tally) => tally.meters,
   },
@@ -153,7 +169,7 @@ export const GOALS: Goal[] = [
     period: "weekly",
     title: "Clean score",
     detail: "Score 30,000 in one run.",
-    skulls: 6,
+    skulls: 18,
     target: 30000,
     read: (tally) => tally.bestScore,
   },
@@ -161,23 +177,52 @@ export const GOALS: Goal[] = [
     id: "week-crew",
     period: "weekly",
     title: "The whole crew",
-    detail: "Finish 30 runs as Ape Cat, 30 as BOGGY, and 30 as GIMBO. Pinky, KOKO, Spooky, RamDawg, OTTER, Figge, TheHoldrCollective, AFTER APES, and deadbeaver.eth count after you unlock them.",
-    skulls: 5,
+    detail: "Finish 30 runs as Ape Cat, 30 as BOGGY, and 30 as GIMBO. Other unlockable runners count after you unlock them.",
+    skulls: 15,
     target: 30,
-    read: (tally) => crewProgress(tally, { pinky: false, koko: false, spooky: false, ramdawg: false, otter: false, figge: false, thehodlr: false, afterape: false, deadbeaver: false }),
+    read: (tally) =>
+      crewProgress(tally, {
+        pinky: false,
+        koko: false,
+        spooky: false,
+        ramdawg: false,
+        otter: false,
+        figge: false,
+        thehodlr: false,
+        afterape: false,
+        deadbeaver: false,
+        quit: false,
+        dupes: false,
+        boggybond: false,
+        gigatron: false,
+      }),
   },
   {
     id: "week-coins",
     period: "weekly",
     title: "Coin vault",
     detail: "Collect 25,000 $APECAT coins this week.",
-    skulls: 5,
+    skulls: 15,
     target: 25000,
     read: (tally) => tally.coins,
   },
 ];
 
-export type UnlockFlags = { pinky: boolean; koko: boolean; spooky: boolean; ramdawg: boolean; otter: boolean; figge: boolean; thehodlr: boolean; afterape: boolean; deadbeaver: boolean };
+export type UnlockFlags = {
+  pinky: boolean;
+  koko: boolean;
+  spooky: boolean;
+  ramdawg: boolean;
+  otter: boolean;
+  figge: boolean;
+  thehodlr: boolean;
+  afterape: boolean;
+  deadbeaver: boolean;
+  quit: boolean;
+  dupes: boolean;
+  boggybond: boolean;
+  gigatron: boolean;
+};
 
 /** Lowest finished-run count across the crew. Paid runners join after unlock. */
 export function crewProgress(tally: Tally, unlocked: UnlockFlags) {
@@ -191,6 +236,10 @@ export function crewProgress(tally: Tally, unlocked: UnlockFlags) {
   if (unlocked.thehodlr) counts.push(tally.rides.THEHODLR);
   if (unlocked.afterape) counts.push(tally.rides.AFTERAPE);
   if (unlocked.deadbeaver) counts.push(tally.rides.DEADBEAVER);
+  if (unlocked.quit) counts.push(tally.rides.QUIT);
+  if (unlocked.dupes) counts.push(tally.rides.DUPES);
+  if (unlocked.boggybond) counts.push(tally.rides.BOGGYBOND);
+  if (unlocked.gigatron) counts.push(tally.rides.GIGATRON);
   return Math.min(...counts);
 }
 
@@ -205,6 +254,10 @@ export function crewDetail(unlocked: UnlockFlags) {
   if (unlocked.thehodlr) bits.push(`30 as ${runnerLabel("THEHODLR")}`);
   if (unlocked.afterape) bits.push(`30 as ${runnerLabel("AFTERAPE")}`);
   if (unlocked.deadbeaver) bits.push(`30 as ${runnerLabel("DEADBEAVER")}`);
+  if (unlocked.quit) bits.push(`30 as ${runnerLabel("QUIT")}`);
+  if (unlocked.dupes) bits.push(`30 as ${runnerLabel("DUPES")}`);
+  if (unlocked.boggybond) bits.push(`30 as ${runnerLabel("BOGGYBOND")}`);
+  if (unlocked.gigatron) bits.push(`30 as ${runnerLabel("GIGATRON")}`);
   return `Finish ${bits.slice(0, -1).join(", ")}, and ${bits[bits.length - 1]}.`;
 }
 
@@ -224,7 +277,24 @@ export function emptyTally(): Tally {
     bestCoins: 0,
     maxCombo: 0,
     runners: [],
-    rides: { APECAT: 0, BOGGY: 0, GIMBO: 0, PINKY: 0, KOKO: 0, SPOOKY: 0, RAMDAWG: 0, OTTER: 0, FIGGE: 0, THEHODLR: 0, AFTERAPE: 0, DEADBEAVER: 0 },
+    rides: {
+      APECAT: 0,
+      BOGGY: 0,
+      GIMBO: 0,
+      PINKY: 0,
+      KOKO: 0,
+      SPOOKY: 0,
+      RAMDAWG: 0,
+      OTTER: 0,
+      FIGGE: 0,
+      THEHODLR: 0,
+      AFTERAPE: 0,
+      DEADBEAVER: 0,
+      QUIT: 0,
+      DUPES: 0,
+      BOGGYBOND: 0,
+      GIGATRON: 0,
+    },
   };
 }
 
@@ -251,6 +321,10 @@ function freshSave(now = new Date()): AchievementSave {
     thehodlr: false,
     afterape: false,
     deadbeaver: false,
+    quit: false,
+    dupes: false,
+    boggybond: false,
+    gigatron: false,
     claims: [],
     dailyKey: utcDay(now),
     weeklyKey: utcWeek(now),
@@ -267,7 +341,25 @@ function num(value: unknown) {
 function tallyFrom(raw: unknown): Tally {
   const row = raw && typeof raw === "object" ? (raw as Partial<Tally>) : {};
   const runners = Array.isArray(row.runners)
-    ? row.runners.filter((name): name is RunnerName => name === "APECAT" || name === "BOGGY" || name === "GIMBO" || name === "PINKY" || name === "KOKO" || name === "SPOOKY" || name === "RAMDAWG" || name === "OTTER" || name === "FIGGE" || name === "THEHODLR" || name === "AFTERAPE" || name === "DEADBEAVER")
+    ? row.runners.filter(
+        (name): name is RunnerName =>
+          name === "APECAT" ||
+          name === "BOGGY" ||
+          name === "GIMBO" ||
+          name === "PINKY" ||
+          name === "KOKO" ||
+          name === "SPOOKY" ||
+          name === "RAMDAWG" ||
+          name === "OTTER" ||
+          name === "FIGGE" ||
+          name === "THEHODLR" ||
+          name === "AFTERAPE" ||
+          name === "DEADBEAVER" ||
+          name === "QUIT" ||
+          name === "DUPES" ||
+          name === "BOGGYBOND" ||
+          name === "GIGATRON",
+      )
     : [];
   return {
     runs: num(row.runs),
@@ -297,6 +389,10 @@ function tallyFrom(raw: unknown): Tally {
       THEHODLR: num(row.rides?.THEHODLR),
       AFTERAPE: num(row.rides?.AFTERAPE),
       DEADBEAVER: num(row.rides?.DEADBEAVER),
+      QUIT: num(row.rides?.QUIT),
+      DUPES: num(row.rides?.DUPES),
+      BOGGYBOND: num(row.rides?.BOGGYBOND),
+      GIGATRON: num(row.rides?.GIGATRON),
     },
   };
 }
@@ -331,6 +427,10 @@ function readRaw(token: string): AchievementSave {
       thehodlr: parsed.thehodlr === true,
       afterape: parsed.afterape === true,
       deadbeaver: parsed.deadbeaver === true,
+      quit: parsed.quit === true,
+      dupes: parsed.dupes === true,
+      boggybond: parsed.boggybond === true,
+      gigatron: parsed.gigatron === true,
       claims: Array.isArray(parsed.claims) ? parsed.claims.filter((claim) => typeof claim === "string") : [],
       dailyKey: typeof parsed.dailyKey === "string" ? parsed.dailyKey : "",
       weeklyKey: typeof parsed.weeklyKey === "string" ? parsed.weeklyKey : "",
@@ -406,11 +506,47 @@ export function unlockKoko(token: string) {
   return { ok: true as const, save: next };
 }
 
-export function goalProgress(goal: Goal, tally: Tally, unlocked: UnlockFlags = { pinky: false, koko: false, spooky: false, ramdawg: false, otter: false, figge: false, thehodlr: false, afterape: false, deadbeaver: false }) {
+export function goalProgress(
+  goal: Goal,
+  tally: Tally,
+  unlocked: UnlockFlags = {
+    pinky: false,
+    koko: false,
+    spooky: false,
+    ramdawg: false,
+    otter: false,
+    figge: false,
+    thehodlr: false,
+    afterape: false,
+    deadbeaver: false,
+    quit: false,
+    dupes: false,
+    boggybond: false,
+    gigatron: false,
+  },
+) {
   return Math.min(goal.target, Math.max(0, goalValue(goal, tally, unlocked)));
 }
 
-export function goalDone(goal: Goal, tally: Tally, unlocked: UnlockFlags = { pinky: false, koko: false, spooky: false, ramdawg: false, otter: false, figge: false, thehodlr: false, afterape: false, deadbeaver: false }) {
+export function goalDone(
+  goal: Goal,
+  tally: Tally,
+  unlocked: UnlockFlags = {
+    pinky: false,
+    koko: false,
+    spooky: false,
+    ramdawg: false,
+    otter: false,
+    figge: false,
+    thehodlr: false,
+    afterape: false,
+    deadbeaver: false,
+    quit: false,
+    dupes: false,
+    boggybond: false,
+    gigatron: false,
+  },
+) {
   return goalValue(goal, tally, unlocked) >= goal.target;
 }
 
@@ -434,6 +570,10 @@ export type AchievementSnapshot = {
   thehodlr: boolean;
   afterape: boolean;
   deadbeaver: boolean;
+  quit: boolean;
+  dupes: boolean;
+  boggybond: boolean;
+  gigatron: boolean;
   paid: string[];
   daily: Tally;
   weekly: Tally;
@@ -454,6 +594,10 @@ export function adoptServerAchievements(token: string, snap: AchievementSnapshot
     thehodlr: snap.thehodlr === true,
     afterape: snap.afterape === true,
     deadbeaver: snap.deadbeaver === true,
+    quit: snap.quit === true,
+    dupes: snap.dupes === true,
+    boggybond: snap.boggybond === true,
+    gigatron: snap.gigatron === true,
     claims: Array.isArray(snap.paid) ? snap.paid.filter((claim) => typeof claim === "string") : [],
     daily: snap.daily,
     weekly: snap.weekly,

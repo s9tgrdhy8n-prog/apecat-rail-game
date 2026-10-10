@@ -13,6 +13,10 @@ const RUNNERS = new Set<RunnerName>([
   "THEHODLR",
   "AFTERAPE",
   "DEADBEAVER",
+  "QUIT",
+  "DUPES",
+  "BOGGYBOND",
+  "GIGATRON",
 ]);
 
 const KEYS = new Set([

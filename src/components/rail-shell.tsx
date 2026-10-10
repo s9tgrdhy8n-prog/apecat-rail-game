@@ -1,7 +1,26 @@
 import { useEffect, useRef, useState } from "react";
 import { Pause, Play, Bell, BellOff, Volume2, VolumeX, SkipForward } from "lucide-react";
 import { AchievementSheet } from "@/components/achievement-sheet";
-import { adoptServerAchievements, AFTERAPE_COST, DEADBEAVER_COST, FIGGE_COST, GOALS, KOKO_COST, OTTER_COST, PINKY_COST, RAMDAWG_COST, SPOOKY_COST, THEHODLR_COST, type AchievementSave, type AchievementSnapshot, type Goal } from "@/game/achievements";
+import {
+  adoptServerAchievements,
+  AFTERAPE_COST,
+  BOGGYBOND_COST,
+  DEADBEAVER_COST,
+  DUPES_COST,
+  FIGGE_COST,
+  GIGATRON_COST,
+  GOALS,
+  KOKO_COST,
+  OTTER_COST,
+  PINKY_COST,
+  QUIT_COST,
+  RAMDAWG_COST,
+  SPOOKY_COST,
+  THEHODLR_COST,
+  type AchievementSave,
+  type AchievementSnapshot,
+  type Goal,
+} from "@/game/achievements";
 import { RunnerStage } from "@/components/runner-stage";
 import { EMPTY_HUD, type Hud, type Nudge, type RailApi, type RunnerName, type StageBundle } from "@/game/types";
 import { beginRun, claimName, EMPTY_SKULLS, getBoard, getGhost, getStats, loginName, recordPlay, setPassword as savePassword, submitRun, syncDiamonds, tickRun, unlockRunner, type BoardState, type RailStats, type SkullCounts } from "@/game/board";
@@ -76,7 +95,21 @@ const RUNNERS: { name: RunnerName; src: string }[] = [
   { name: "THEHODLR", src: "/brand/thehodlr.png" },
   { name: "AFTERAPE", src: "/brand/afterape.png" },
   { name: "DEADBEAVER", src: "/brand/deadbeaver.png" },
+  { name: "QUIT", src: "/brand/quit.png" },
+  { name: "DUPES", src: "/brand/dupes.png" },
+  { name: "BOGGYBOND", src: "/brand/boggybond.png" },
+  { name: "GIGATRON", src: "/brand/gigatron.png" },
 ];
+const KIDS_SPEEDS = [
+  { id: "1", label: "1×", mult: 1 },
+  { id: "2", label: "2×", mult: 2 },
+  { id: "3", label: "3×", mult: 3 },
+  { id: "4", label: "4×", mult: 4 },
+  { id: "5", label: "5×", mult: 5 },
+] as const;
+
+type PracticeRun = { score: number; meters: number; runner: RunnerName };
+
 const MOBILE_KEY = "apecat-rail-mobile";
 const QUIET_KEY = "apecat-rail-quiet";
 
@@ -140,6 +173,10 @@ export function RailShell() {
   const [thehodlrUnlocked, setThehodlrUnlocked] = useState(false);
   const [afterapeUnlocked, setAfterapeUnlocked] = useState(false);
   const [deadbeaverUnlocked, setDeadbeaverUnlocked] = useState(false);
+  const [quitUnlocked, setQuitUnlocked] = useState(false);
+  const [dupesUnlocked, setDupesUnlocked] = useState(false);
+  const [boggybondUnlocked, setBoggybondUnlocked] = useState(false);
+  const [gigatronUnlocked, setGigatronUnlocked] = useState(false);
   const [stats, setStats] = useState<RailStats | null>(null);
   const [nameDraft, setNameDraft] = useState("");
   const [password, setPassword] = useState("");
@@ -150,6 +187,11 @@ export function RailShell() {
   const [mobile, setMobile] = useState(false);
   const [quiet, setQuiet] = useState(false);
   const [stage, setStage] = useState<StageBundle | null>(null);
+  const [practice, setPractice] = useState(false);
+  const [kidsOpen, setKidsOpen] = useState(false);
+  const [kidsStyle, setKidsStyle] = useState<"dodge" | "full">("dodge");
+  const [kidsSpeed, setKidsSpeed] = useState<(typeof KIDS_SPEEDS)[number]["id"]>("1");
+  const [sessionRuns, setSessionRuns] = useState<PracticeRun[]>([]);
   const posted = useRef(new Set<number>());
   const pinkyRef = useRef(false);
   const kokoRef = useRef(false);
@@ -160,8 +202,15 @@ export function RailShell() {
   const thehodlrRef = useRef(false);
   const afterapeRef = useRef(false);
   const deadbeaverRef = useRef(false);
+  const quitRef = useRef(false);
+  const dupesRef = useRef(false);
+  const boggybondRef = useRef(false);
+  const gigatronRef = useRef(false);
   const settle = useRef<Promise<unknown>>(Promise.resolve());
   const arming = useRef(false);
+  const practiceRef = useRef(false);
+  const practicePosted = useRef(new Set<number>());
+  practiceRef.current = practice;
   const hudRef = useRef(hud);
   hudRef.current = hud;
 
@@ -189,7 +238,7 @@ export function RailShell() {
       dead = true;
       dispose();
     };
-  }, [25]);
+  }, []);
 
   function applyWallet(nextToken: string, res: AchievementSnapshot & { earned?: { id: string }[]; fill?: number }, runSerial = 0) {
     const save = adoptServerAchievements(nextToken, res);
@@ -221,6 +270,18 @@ export function RailShell() {
     setDeadbeaverUnlocked(save.deadbeaver);
     deadbeaverRef.current = save.deadbeaver;
     apiRef.current?.setDeadbeaverUnlocked(save.deadbeaver);
+    setQuitUnlocked(save.quit);
+    quitRef.current = save.quit;
+    apiRef.current?.setQuitUnlocked(save.quit);
+    setDupesUnlocked(save.dupes);
+    dupesRef.current = save.dupes;
+    apiRef.current?.setDupesUnlocked(save.dupes);
+    setBoggybondUnlocked(save.boggybond);
+    boggybondRef.current = save.boggybond;
+    apiRef.current?.setBoggybondUnlocked(save.boggybond);
+    setGigatronUnlocked(save.gigatron);
+    gigatronRef.current = save.gigatron;
+    apiRef.current?.setGigatronUnlocked(save.gigatron);
     if (typeof res.fill === "number") setPickupFill(Math.max(0, Math.min(99, Math.floor(res.fill))));
     if (runSerial > 0) {
       const live = hudRef.current;
@@ -251,6 +312,14 @@ export function RailShell() {
     afterapeRef.current = false;
     setDeadbeaverUnlocked(false);
     deadbeaverRef.current = false;
+    setQuitUnlocked(false);
+    quitRef.current = false;
+    setDupesUnlocked(false);
+    dupesRef.current = false;
+    setBoggybondUnlocked(false);
+    boggybondRef.current = false;
+    setGigatronUnlocked(false);
+    gigatronRef.current = false;
     void syncDiamonds({ data: { token: next } })
       .then((res) => {
         if (!res.daily) return;
@@ -305,6 +374,26 @@ export function RailShell() {
   }, [deadbeaverUnlocked, hud.phase]);
 
   useEffect(() => {
+    quitRef.current = quitUnlocked;
+    apiRef.current?.setQuitUnlocked(quitUnlocked);
+  }, [quitUnlocked, hud.phase]);
+
+  useEffect(() => {
+    dupesRef.current = dupesUnlocked;
+    apiRef.current?.setDupesUnlocked(dupesUnlocked);
+  }, [dupesUnlocked, hud.phase]);
+
+  useEffect(() => {
+    boggybondRef.current = boggybondUnlocked;
+    apiRef.current?.setBoggybondUnlocked(boggybondUnlocked);
+  }, [boggybondUnlocked, hud.phase]);
+
+  useEffect(() => {
+    gigatronRef.current = gigatronUnlocked;
+    apiRef.current?.setGigatronUnlocked(gigatronUnlocked);
+  }, [gigatronUnlocked, hud.phase]);
+
+  useEffect(() => {
     if (hud.phase === "run") setJustEarned([]);
   }, [hud.phase]);
 
@@ -336,7 +425,7 @@ export function RailShell() {
   }
 
   useEffect(() => {
-    if (hud.phase !== "run" || !token) return;
+    if (practice || hud.phase !== "run" || !token) return;
     let stopped = false;
     let chain = Promise.resolve();
     const send = () => {
@@ -364,10 +453,17 @@ export function RailShell() {
       window.clearTimeout(first);
       window.clearInterval(id);
     };
-  }, [hud.phase, token]);
+  }, [hud.phase, token, practice]);
 
   function launch() {
     if (arming.current || hudRef.current.phase === "run") return;
+    if (practiceRef.current) {
+      const pace = KIDS_SPEEDS.find((row) => row.id === kidsSpeed) ?? KIDS_SPEEDS[0];
+      apiRef.current?.setPractice({ on: true, dodge: kidsStyle === "dodge", speed: pace.mult });
+      apiRef.current?.kickMusic();
+      apiRef.current?.start();
+      return;
+    }
     if (
       (hudRef.current.runner === "PINKY" && !pinkyRef.current) ||
       (hudRef.current.runner === "KOKO" && !kokoRef.current) ||
@@ -377,7 +473,11 @@ export function RailShell() {
       (hudRef.current.runner === "FIGGE" && !figgeRef.current) ||
       (hudRef.current.runner === "THEHODLR" && !thehodlrRef.current) ||
       (hudRef.current.runner === "AFTERAPE" && !afterapeRef.current) ||
-      (hudRef.current.runner === "DEADBEAVER" && !deadbeaverRef.current)
+      (hudRef.current.runner === "DEADBEAVER" && !deadbeaverRef.current) ||
+      (hudRef.current.runner === "QUIT" && !quitRef.current) ||
+      (hudRef.current.runner === "DUPES" && !dupesRef.current) ||
+      (hudRef.current.runner === "BOGGYBOND" && !boggybondRef.current) ||
+      (hudRef.current.runner === "GIGATRON" && !gigatronRef.current)
     ) {
       apiRef.current?.start();
       return;
@@ -412,8 +512,7 @@ export function RailShell() {
     apiRef.current?.noteBest(board.you.score);
   }, [board?.you?.score]);
 
-  const displayBest =
-    board?.you != null ? Math.max(hud.best, board.you.score) : hud.best;
+  const displayBest = practice ? hud.best : board?.you != null ? Math.max(hud.best, board.you.score) : hud.best;
 
   const pickedNow = hud.shields + hud.magnets + hud.surges;
   const runPickups = hud.phase === "run" ? pickedNow : Math.max(0, pickedNow - bankedThisRun);
@@ -440,7 +539,21 @@ export function RailShell() {
   }, [diamondPop]);
 
   useEffect(() => {
-    if (!token || board === null || hud.phase !== "dead" || hud.runSerial === 0) return;
+    if (!practice || hud.phase !== "dead" || hud.runSerial === 0) return;
+    if (practicePosted.current.has(hud.runSerial)) return;
+    practicePosted.current.add(hud.runSerial);
+    setSessionRuns((rows) =>
+      [...rows, { score: hud.score, meters: hud.meters, runner: hud.runner }].sort((a, b) => b.score - a.score).slice(0, 8),
+    );
+  }, [practice, hud.phase, hud.runSerial, hud.score, hud.meters, hud.runner]);
+
+  useEffect(() => {
+    const pace = KIDS_SPEEDS.find((row) => row.id === kidsSpeed) ?? KIDS_SPEEDS[0];
+    apiRef.current?.setPractice({ on: practice, dodge: kidsStyle === "dodge", speed: pace.mult });
+  }, [practice, kidsStyle, kidsSpeed, hud.phase]);
+
+  useEffect(() => {
+    if (practice || !token || board === null || hud.phase !== "dead" || hud.runSerial === 0) return;
     if (posted.current.has(hud.runSerial)) return;
     posted.current.add(hud.runSerial);
     const runSerial = hud.runSerial;
@@ -497,7 +610,7 @@ export function RailShell() {
           posted.current.delete(runSerial);
         }),
     );
-  }, [token, board, hud.phase, hud.runSerial, hud.score, hud.meters, hud.coins, hud.runner, hud.seconds]);
+  }, [practice, token, board, hud.phase, hud.runSerial, hud.score, hud.meters, hud.coins, hud.runner, hud.seconds]);
 
   useEffect(() => {
     if (!statsOpen) return;
@@ -518,6 +631,10 @@ export function RailShell() {
         { name: "THEHODLR" as const, seconds: 0 },
         { name: "AFTERAPE" as const, seconds: 0 },
         { name: "DEADBEAVER" as const, seconds: 0 },
+        { name: "QUIT" as const, seconds: 0 },
+        { name: "DUPES" as const, seconds: 0 },
+        { name: "BOGGYBOND" as const, seconds: 0 },
+        { name: "GIGATRON" as const, seconds: 0 },
       ],
     };
     void (async () => getStats({ data: { token } }))()
@@ -676,6 +793,7 @@ export function RailShell() {
     const adx = Math.abs(dx);
     const ady = Math.abs(dy);
     if (ady >= 16 && ady > adx * 0.65) {
+      if (practice && kidsStyle === "dodge") return;
       gesture.used = true;
       gesture.held = dy > 0 ? "slide" : "jump";
       apiRef.current?.hold(gesture.held, true);
@@ -839,6 +957,34 @@ export function RailShell() {
     if (res?.ok && res.daily) applyWallet(token, res);
   }
 
+  async function onUnlockQuit() {
+    if (!token || quitUnlocked) return;
+    if ((ach?.skulls ?? 0) < QUIT_COST) return;
+    const res = await unlockRunner({ data: { token, runner: "QUIT" } }).catch(() => null);
+    if (res?.ok && res.daily) applyWallet(token, res);
+  }
+
+  async function onUnlockDupes() {
+    if (!token || dupesUnlocked) return;
+    if ((ach?.skulls ?? 0) < DUPES_COST) return;
+    const res = await unlockRunner({ data: { token, runner: "DUPES" } }).catch(() => null);
+    if (res?.ok && res.daily) applyWallet(token, res);
+  }
+
+  async function onUnlockBoggybond() {
+    if (!token || boggybondUnlocked) return;
+    if ((ach?.skulls ?? 0) < BOGGYBOND_COST) return;
+    const res = await unlockRunner({ data: { token, runner: "BOGGYBOND" } }).catch(() => null);
+    if (res?.ok && res.daily) applyWallet(token, res);
+  }
+
+  async function onUnlockGigatron() {
+    if (!token || gigatronUnlocked) return;
+    if ((ach?.skulls ?? 0) < GIGATRON_COST) return;
+    const res = await unlockRunner({ data: { token, runner: "GIGATRON" } }).catch(() => null);
+    if (res?.ok && res.daily) applyWallet(token, res);
+  }
+
   const pickScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -852,10 +998,64 @@ export function RailShell() {
     });
   }, [hud.runner]);
 
+  function runnerOpen(name: RunnerName) {
+    if (name === "APECAT" || name === "BOGGY" || name === "GIMBO") return true;
+    if (name === "PINKY") return pinkyUnlocked;
+    if (name === "KOKO") return kokoUnlocked;
+    if (name === "SPOOKY") return spookyUnlocked;
+    if (name === "RAMDAWG") return ramdawgUnlocked;
+    if (name === "OTTER") return otterUnlocked;
+    if (name === "FIGGE") return figgeUnlocked;
+    if (name === "THEHODLR") return thehodlrUnlocked;
+    if (name === "AFTERAPE") return afterapeUnlocked;
+    if (name === "DEADBEAVER") return deadbeaverUnlocked;
+    if (name === "QUIT") return quitUnlocked;
+    if (name === "DUPES") return dupesUnlocked;
+    if (name === "BOGGYBOND") return boggybondUnlocked;
+    return gigatronUnlocked;
+  }
+
+  function sessionBoard() {
+    return (
+      <div className="rail-kids-board">
+        <p className="rail-kicker">Session best</p>
+        {sessionRuns.length === 0 ? (
+          <p className="rail-sub">No practice runs yet. This list clears when you reload.</p>
+        ) : (
+          <ol>
+            {sessionRuns.map((row, index) => (
+              <li key={`${row.runner}-${row.score}-${index}`}>
+                <span>{runnerLabel(row.runner)}</span>
+                <strong>{row.score.toLocaleString()}</strong>
+                <em>{row.meters}m</em>
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
+    );
+  }
+
+  function enterKids() {
+    const pace = KIDS_SPEEDS.find((row) => row.id === kidsSpeed) ?? KIDS_SPEEDS[0];
+    setPractice(true);
+    setKidsOpen(true);
+    apiRef.current?.setPractice({ on: true, dodge: kidsStyle === "dodge", speed: pace.mult });
+    if (!runnerOpen(hud.runner)) apiRef.current?.pick("APECAT");
+  }
+
+  function leaveKids() {
+    setPractice(false);
+    setKidsOpen(false);
+    apiRef.current?.setPractice({ on: false, dodge: false, speed: 1 });
+    if (hudRef.current.phase === "dead") apiRef.current?.toMenu();
+  }
+
   function picks() {
+    const roster = practice ? RUNNERS.filter((runner) => runnerOpen(runner.name)) : RUNNERS;
     return (
       <div className="rail-picks" role="group" aria-label="Runners">
-        {RUNNERS.map((runner) => {
+        {roster.map((runner) => {
           const locked =
             (runner.name === "PINKY" && !pinkyUnlocked) ||
             (runner.name === "KOKO" && !kokoUnlocked) ||
@@ -865,7 +1065,11 @@ export function RailShell() {
             (runner.name === "FIGGE" && !figgeUnlocked) ||
             (runner.name === "THEHODLR" && !thehodlrUnlocked) ||
             (runner.name === "AFTERAPE" && !afterapeUnlocked) ||
-            (runner.name === "DEADBEAVER" && !deadbeaverUnlocked);
+            (runner.name === "DEADBEAVER" && !deadbeaverUnlocked) ||
+            (runner.name === "QUIT" && !quitUnlocked) ||
+            (runner.name === "DUPES" && !dupesUnlocked) ||
+            (runner.name === "BOGGYBOND" && !boggybondUnlocked) ||
+            (runner.name === "GIGATRON" && !gigatronUnlocked);
           const cost =
             runner.name === "KOKO"
               ? KOKO_COST
@@ -883,7 +1087,15 @@ export function RailShell() {
                         ? AFTERAPE_COST
                         : runner.name === "DEADBEAVER"
                           ? DEADBEAVER_COST
-                          : PINKY_COST;
+                          : runner.name === "QUIT"
+                            ? QUIT_COST
+                            : runner.name === "DUPES"
+                              ? DUPES_COST
+                              : runner.name === "BOGGYBOND"
+                                ? BOGGYBOND_COST
+                                : runner.name === "GIGATRON"
+                                  ? GIGATRON_COST
+                                  : PINKY_COST;
           return (
             <button
               key={runner.name}
@@ -1106,7 +1318,7 @@ export function RailShell() {
         </div>
       ) : null}
 
-      {hud.phase === "run" || hud.phase === "dead" ? (
+      {!practice && (hud.phase === "run" || hud.phase === "dead") ? (
         <div className="rail-diamond-meter" aria-label={`${meter} of 100 power skulls toward a Diamond Skull`}>
           <img src={DIAMOND_MARK} alt="" />
           <div className="rail-diamond-meter-track">
@@ -1137,7 +1349,50 @@ export function RailShell() {
         </div>
       ) : null}
 
-      {hud.phase === "menu" ? (
+      {hud.phase === "menu" && kidsOpen ? (
+        <div className="rail-menu">
+          <div className="rail-card rail-kids">
+            <p className="rail-kicker">Practice tunnel</p>
+            <button type="button" className="rail-kids-mark" onClick={leaveKids} aria-label="Leave Kids Mode">
+              <img src="/brand/kids-mode.png" alt="Kids Mode" />
+            </button>
+            <p className="rail-lede">
+              {kidsStyle === "dodge"
+                ? "Dodge left and right. No jump, no duck."
+                : "Full run. Lanes, jump, and duck."}{" "}
+              Speed stays where you set it.
+            </p>
+            <div className="rail-kids-toggle" role="group" aria-label="Practice style">
+              <button type="button" className={kidsStyle === "dodge" ? "is-on" : ""} onClick={() => setKidsStyle("dodge")}>
+                Dodge
+              </button>
+              <button type="button" className={kidsStyle === "full" ? "is-on" : ""} onClick={() => setKidsStyle("full")}>
+                Full
+              </button>
+            </div>
+            <div className="rail-kids-speeds" role="group" aria-label="Practice speed">
+              {KIDS_SPEEDS.map((pace) => (
+                <button key={pace.id} type="button" className={kidsSpeed === pace.id ? "is-on" : ""} onClick={() => setKidsSpeed(pace.id)}>
+                  {pace.label}
+                </button>
+              ))}
+            </div>
+            {sessionBoard()}
+            <button type="button" className="rail-start" onClick={launch}>
+              Start practice
+            </button>
+            <div className="rail-pick-block">
+              <div className="rail-pick-scroll">{picks()}</div>
+              <p className="rail-pick-hint">Starters and unlocked runners</p>
+            </div>
+            <button type="button" className="rail-stats-btn" onClick={leaveKids}>
+              Back to the rail
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {hud.phase === "menu" && !kidsOpen ? (
         <div className="rail-menu">
           <div className="rail-card">
             <p className="rail-kicker">Solana subway</p>
@@ -1163,7 +1418,11 @@ export function RailShell() {
               (hud.runner === "FIGGE" && !figgeUnlocked) ||
               (hud.runner === "THEHODLR" && !thehodlrUnlocked) ||
               (hud.runner === "AFTERAPE" && !afterapeUnlocked) ||
-              (hud.runner === "DEADBEAVER" && !deadbeaverUnlocked)
+              (hud.runner === "DEADBEAVER" && !deadbeaverUnlocked) ||
+              (hud.runner === "QUIT" && !quitUnlocked) ||
+              (hud.runner === "DUPES" && !dupesUnlocked) ||
+              (hud.runner === "BOGGYBOND" && !boggybondUnlocked) ||
+              (hud.runner === "GIGATRON" && !gigatronUnlocked)
                 ? "Unlock for 169 Diamond Skulls."
                 : "Get the highest score. Don’t kiss the bears."}
             </p>
@@ -1205,6 +1464,9 @@ export function RailShell() {
                 </p>
               </div>
             </div>
+            <button type="button" className="rail-kids-open" onClick={enterKids}>
+              <img src="/brand/kids-mode.png" alt="Kids Mode" />
+            </button>
             <div className="rail-pick-block">
               <button
                 type="button"
@@ -1216,7 +1478,7 @@ export function RailShell() {
               <div className="rail-pick-scroll" ref={pickScrollRef}>
                 {picks()}
               </div>
-              <p className="rail-pick-hint">Swipe the row for more runners</p>
+              <p className="rail-pick-hint">Swipe or scroll the row for more runners</p>
             </div>
             {hud.runner === "PINKY" && !pinkyUnlocked ? (
               <button type="button" className="rail-stats-btn" onClick={onUnlockPinky}>
@@ -1261,6 +1523,26 @@ export function RailShell() {
             {hud.runner === "DEADBEAVER" && !deadbeaverUnlocked ? (
               <button type="button" className="rail-stats-btn" onClick={onUnlockDeadbeaver}>
                 {(ach?.skulls ?? 0) >= DEADBEAVER_COST ? `Unlock ${runnerLabel("DEADBEAVER")} · 169` : "Need 169 Diamond Skulls"}
+              </button>
+            ) : null}
+            {hud.runner === "QUIT" && !quitUnlocked ? (
+              <button type="button" className="rail-stats-btn" onClick={onUnlockQuit}>
+                {(ach?.skulls ?? 0) >= QUIT_COST ? `Unlock ${runnerLabel("QUIT")} · 169` : "Need 169 Diamond Skulls"}
+              </button>
+            ) : null}
+            {hud.runner === "DUPES" && !dupesUnlocked ? (
+              <button type="button" className="rail-stats-btn" onClick={onUnlockDupes}>
+                {(ach?.skulls ?? 0) >= DUPES_COST ? `Unlock ${runnerLabel("DUPES")} · 169` : "Need 169 Diamond Skulls"}
+              </button>
+            ) : null}
+            {hud.runner === "BOGGYBOND" && !boggybondUnlocked ? (
+              <button type="button" className="rail-stats-btn" onClick={onUnlockBoggybond}>
+                {(ach?.skulls ?? 0) >= BOGGYBOND_COST ? `Unlock ${runnerLabel("BOGGYBOND")} · 169` : "Need 169 Diamond Skulls"}
+              </button>
+            ) : null}
+            {hud.runner === "GIGATRON" && !gigatronUnlocked ? (
+              <button type="button" className="rail-stats-btn" onClick={onUnlockGigatron}>
+                {(ach?.skulls ?? 0) >= GIGATRON_COST ? `Unlock ${runnerLabel("GIGATRON")} · 169` : "Need 169 Diamond Skulls"}
               </button>
             ) : null}
             {mobile ? null : (
@@ -1336,14 +1618,21 @@ export function RailShell() {
                 Menu
               </button>
             </div>
-            {displayBest > 0 ? <p className="rail-sub">Best {displayBest.toLocaleString()}</p> : null}
-            {board?.you ? (
+            {practice ? sessionBoard() : displayBest > 0 ? <p className="rail-sub">Best {displayBest.toLocaleString()}</p> : null}
+            {practice || board?.you ? (
+              practice ? null : (
               <p className="rail-sub">
-                {board.you.rank ? `Rail rank ${board.you.rank} · ` : ""}best {displayBest.toLocaleString()}
+                {board?.you?.rank ? `Rail rank ${board.you.rank} · ` : ""}best {displayBest.toLocaleString()}
               </p>
+              )
             ) : (
               nameSlot()
             )}
+            {practice ? (
+              <button type="button" className="rail-menu-btn" onClick={leaveKids}>
+                Back to the rail
+              </button>
+            ) : (
             <div className="rail-action-stack">
               <button type="button" className="rail-board-btn" onClick={() => setBoardOpen(true)}>
                 Leaderboard
@@ -1365,6 +1654,7 @@ export function RailShell() {
                 Achievements
               </button>
             </div>
+            )}
           </div>
         </div>
       ) : null}
@@ -1710,12 +2000,16 @@ export function RailShell() {
           >
             Left
           </button>
-          <button type="button" onPointerDown={pressAction("jump", true)} onPointerUp={pressAction("jump", false)} onPointerCancel={pressAction("jump", false)}>
-            Jump
-          </button>
-          <button type="button" onPointerDown={pressAction("slide", true)} onPointerUp={pressAction("slide", false)} onPointerCancel={pressAction("slide", false)}>
-            Duck
-          </button>
+          {practice && kidsStyle === "dodge" ? null : (
+            <button type="button" onPointerDown={pressAction("jump", true)} onPointerUp={pressAction("jump", false)} onPointerCancel={pressAction("jump", false)}>
+              Jump
+            </button>
+          )}
+          {practice && kidsStyle === "dodge" ? null : (
+            <button type="button" onPointerDown={pressAction("slide", true)} onPointerUp={pressAction("slide", false)} onPointerCancel={pressAction("slide", false)}>
+              Duck
+            </button>
+          )}
           <button
             type="button"
             onPointerDown={(e) => {
