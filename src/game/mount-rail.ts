@@ -290,6 +290,7 @@ class RailWorld {
   private rushNext = false;
   private shieldRing!: THREE.Object3D;
   private shieldRings: THREE.Mesh[] = [];
+  private buffMarks = new Map<Power, THREE.Group>();
   private shieldMats: THREE.MeshBasicMaterial[] = [];
   private magnetMesh: THREE.Mesh | null = null;
   private magnetPos: Float32Array | null = null;
@@ -1285,6 +1286,43 @@ class RailWorld {
     this.magnetPos = pos;
   }
 
+  /** A small copy of the pickup skull, circling the runner while that power is on. */
+  private mountBuffMark(tag: Power, src: THREE.Object3D, box: THREE.Box3, size: THREE.Vector3, center: THREE.Vector3) {
+    const s = 0.36 / Math.max(0.01, size.y);
+    const skull = src.clone(true);
+    skull.name = "buff-skull";
+    skull.scale.setScalar(s);
+    skull.position.set(-center.x * s, -box.min.y * s, -center.z * s);
+    const arm = new THREE.Group();
+    arm.position.x = 1.05;
+    arm.add(skull);
+    const pivot = new THREE.Group();
+    pivot.position.y = 1.15;
+    pivot.add(arm);
+    pivot.visible = false;
+    this.rig.add(pivot);
+    this.buffMarks.set(tag, pivot);
+  }
+
+  private updateBuffMarks() {
+    const live = this.phase === "run" || (this.phase === "replay" && !this.replayDone);
+    const on: Power[] = [];
+    if (live && this.shield) on.push("shield");
+    if (live && this.magnetT > 0) on.push("magnet");
+    if (live && this.surgeT > 0) on.push("surge");
+    for (const tag of ["shield", "magnet", "surge"] as const) {
+      const pivot = this.buffMarks.get(tag);
+      if (!pivot) continue;
+      const i = on.indexOf(tag);
+      pivot.visible = i >= 0;
+      if (i < 0) continue;
+      const step = (Math.PI * 2) / on.length;
+      pivot.rotation.y = this.runTime * 1.9 + i * step;
+      const skull = pivot.getObjectByName("buff-skull");
+      if (skull) skull.rotation.y = this.runTime * 2.6;
+    }
+  }
+
   private coinInMagnet(ent: Ent) {
     if (ent.z > 1.15 || ent.z < -3.2) return false;
     const dx = Math.abs(laneX(ent.lane) + ent.tug - this.x);
@@ -1391,6 +1429,7 @@ class RailWorld {
         const box = new THREE.Box3().setFromObject(src);
         const size = box.getSize(new THREE.Vector3());
         const center = box.getCenter(new THREE.Vector3());
+        this.mountBuffMark(spec.tag, src, box, size, center);
         const s = 0.81 / Math.max(0.01, size.y);
         const haloMat = new THREE.MeshBasicMaterial({
           color: spec.color,
@@ -2596,6 +2635,7 @@ class RailWorld {
     this.yawGroup.rotation.z = 0;
     this.yawGroup.rotation.y = this.yaw;
     this.rig.position.set(this.x, 0, Math.min(1.35, this.deathT * 2.2));
+    this.updateBuffMarks();
     this.shadow.position.x = this.x;
     const mat = this.shadow.material as THREE.MeshBasicMaterial;
     mat.opacity = 0.2;
@@ -2617,6 +2657,7 @@ class RailWorld {
     this.pitchGroup.rotation.x = this.pitch;
     this.rig.position.set(this.x, this.sliding ? 0 : this.jumpY, 0);
     this.shieldRing.visible = this.shield;
+    this.updateBuffMarks();
     if (this.shield) {
       const t = this.runTime;
       this.shieldRings.forEach((ring, i) => {

@@ -23,7 +23,7 @@ import {
 } from "@/game/achievements";
 import { RunnerStage } from "@/components/runner-stage";
 import { EMPTY_HUD, type Hud, type Nudge, type RailApi, type RunnerName, type StageBundle } from "@/game/types";
-import { beginRun, claimName, EMPTY_SKULLS, getBoard, getGhost, getStats, loginName, recordPlay, setPassword as savePassword, submitRun, syncDiamonds, tickRun, unlockRunner, type BoardState, type RailStats, type SkullCounts } from "@/game/board";
+import { beginRun, claimName, claimReward, EMPTY_SKULLS, getBoard, getGhost, getStats, loginName, recordPlay, setPassword as savePassword, submitRun, syncDiamonds, tickRun, unlockRunner, type BoardState, type RailStats, type SkullCounts } from "@/game/board";
 import { encodeGhost } from "@/game/replay";
 import { ensurePlayerToken, forgetPlayerToken } from "@/game/player-token";
 import { GAME_VERSION } from "@/game/version";
@@ -184,6 +184,9 @@ export function RailShell() {
   const [authMode, setAuthMode] = useState<"claim" | "login">("claim");
   const [nameError, setNameError] = useState("");
   const [claiming, setClaiming] = useState(false);
+  const [rewardOpen, setRewardOpen] = useState(false);
+  const [rewardBusy, setRewardBusy] = useState(false);
+  const [rewardNote, setRewardNote] = useState("");
   const [mobile, setMobile] = useState(false);
   const [quiet, setQuiet] = useState(false);
   const [stage, setStage] = useState<StageBundle | null>(null);
@@ -324,6 +327,7 @@ export function RailShell() {
       .then((res) => {
         if (!res.daily) return;
         applyWallet(next, res);
+        setRewardOpen(res.reward === "open");
       })
       .catch(() => undefined);
   }, []);
@@ -683,6 +687,11 @@ export function RailShell() {
       setNameDraft("");
       setPassword("");
       setConfirm("");
+      const wallet = await syncDiamonds({ data: { token } });
+      if (wallet.daily) {
+        applyWallet(token, wallet);
+        setRewardOpen(wallet.reward === "open");
+      }
       if (hud.phase === "dead" && hud.runSerial > 0 && !posted.current.has(hud.runSerial)) {
         posted.current.add(hud.runSerial);
         const postedRun = await submitRun({
@@ -728,6 +737,11 @@ export function RailShell() {
       setPassword("");
       setConfirm("");
       if (next.you) apiRef.current?.noteBest(next.you.score);
+      const wallet = await syncDiamonds({ data: { token } });
+      if (wallet.daily) {
+        applyWallet(token, wallet);
+        setRewardOpen(wallet.reward === "open");
+      }
     } catch {
       setNameError("Couldn’t reach the rail. Try again.");
     } finally {
@@ -771,6 +785,49 @@ export function RailShell() {
     setConfirm("");
     setNameError("");
     setAuthMode("login");
+    setRewardNote("");
+    void syncDiamonds({ data: { token: next } })
+      .then((res) => {
+        if (!res.daily) return;
+        applyWallet(next, res);
+        setRewardOpen(res.reward === "open");
+      })
+      .catch(() => undefined);
+  }
+
+  async function onClaimReward() {
+    if (!board?.name) {
+      setAuthMode("claim");
+      setRewardNote("Claim a name first. Then this box adds 169 Diamond Skulls.");
+      return;
+    }
+    setRewardBusy(true);
+    setRewardNote("");
+    try {
+      const res = await claimReward({ data: { token } });
+      if (!res.ok) {
+        setRewardOpen("reward" in res && res.reward === "open");
+        setRewardNote("error" in res ? res.error : "Couldn’t reach the rail. Try again.");
+        return;
+      }
+      applyWallet(token, res);
+      setRewardOpen(false);
+      setRewardNote("169 Diamond Skulls added.");
+    } catch {
+      setRewardNote("Couldn’t reach the rail. Try again.");
+    } finally {
+      setRewardBusy(false);
+    }
+  }
+
+  function rewardBox() {
+    if (!rewardOpen) return null;
+    return (
+      <button type="button" className="rail-reward" onClick={onClaimReward} disabled={rewardBusy}>
+        <img src="/brand/claim-reward-skull.jpg" alt="" />
+        <strong>{rewardBusy ? "Adding…" : "Claim Rewards"}</strong>
+      </button>
+    );
   }
 
   function switchAuth(mode: "claim" | "login") {
@@ -1464,9 +1521,13 @@ export function RailShell() {
                 </p>
               </div>
             </div>
-            <button type="button" className="rail-kids-open" onClick={enterKids}>
-              <img src="/brand/kids-mode.png" alt="Kids Mode" />
-            </button>
+            <div className="rail-mid-actions">
+              <button type="button" className="rail-kids-open" onClick={enterKids}>
+                <img src="/brand/kids-mode.png" alt="Kids Mode" />
+              </button>
+              {rewardBox()}
+            </div>
+            {rewardNote ? <p className="rail-reward-note">{rewardNote}</p> : null}
             <div className="rail-pick-block">
               <button
                 type="button"

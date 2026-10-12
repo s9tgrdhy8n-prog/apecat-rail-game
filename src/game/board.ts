@@ -549,8 +549,25 @@ async function diamondTotals(personKey?: string) {
 }
 
 const UNLOCK_COST = 169;
+const REWARD_DROP = "crystal-169";
 
 type EarnedGoal = { id: string; skulls: number };
+type RewardState = "open" | "claimed" | "closed";
+
+async function rewardState(userId: string | null): Promise<RewardState> {
+  const sql = await getSql();
+  const drop = await sql<{ open: number }>`
+    select (ends_at > now())::int as open
+    from rail_reward_drop
+    where id = ${REWARD_DROP}
+  `;
+  if (Number(drop[0]?.open) !== 1) return "closed";
+  if (!userId) return "open";
+  const claimed = await sql<{ user_id: string }>`
+    select user_id from rail_reward_claim where user_id = ${userId}
+  `;
+  return claimed[0] ? "claimed" : "open";
+}
 
 function emptyWallet() {
   return {
@@ -574,6 +591,7 @@ function emptyWallet() {
     daily: emptyTally(),
     weekly: emptyTally(),
     earned: [] as EarnedGoal[],
+    reward: "closed" as RewardState,
   };
 }
 
@@ -897,6 +915,7 @@ async function readWallet(token: string, earned: EarnedGoal[] = []) {
       and (period_key = ${day} or period_key = ${week})
   `;
   const wallet = await pickupProgress(key);
+  const reward = await rewardState(user?.user_id ?? null);
   return {
     ok: true as const,
     skulls: Number(rows[0]?.skulls) || 0,
@@ -918,8 +937,58 @@ async function readWallet(token: string, earned: EarnedGoal[] = []) {
     daily,
     weekly,
     earned,
+    reward,
   };
 }
+
+export const claimReward = createServerFn({ method: "POST" })
+  .validator((input: { token?: string } | undefined) => (typeof input?.token === "string" ? input.token : ""))
+  .handler(async ({ data: token }) => {
+    const user = await resolveUser(token);
+    if (!user) {
+      const reward = await rewardState(null);
+      return {
+        ok: false as const,
+        reward,
+        error: "Claim a name first. Then this box adds 169 Diamond Skulls.",
+      };
+    }
+    const sql = await getSql();
+    const paid = await sql<{ skulls: number }>`
+      with drop as (
+        select id, skulls
+        from rail_reward_drop
+        where id = ${REWARD_DROP}
+          and ends_at > now()
+      ),
+      grab as (
+        insert into rail_reward_claim (user_id, drop_id)
+        select ${user.user_id}, drop.id
+        from drop
+        on conflict (user_id) do nothing
+        returning user_id
+      ),
+      pay as (
+        insert into rail_diamond (person_key, skulls)
+        select grab.user_id, drop.skulls
+        from grab
+        cross join drop
+        on conflict (person_key) do update
+        set skulls = rail_diamond.skulls + excluded.skulls
+        returning skulls::int as skulls
+      )
+      select skulls::int as skulls from pay
+    `;
+    if (!paid[0]) {
+      const reward = await rewardState(user.user_id);
+      return {
+        ok: false as const,
+        reward,
+        error: reward === "claimed" ? "Already claimed." : "This reward has closed.",
+      };
+    }
+    return readWallet(token);
+  });
 
 export const syncDiamonds = createServerFn({ method: "POST" })
   .validator((input: { token?: string } | undefined) => (typeof input?.token === "string" ? input.token : ""))
