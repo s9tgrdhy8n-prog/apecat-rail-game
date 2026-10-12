@@ -37,6 +37,7 @@ The start menu reads `GAME_VERSION` in `src/game/version.ts`. On every productio
 | 1.8.2 | 2026-10-08 | Published to https://apecat-rail-game.com. Mobile run HUD: smaller runner thumbs on the left with swipe, compact diamond skull meter under the music buttons, no Keyboard/Mobile dock mid-run, and no overlap on the coin or Best score. |
 | 1.9.0 | 2026-10-09 | Published to https://apecat-rail-game.com. Quit, Dupes, Boggy Bond, and GIGATRON join the runners and each unlocks for 169 Diamond Skulls. BOGGY’s X is @BoggyCoinSol. Five portraits stay on screen and the row scrolls for the rest, on desktop and on a phone. Kids Mode is practice: dodge left and right, or play the full tunnel, at 1× through 5×. Session bests clear on reload and do not rank. Daily and weekly Diamond Skull rewards pay 3×. View Character is a smaller neon button. |
 | 1.10.0 | 2026-10-11 | Published to https://apecat-rail-game.com. Claim Rewards sits beside Kids Mode. One tap adds 169 Diamond Skulls to an account, once, enough to unlock one runner. Existing accounts can claim it, and so can any account created in the 24 hours after this publish. Shield, Magnet, and Surge each put a mini skull on one shared orbit around the runner while that buff is active. |
+| 1.10.1 | 2026-10-11 | Published to https://apecat-rail-game.com. Phones open the menu after the three starters, then load the other runners one at a time so the tab is not killed while everything decodes at once. |
 
 ## 1.0.5 notes
 

@@ -355,6 +355,8 @@ class RailWorld {
   private clips = new Map<string, THREE.AnimationAction>();
   private current: THREE.AnimationAction | null = null;
   private modelReady = false;
+  private phoneQueue: (() => void) | null = null;
+  private wantedRunner: RunnerName | null = null;
   private lightFx: { mat: THREE.MeshBasicMaterial; base: number; phase: number }[] = [];
   private tunnelLamps: { light: THREE.PointLight; base: number; phase: number }[] = [];
   private sconces: THREE.Object3D[] = [];
@@ -704,7 +706,12 @@ class RailWorld {
     this.giveDanceToAll();
   }
 
-  private loadRunnerGltf(spec: { id: RunnerId; name: RunnerName; url: string }, loader: GLTFLoader, gateMenu: boolean) {
+  private loadRunnerGltf(
+    spec: { id: RunnerId; name: RunnerName; url: string },
+    loader: GLTFLoader,
+    gateMenu: boolean,
+    onDone?: () => void,
+  ) {
     if (gateMenu) this.armLoad();
     loader.load(
       spec.url,
@@ -712,8 +719,10 @@ class RailWorld {
         try {
           if (!this.disposed) {
             this.ingestRunner(spec, gltf);
-            if (!gateMenu && this.modelReady && this.runnerName === spec.name) {
-              this.activate(spec.id, false);
+            if (!gateMenu && this.modelReady && (this.runnerName === spec.name || this.wantedRunner === spec.name)) {
+              const announce = this.wantedRunner === spec.name;
+              this.wantedRunner = null;
+              this.activate(spec.id, announce);
               this.push(true);
             }
           }
@@ -721,20 +730,24 @@ class RailWorld {
           /* bad export — skip this runner */
         } finally {
           if (gateMenu && !this.disposed) this.settleLoad();
+          onDone?.();
         }
       },
       undefined,
       () => {
         if (gateMenu && !this.disposed) this.settleLoad();
+        onDone?.();
       },
     );
   }
 
   private loadRunners() {
-    const specs: { id: RunnerId; name: RunnerName; url: string }[] = [
+    const starters: { id: RunnerId; name: RunnerName; url: string }[] = [
       { id: "apecat", name: "APECAT", url: "/models/apecat_rail.glb" },
       { id: "boggo", name: "BOGGY", url: "/models/boggo.glb" },
       { id: "gimbo", name: "GIMBO", url: "/models/gimbo.glb" },
+    ];
+    const rest: { id: RunnerId; name: RunnerName; url: string }[] = [
       { id: "pinky", name: "PINKY", url: "/models/pinky.glb" },
       { id: "koko", name: "KOKO", url: "/models/koko.glb" },
       { id: "spooky", name: "SPOOKY", url: "/models/spooky.glb" },
@@ -744,16 +757,32 @@ class RailWorld {
       { id: "thehodlr", name: "THEHODLR", url: "/models/thehodlr.glb" },
       { id: "afterape", name: "AFTERAPE", url: "/models/afterape.glb" },
       { id: "deadbeaver", name: "DEADBEAVER", url: "/models/deadbeaver.glb" },
-    ];
-    const deferred: { id: RunnerId; name: RunnerName; url: string }[] = [
       { id: "quit", name: "QUIT", url: "/models/quit.glb" },
       { id: "dupes", name: "DUPES", url: "/models/dupes.glb" },
       { id: "boggybond", name: "BOGGYBOND", url: "/models/boggybond.glb" },
       { id: "gigatron", name: "GIGATRON", url: "/models/gigatron.glb" },
     ];
     const loader = new GLTFLoader();
-    for (const spec of specs) this.loadRunnerGltf(spec, loader, true);
-    for (const spec of deferred) this.loadRunnerGltf(spec, loader, false);
+    const phone = window.matchMedia("(pointer: coarse)").matches || Math.min(window.innerWidth, window.innerHeight) < 820;
+    if (!phone) {
+      for (const spec of starters) this.loadRunnerGltf(spec, loader, true);
+      for (const spec of rest.slice(0, 9)) this.loadRunnerGltf(spec, loader, true);
+      for (const spec of rest.slice(9)) this.loadRunnerGltf(spec, loader, false);
+      return;
+    }
+    for (const spec of starters) this.loadRunnerGltf(spec, loader, true);
+    this.phoneQueue = () => this.queueRunners(rest, loader);
+  }
+
+  /** Phones die if every runner GLB decodes at once. Load the rest one at a time after the menu opens. */
+  private queueRunners(specs: { id: RunnerId; name: RunnerName; url: string }[], loader: GLTFLoader) {
+    const step = () => {
+      if (this.disposed) return;
+      const spec = specs.shift();
+      if (!spec) return;
+      this.loadRunnerGltf(spec, loader, false, step);
+    };
+    step();
   }
 
   private giveDeadToAll() {
@@ -846,6 +875,9 @@ class RailWorld {
     this.modelReady = true;
     this.phase = "menu";
     this.push(true);
+    const queued = this.phoneQueue;
+    this.phoneQueue = null;
+    queued?.();
   }
 
   private activate(id: RunnerId, announce: boolean) {
@@ -889,7 +921,12 @@ class RailWorld {
     if (!this.modelReady) return;
     if (this.lockedRunner(name) && this.phase === "run") return;
     const id = this.runnerIdFor(name);
-    if (!this.roster.has(id) || id === this.runnerId) return;
+    if (id === this.runnerId) return;
+    if (!this.roster.has(id)) {
+      this.wantedRunner = name;
+      return;
+    }
+    this.wantedRunner = null;
     this.activate(id, true);
   }
 
@@ -1407,6 +1444,7 @@ class RailWorld {
     };
     for (const spec of specs) {
       loader.load(spec.url, (gltf) => {
+        try {
         if (this.disposed) return;
         const src = gltf.scene;
         src.updateMatrixWorld(true);
@@ -1452,7 +1490,9 @@ class RailWorld {
           ent.y = 1.15;
           this.ents.push(ent);
         }
-        finish();
+        } finally {
+          if (!this.disposed) finish();
+        }
       }, undefined, () => finish());
     }
   }
