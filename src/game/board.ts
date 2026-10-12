@@ -15,12 +15,45 @@ export type BoardRow = {
   ghost: boolean;
 };
 
+export type BoardPeriod = "day" | "week" | "month" | "all";
+
 export type BoardState = {
   name: string | null;
   hasPassword: boolean;
   rows: BoardRow[];
   you: BoardRow | null;
 };
+
+export type StatMetric = "time" | "skulls" | "coins";
+
+export type StatBoardRow = {
+  rank: number;
+  name: string;
+  value: number;
+  you: boolean;
+};
+
+export type StatBoard = {
+  rows: StatBoardRow[];
+  you: { rank: number | null; name: string; value: number } | null;
+};
+
+function cleanPeriod(raw: unknown): BoardPeriod {
+  if (raw === "day" || raw === "week" || raw === "month" || raw === "all") return raw;
+  return "all";
+}
+
+function cleanMetric(raw: unknown): StatMetric {
+  if (raw === "time" || raw === "skulls" || raw === "coins") return raw;
+  return "time";
+}
+
+function periodStart(period: BoardPeriod, now = new Date()) {
+  if (period === "all") return null;
+  if (period === "day") return `${utcDay(now)}T00:00:00.000Z`;
+  if (period === "week") return `${utcWeek(now)}T00:00:00.000Z`;
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+}
 
 const NAME_RE = /^[A-Za-z0-9_]+(?: [A-Za-z0-9_]+)*$/;
 const TOKEN_RE = /^[a-f0-9]{64}$/;
@@ -135,8 +168,9 @@ async function bindDevice(token: string, userId: string) {
   `;
 }
 
-async function loadBoard(userId: string): Promise<BoardState> {
+async function loadBoard(userId: string, period: BoardPeriod = "all"): Promise<BoardState> {
   const sql = await getSql();
+  const since = periodStart(period);
   const mine = await sql<{ name: string; has_password: boolean }>`
     select name, (password_hash is not null) as has_password
     from rail_players
@@ -150,9 +184,10 @@ async function loadBoard(userId: string): Promise<BoardState> {
            coalesce((array_agg(r.coins order by r.score desc, r.id desc))[1], 0)::int as coins,
            coalesce((array_agg(r.runner order by r.score desc, r.id desc))[1], '') as runner,
            bool_or(p.user_id = ${userId}) as mine,
-           (g.user_id is not null) as ghost
+           (g.user_id is not null and ${period} = 'all') as ghost
     from rail_players p
     left join rail_runs r on r.user_id = p.user_id
+      and (${since}::timestamptz is null or r.created_at >= ${since}::timestamptz)
     left join rail_ghost g on g.user_id = p.user_id
     group by p.user_id, p.name, p.created_at, g.user_id
     order by score desc, p.created_at asc
@@ -190,9 +225,9 @@ async function loadBoard(userId: string): Promise<BoardState> {
   };
 }
 
-async function boardForToken(token: string) {
+async function boardForToken(token: string, period: BoardPeriod) {
   const user = await resolveUser(token);
-  return loadBoard(user?.user_id ?? "");
+  return loadBoard(user?.user_id ?? "", period);
 }
 
 function readSecret(raw: { token?: string; name?: string; password?: string } | undefined) {
@@ -204,8 +239,11 @@ function readSecret(raw: { token?: string; name?: string; password?: string } | 
 }
 
 export const getBoard = createServerFn({ method: "POST" })
-  .validator((raw: { token?: string } | undefined) => (typeof raw?.token === "string" ? raw.token : ""))
-  .handler(async ({ data: token }) => boardForToken(token));
+  .validator((raw: { token?: string; period?: string } | undefined) => ({
+    token: typeof raw?.token === "string" ? raw.token : "",
+    period: cleanPeriod(raw?.period),
+  }))
+  .handler(async ({ data }) => boardForToken(data.token, data.period));
 
 export const claimName = createServerFn({ method: "POST" })
   .validator(readSecret)
@@ -1272,6 +1310,65 @@ export const getStats = createServerFn({ method: "POST" })
         diamonds: globalDiamonds,
       },
       personal: { ...sliceFrom(mine, mineSeconds), best, coins, rank, skulls: personalSkulls, diamonds: personalDiamonds },
+    };
+  });
+
+export const getStatBoard = createServerFn({ method: "POST" })
+  .validator((raw: { token?: string; metric?: string; period?: string } | undefined) => ({
+    token: typeof raw?.token === "string" ? raw.token : "",
+    metric: cleanMetric(raw?.metric),
+    period: cleanPeriod(raw?.period),
+  }))
+  .handler(async ({ data }): Promise<StatBoard> => {
+    const sql = await getSql();
+    const since = periodStart(data.period);
+    const metric = data.metric;
+    const user = await resolveUser(data.token);
+    const ranked = await sql<{ name: string; value: number; mine: boolean; created_at: string }>`
+      select p.name,
+             p.created_at::text as created_at,
+             coalesce(sum(
+               case
+                 when ${metric} = 'time' then r.seconds
+                 when ${metric} = 'skulls' then r.shields + r.magnets + r.surges
+                 else r.coins
+               end
+             ), 0)::int as value,
+             bool_or(p.user_id = ${user?.user_id ?? ""}) as mine
+      from rail_players p
+      left join rail_play r on r.person_key = p.user_id
+        and (${since}::timestamptz is null or r.created_at >= ${since}::timestamptz)
+        and (
+          (r.meters >= 8 and r.seconds >= 1 and r.seconds <= (r.meters / 12.0) + 90)
+          or (r.meters = 0 and r.seconds between 1 and 900)
+        )
+      group by p.user_id, p.name, p.created_at
+      having coalesce(sum(
+        case
+          when ${metric} = 'time' then r.seconds
+          when ${metric} = 'skulls' then r.shields + r.magnets + r.surges
+          else r.coins
+        end
+      ), 0) > 0
+      order by value desc, p.created_at asc
+    `;
+    const rows: StatBoardRow[] = ranked.slice(0, 30).map((row, index) => ({
+      rank: index + 1,
+      name: row.name,
+      value: Number(row.value) || 0,
+      you: isMine(row.mine),
+    }));
+    const mineRow = ranked.find((row) => isMine(row.mine));
+    const youIndex = ranked.findIndex((row) => isMine(row.mine));
+    return {
+      rows,
+      you: mineRow
+        ? {
+            rank: youIndex < 0 ? null : youIndex + 1,
+            name: mineRow.name,
+            value: Number(mineRow.value) || 0,
+          }
+        : null,
     };
   });
 

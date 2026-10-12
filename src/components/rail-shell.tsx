@@ -23,7 +23,7 @@ import {
 } from "@/game/achievements";
 import { RunnerStage } from "@/components/runner-stage";
 import { EMPTY_HUD, type Hud, type Nudge, type RailApi, type RunnerName, type StageBundle } from "@/game/types";
-import { beginRun, claimName, claimReward, EMPTY_SKULLS, getBoard, getGhost, getStats, loginName, recordPlay, setPassword as savePassword, submitRun, syncDiamonds, tickRun, unlockRunner, type BoardState, type RailStats, type SkullCounts } from "@/game/board";
+import { beginRun, claimName, claimReward, EMPTY_SKULLS, getBoard, getGhost, getStatBoard, getStats, loginName, recordPlay, setPassword as savePassword, submitRun, syncDiamonds, tickRun, unlockRunner, type BoardPeriod, type BoardState, type RailStats, type SkullCounts, type StatBoard, type StatMetric } from "@/game/board";
 import { encodeGhost } from "@/game/replay";
 import { ensurePlayerToken, forgetPlayerToken } from "@/game/player-token";
 import { GAME_VERSION } from "@/game/version";
@@ -112,6 +112,18 @@ type PracticeRun = { score: number; meters: number; runner: RunnerName };
 
 const MOBILE_KEY = "apecat-rail-mobile";
 const QUIET_KEY = "apecat-rail-quiet";
+const CLEAR_KEY = "apecat-rail-clear";
+const PERIODS: { id: BoardPeriod; label: string }[] = [
+  { id: "day", label: "Daily" },
+  { id: "week", label: "Weekly" },
+  { id: "month", label: "Monthly" },
+  { id: "all", label: "All-time" },
+];
+const STAT_METRICS: { id: StatMetric; label: string }[] = [
+  { id: "time", label: "Playtime" },
+  { id: "skulls", label: "Skulls" },
+  { id: "coins", label: "Coins" },
+];
 
 function formatPlay(total: number) {
   const seconds = Math.max(0, Math.floor(total));
@@ -121,6 +133,23 @@ function formatPlay(total: number) {
   if (hours > 0) return `${hours}h ${minutes}m`;
   if (minutes > 0) return `${minutes}m ${secs}s`;
   return `${secs}s`;
+}
+
+function formatStat(metric: StatMetric, value: number) {
+  if (metric === "time") return formatPlay(value);
+  return value.toLocaleString();
+}
+
+function PeriodTabs({ value, onPick }: { value: BoardPeriod; onPick: (period: BoardPeriod) => void }) {
+  return (
+    <div className="rail-period" role="group" aria-label="Time window">
+      {PERIODS.map((period) => (
+        <button key={period.id} type="button" className={value === period.id ? "is-on" : ""} onClick={() => onPick(period.id)}>
+          {period.label}
+        </button>
+      ))}
+    </div>
+  );
 }
 
 function RunnerTimes({ rows }: { rows: { name: string; seconds: number }[] }) {
@@ -155,7 +184,13 @@ export function RailShell() {
   const [board, setBoard] = useState<BoardState | null>(null);
   const [boardOpen, setBoardOpen] = useState(false);
   const [statsOpen, setStatsOpen] = useState(false);
-  const [statsPane, setStatsPane] = useState<"global" | "personal" | null>(null);
+  const [statsPane, setStatsPane] = useState<"global" | "personal" | "boards" | null>(null);
+  const [boardPeriod, setBoardPeriod] = useState<BoardPeriod>("all");
+  const [statMetric, setStatMetric] = useState<StatMetric>("time");
+  const [statPeriod, setStatPeriod] = useState<BoardPeriod>("all");
+  const [statBoard, setStatBoard] = useState<StatBoard | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [clearScreen, setClearScreen] = useState(false);
   const [legendOpen, setLegendOpen] = useState(false);
   const [achOpen, setAchOpen] = useState(false);
   const [ach, setAch] = useState<AchievementSave | null>(null);
@@ -404,7 +439,7 @@ export function RailShell() {
   useEffect(() => {
     if (!token) return;
     let cancel = false;
-    void getBoard({ data: { token } })
+    void getBoard({ data: { token, period: boardPeriod } })
       .then((next) => {
         if (!cancel) setBoard(next);
       })
@@ -414,13 +449,30 @@ export function RailShell() {
     return () => {
       cancel = true;
     };
-  }, [token]);
+  }, [token, boardPeriod]);
+
+  useEffect(() => {
+    if (!statsOpen || statsPane !== "boards") return;
+    let cancel = false;
+    setStatBoard(null);
+    void getStatBoard({ data: { token, metric: statMetric, period: statPeriod } })
+      .then((next) => {
+        if (!cancel) setStatBoard(next);
+      })
+      .catch(() => {
+        if (!cancel) setStatBoard({ rows: [], you: null });
+      });
+    return () => {
+      cancel = true;
+    };
+  }, [statsOpen, statsPane, token, statMetric, statPeriod]);
 
   useEffect(() => {
     if (hud.phase === "run") {
       setBoardOpen(false);
       setStatsOpen(false);
       setLegendOpen(false);
+      setSettingsOpen(false);
     }
   }, [hud.phase]);
 
@@ -682,7 +734,7 @@ export function RailShell() {
         setNameError(result.error);
         return;
       }
-      const next = await getBoard({ data: { token } });
+      const next = await getBoard({ data: { token, period: boardPeriod } });
       setBoard(next);
       setNameDraft("");
       setPassword("");
@@ -731,7 +783,7 @@ export function RailShell() {
         setNameError(result.error);
         return;
       }
-      const next = await getBoard({ data: { token } });
+      const next = await getBoard({ data: { token, period: boardPeriod } });
       setBoard(next);
       setNameDraft("");
       setPassword("");
@@ -765,7 +817,7 @@ export function RailShell() {
         setNameError(result.error);
         return;
       }
-      const next = await getBoard({ data: { token } });
+      const next = await getBoard({ data: { token, period: boardPeriod } });
       setBoard(next);
       setPassword("");
       setConfirm("");
@@ -913,6 +965,7 @@ export function RailShell() {
       if (saved === "1" || saved === "0") setMobile(saved === "1");
       else setMobile(window.matchMedia("(pointer: coarse)").matches);
       setQuiet(localStorage.getItem(QUIET_KEY) === "1");
+      setClearScreen(localStorage.getItem(CLEAR_KEY) === "1");
     } catch {
       /* private mode */
     }
@@ -923,6 +976,18 @@ export function RailShell() {
       const next = !on;
       try {
         localStorage.setItem(QUIET_KEY, next ? "1" : "0");
+      } catch {
+        /* private mode */
+      }
+      return next;
+    });
+  }
+
+  function chooseClear() {
+    setClearScreen((on) => {
+      const next = !on;
+      try {
+        localStorage.setItem(CLEAR_KEY, next ? "1" : "0");
       } catch {
         /* private mode */
       }
@@ -1304,6 +1369,7 @@ export function RailShell() {
       className="rail-root"
       data-phase={hud.phase}
       data-mobile={mobile ? "1" : "0"}
+      data-clear={clearScreen ? "1" : "0"}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={endSwipe}
@@ -1505,11 +1571,8 @@ export function RailShell() {
               >
                 Stats
               </button>
-              <button type="button" className="rail-stats-btn" onClick={() => setLegendOpen(true)}>
-                Legend
-              </button>
-              <button type="button" className="rail-stats-btn" onClick={() => apiRef.current?.enterGallery()}>
-                Gallery
+              <button type="button" className="rail-stats-btn" onClick={() => setSettingsOpen(true)}>
+                Settings
               </button>
               <div className="rail-achieve-row">
                 <button type="button" className="rail-stats-btn" onClick={() => setAchOpen(true)}>
@@ -1708,8 +1771,8 @@ export function RailShell() {
               >
                 Stats
               </button>
-              <button type="button" className="rail-stats-btn" onClick={() => setLegendOpen(true)}>
-                Legend
+              <button type="button" className="rail-stats-btn" onClick={() => setSettingsOpen(true)}>
+                Settings
               </button>
               <button type="button" className="rail-stats-btn" onClick={() => setAchOpen(true)}>
                 Achievements
@@ -1828,6 +1891,13 @@ export function RailShell() {
                   >
                     Personal
                   </button>
+                  <button
+                    type="button"
+                    className={statsPane === "boards" ? "is-boards is-on" : "is-boards"}
+                    onClick={() => setStatsPane("boards")}
+                  >
+                    Boards
+                  </button>
                 </div>
                 <button type="button" className="rail-stats-switch-close" onClick={() => setStatsOpen(false)}>
                   Close
@@ -1889,6 +1959,61 @@ export function RailShell() {
                 <SkullCountsList counts={stats.personal.skulls} />
                 <DiamondCollected count={stats.personal.diamonds} />
               </section>
+              <section className="rail-card rail-board rail-stats-window rail-stats-boards">
+                <div className="rail-board-head">
+                  <p className="rail-kicker">Stat boards</p>
+                  <button type="button" onClick={() => setStatsOpen(false)}>
+                    Close
+                  </button>
+                </div>
+                <div className="rail-period" role="group" aria-label="Stat">
+                  {STAT_METRICS.map((metric) => (
+                    <button
+                      key={metric.id}
+                      type="button"
+                      className={statMetric === metric.id ? "is-on" : ""}
+                      onClick={() => setStatMetric(metric.id)}
+                    >
+                      {metric.label}
+                    </button>
+                  ))}
+                </div>
+                <PeriodTabs value={statPeriod} onPick={setStatPeriod} />
+                <p className="rail-sub">
+                  {statMetric === "skulls"
+                    ? "Shield, Magnet, and Surge pickups in this window."
+                    : statMetric === "coins"
+                      ? "$APECAT COIN collected in this window."
+                      : "Time on the rail in this window."}
+                </p>
+                {statBoard === null ? (
+                  <p className="rail-sub">Counting the rail…</p>
+                ) : (
+                  <>
+                    {statBoard.you ? (
+                      <p className="rail-name">
+                        {statBoard.you.name}
+                        {statBoard.you.rank ? ` · #${statBoard.you.rank}` : ""} · {formatStat(statMetric, statBoard.you.value)}
+                      </p>
+                    ) : (
+                      <p className="rail-sub">Claim a name and your totals rank here.</p>
+                    )}
+                    <ol className="rail-board-list">
+                      {statBoard.rows.length ? (
+                        statBoard.rows.map((row) => (
+                          <li key={row.name} className={row.you ? "is-you" : ""}>
+                            <span>#{row.rank}</span>
+                            <strong>{row.name}</strong>
+                            <em>{formatStat(statMetric, row.value)}</em>
+                          </li>
+                        ))
+                      ) : (
+                        <li className="rail-board-empty">Nobody’s posted in this window yet.</li>
+                      )}
+                    </ol>
+                  </>
+                )}
+              </section>
             </div>
           )}
         </div>
@@ -1903,6 +2028,8 @@ export function RailShell() {
                 Close
               </button>
             </div>
+            <PeriodTabs value={boardPeriod} onPick={setBoardPeriod} />
+            <p className="rail-sub">Best score in this window. Watch stays on All-time.</p>
             {board === null ? (
               <p className="rail-sub">Checking the rail…</p>
             ) : (
@@ -1954,6 +2081,56 @@ export function RailShell() {
         </div>
       ) : null}
 
+      {settingsOpen ? (
+        <div className="rail-sheet">
+          <div className="rail-card rail-board rail-settings">
+            <div className="rail-board-head">
+              <p className="rail-kicker">Settings</p>
+              <button type="button" onClick={() => setSettingsOpen(false)}>
+                Close
+              </button>
+            </div>
+            <button type="button" className={clearScreen ? "rail-menu-btn is-on" : "rail-menu-btn"} onClick={chooseClear}>
+              {clearScreen ? "Clear screen on" : "Clear screen"}
+            </button>
+            <p className="rail-sub">Hides the score, banners, and song buttons during a run. Pause and the phone buttons stay.</p>
+            {controlPick()}
+            <div className="rail-settings-audio">
+              <button type="button" className="rail-mute" aria-label={hud.muted ? "Unmute" : "Mute"} onClick={() => apiRef.current?.toggleMute()}>
+                {hud.muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+              </button>
+              <button
+                type="button"
+                className="rail-mute rail-pause"
+                aria-label={hud.musicPaused ? "Play music" : "Pause music"}
+                onClick={() => apiRef.current?.toggleMusic()}
+              >
+                {hud.musicPaused ? <Play size={18} /> : <Pause size={18} />}
+              </button>
+              <button type="button" className="rail-mute rail-track" aria-label={`Song: ${hud.track}. Next song`} onClick={() => apiRef.current?.nextTrack()}>
+                <SkipForward size={16} />
+                <span>{hud.track}</span>
+              </button>
+            </div>
+            <div className="rail-dead-actions">
+              <button type="button" className="rail-stats-btn" onClick={() => setLegendOpen(true)}>
+                Legend
+              </button>
+              <button
+                type="button"
+                className="rail-stats-btn"
+                onClick={() => {
+                  setSettingsOpen(false);
+                  apiRef.current?.enterGallery();
+                }}
+              >
+                Gallery
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <div className="rail-audio-dock">
         <button
           type="button"
@@ -2001,9 +2178,14 @@ export function RailShell() {
       ) : null}
 
       {hud.phase === "run" && !hud.paused && hud.countdown === 0 ? (
-        <button type="button" className="rail-break" onClick={() => apiRef.current?.pause()}>
-          Pause
-        </button>
+        <div className="rail-run-tools">
+          <button type="button" className="rail-break" onClick={() => apiRef.current?.pause()}>
+            Pause
+          </button>
+          <button type="button" className="rail-break" onClick={() => setSettingsOpen(true)}>
+            Settings
+          </button>
+        </div>
       ) : null}
 
       {hud.phase === "run" && hud.paused ? (
@@ -2046,9 +2228,6 @@ export function RailShell() {
         />
       ) : null}
 
-      {hud.phase === "menu" || hud.phase === "dead" ? (
-        <div className="rail-modes rail-modes-dock">{controlPick()}</div>
-      ) : null}
 
       {hud.phase === "run" && mobile ? (
         <div className="rail-touch">
