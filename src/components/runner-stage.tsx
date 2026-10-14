@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import { applyGimboLook } from "@/game/runner-look";
 import type { StageBundle } from "@/game/types";
 
 type Pose = "run" | "dance" | "still";
@@ -137,18 +139,28 @@ export function RunnerStage({
     const { model, run, dance } = bundle;
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: "high-performance" });
     renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.2;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
     const scene = new THREE.Scene();
     const bgColor = new THREE.Color(bgRef.current);
     scene.background = bgColor;
-    scene.add(new THREE.HemisphereLight(0xfff4ea, 0x2a2438, 1.15));
-    const key = new THREE.DirectionalLight(0xffffff, 1.35);
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    scene.environmentIntensity = 1.15;
+    pmrem.dispose();
+    scene.add(new THREE.HemisphereLight(0xfff4ea, 0x2a2438, 0.85));
+    const key = new THREE.DirectionalLight(0xffffff, 1.15);
     key.position.set(2.2, 4.5, 3.4);
     scene.add(key);
-    const rim = new THREE.DirectionalLight(0xd7e6ff, 0.55);
+    const fill = new THREE.DirectionalLight(0xfff1c8, 0.45);
+    fill.position.set(-1.2, 1.8, 3.2);
+    scene.add(fill);
+    const rim = new THREE.DirectionalLight(0xd7e6ff, 0.7);
     rim.position.set(-2.4, 2.2, -2.6);
     scene.add(rim);
 
+    if (label === "GIMBO") applyGimboLook(model);
     const turn = new THREE.Group();
     turn.rotation.y = Math.PI;
     turn.add(model);

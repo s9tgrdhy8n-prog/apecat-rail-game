@@ -1,10 +1,12 @@
 import * as THREE from "three";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { clone as cloneSkinned } from "three/addons/utils/SkeletonUtils.js";
 import { mulberry32, type GhostEvent, type GhostInput, type GhostTape } from "@/game/replay";
 import { Sfx } from "@/game/sfx";
 import type { Hud, Nudge, Phase, RailApi, RunnerName, StageBundle } from "@/game/types";
 import { runnerLabel } from "@/game/runners";
+import { applyGimboLook } from "@/game/runner-look";
 
 const SAVE_KEY = "apecat-rail-v1";
 const LANE = 2.2;
@@ -170,7 +172,9 @@ type RunnerId =
   | "quit"
   | "dupes"
   | "boggybond"
-  | "gigatron";
+  | "gigatron"
+  | "gimbopope"
+  | "goldfinger";
 
 function meshyRunner(id: RunnerId) {
   return (
@@ -186,7 +190,9 @@ function meshyRunner(id: RunnerId) {
     id === "quit" ||
     id === "dupes" ||
     id === "boggybond" ||
-    id === "gigatron"
+    id === "gigatron" ||
+    id === "gimbopope" ||
+    id === "goldfinger"
   );
 }
 
@@ -263,6 +269,8 @@ class RailWorld {
   private dupesUnlocked = false;
   private boggybondUnlocked = false;
   private gigatronUnlocked = false;
+  private gimbopopeUnlocked = false;
+  private goldfingerUnlocked = false;
   private kidsOn = false;
   private kidsDodge = false;
   private kidsMult = 1;
@@ -396,6 +404,10 @@ class RailWorld {
     const rim = new THREE.DirectionalLight(0x3dfff6, 0.55);
     rim.position.set(-3, 2.4, -10);
     this.scene.add(rim);
+    const pmrem = new THREE.PMREMGenerator(this.renderer);
+    this.scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    this.scene.environmentIntensity = 0.85;
+    pmrem.dispose();
 
     this.buildTunnel();
     this.buildPortraits();
@@ -479,6 +491,12 @@ class RailWorld {
       },
       setGigatronUnlocked: (unlocked) => {
         this.gigatronUnlocked = unlocked;
+      },
+      setGimbopopeUnlocked: (unlocked) => {
+        this.gimbopopeUnlocked = unlocked;
+      },
+      setGoldfingerUnlocked: (unlocked) => {
+        this.goldfingerUnlocked = unlocked;
       },
       pause: () => this.freeze(),
       resume: () => this.beginCountdown(),
@@ -654,14 +672,20 @@ class RailWorld {
           tex.generateMipmaps = true;
           tex.needsUpdate = true;
         }
-        if (spec.id === "gimbo") {
+        if (spec.id === "gimbopope" || spec.id === "goldfinger") {
           const std = mat as THREE.MeshStandardMaterial;
-          std.metalnessMap = null;
-          std.metalness = 0;
+          std.metalness = 1;
+          std.roughness = spec.id === "goldfinger" ? 0.22 : 1;
+          std.envMapIntensity = spec.id === "goldfinger" ? 1.55 : 1.35;
+          if (spec.id === "goldfinger") {
+            std.color.set(0xffd56a);
+            std.roughnessMap = null;
+          }
           std.needsUpdate = true;
         }
       }
     });
+    if (spec.id === "gimbo") applyGimboLook(model);
     this.fitGroup.add(model);
     const mixer = new THREE.AnimationMixer(model);
     const clips = new Map<string, THREE.AnimationAction>();
@@ -698,7 +722,16 @@ class RailWorld {
         });
       }
     }
-    const fit = spec.id === "boggo" ? 1.2 : meshyRunner(spec.id) ? 1.3 : 0.7;
+    const fit =
+      spec.id === "boggo"
+        ? 1.2
+        : spec.id === "gimbopope"
+          ? 0.84
+          : spec.id === "goldfinger"
+            ? 0.77
+            : meshyRunner(spec.id)
+            ? 1.3
+            : 0.7;
     const yaw = runnerYaw(spec.id);
     this.fitModel(model, fit, yaw);
     this.roster.set(spec.id, { id: spec.id, name: spec.name, model, mixer, clips });
@@ -761,6 +794,8 @@ class RailWorld {
       { id: "dupes", name: "DUPES", url: "/models/dupes.glb" },
       { id: "boggybond", name: "BOGGYBOND", url: "/models/boggybond.glb" },
       { id: "gigatron", name: "GIGATRON", url: "/models/gigatron.glb" },
+      { id: "gimbopope", name: "GIMBOPOPE", url: "/models/gimbopope.glb" },
+      { id: "goldfinger", name: "GOLDFINGER", url: "/models/goldfinger.glb" },
     ];
     const loader = new GLTFLoader();
     const phone = window.matchMedia("(pointer: coarse)").matches || Math.min(window.innerWidth, window.innerHeight) < 820;
@@ -914,6 +949,8 @@ class RailWorld {
     if (name === "DUPES") return !this.dupesUnlocked;
     if (name === "BOGGYBOND") return !this.boggybondUnlocked;
     if (name === "GIGATRON") return !this.gigatronUnlocked;
+    if (name === "GIMBOPOPE") return !this.gimbopopeUnlocked;
+    if (name === "GOLDFINGER") return !this.goldfingerUnlocked;
     return false;
   }
 
@@ -949,6 +986,8 @@ class RailWorld {
       "dupes",
       "boggybond",
       "gigatron",
+      "gimbopope",
+      "goldfinger",
     ];
     const available = order.filter((id) => {
       if (!this.roster.has(id)) return false;
@@ -1997,6 +2036,8 @@ class RailWorld {
     if (name === "DUPES") return "dupes";
     if (name === "BOGGYBOND") return "boggybond";
     if (name === "GIGATRON") return "gigatron";
+    if (name === "GIMBOPOPE") return "gimbopope";
+    if (name === "GOLDFINGER") return "goldfinger";
     return "gimbo";
   }
 
@@ -2005,6 +2046,10 @@ class RailWorld {
     if (!runner) return null;
     const model = cloneSkinned(runner.model) as THREE.Object3D;
     model.visible = true;
+    if (name === "GIMBO") {
+      applyGimboLook(runner.model);
+      applyGimboLook(model);
+    }
     let run: THREE.AnimationClip | null = runner.clips.get("Run")?.getClip() ?? runner.clips.get("Walk")?.getClip() ?? null;
     let dance: THREE.AnimationClip | null = null;
     for (const [clipName, action] of runner.clips) {

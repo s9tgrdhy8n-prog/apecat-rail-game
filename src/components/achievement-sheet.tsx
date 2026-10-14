@@ -34,6 +34,8 @@ function crewLine(tally: Tally, unlocked: UnlockFlags) {
   if (unlocked.dupes) parts.push(`${runnerLabel("DUPES")} ${tally.rides.DUPES}`);
   if (unlocked.boggybond) parts.push(`${runnerLabel("BOGGYBOND")} ${tally.rides.BOGGYBOND}`);
   if (unlocked.gigatron) parts.push(`${runnerLabel("GIGATRON")} ${tally.rides.GIGATRON}`);
+  if (unlocked.gimbopope) parts.push(`${runnerLabel("GIMBOPOPE")} ${tally.rides.GIMBOPOPE}`);
+  if (unlocked.goldfinger) parts.push(`${runnerLabel("GOLDFINGER")} ${tally.rides.GOLDFINGER}`);
   return ` · ${parts.join(" · ")}`;
 }
 
@@ -104,6 +106,8 @@ export function AchievementSheet({
     dupes: save.dupes,
     boggybond: save.boggybond,
     gigatron: save.gigatron,
+    gimbopope: save.gimbopope,
+    goldfinger: save.goldfinger,
   };
   const daily = GOALS.filter((goal) => goal.period === "daily");
   const weekly = GOALS.filter((goal) => goal.period === "weekly");

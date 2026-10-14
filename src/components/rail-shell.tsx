@@ -9,6 +9,8 @@ import {
   DUPES_COST,
   FIGGE_COST,
   GIGATRON_COST,
+  GIMBOPOPE_COST,
+  GOLDFINGER_COST,
   GOALS,
   KOKO_COST,
   OTTER_COST,
@@ -99,6 +101,8 @@ const RUNNERS: { name: RunnerName; src: string }[] = [
   { name: "DUPES", src: "/brand/dupes.png" },
   { name: "BOGGYBOND", src: "/brand/boggybond.png" },
   { name: "GIGATRON", src: "/brand/gigatron.png" },
+  { name: "GIMBOPOPE", src: "/brand/gimbopope.png" },
+  { name: "GOLDFINGER", src: "/brand/goldfinger.jpg" },
 ];
 const KIDS_SPEEDS = [
   { id: "1", label: "1×", mult: 1 },
@@ -212,6 +216,8 @@ export function RailShell() {
   const [dupesUnlocked, setDupesUnlocked] = useState(false);
   const [boggybondUnlocked, setBoggybondUnlocked] = useState(false);
   const [gigatronUnlocked, setGigatronUnlocked] = useState(false);
+  const [gimbopopeUnlocked, setGimbopopeUnlocked] = useState(false);
+  const [goldfingerUnlocked, setGoldfingerUnlocked] = useState(false);
   const [stats, setStats] = useState<RailStats | null>(null);
   const [nameDraft, setNameDraft] = useState("");
   const [password, setPassword] = useState("");
@@ -244,6 +250,8 @@ export function RailShell() {
   const dupesRef = useRef(false);
   const boggybondRef = useRef(false);
   const gigatronRef = useRef(false);
+  const gimbopopeRef = useRef(false);
+  const goldfingerRef = useRef(false);
   const settle = useRef<Promise<unknown>>(Promise.resolve());
   const arming = useRef(false);
   const practiceRef = useRef(false);
@@ -320,6 +328,12 @@ export function RailShell() {
     setGigatronUnlocked(save.gigatron);
     gigatronRef.current = save.gigatron;
     apiRef.current?.setGigatronUnlocked(save.gigatron);
+    setGimbopopeUnlocked(save.gimbopope);
+    gimbopopeRef.current = save.gimbopope;
+    apiRef.current?.setGimbopopeUnlocked(save.gimbopope);
+    setGoldfingerUnlocked(save.goldfinger);
+    goldfingerRef.current = save.goldfinger;
+    apiRef.current?.setGoldfingerUnlocked(save.goldfinger);
     if (typeof res.fill === "number") setPickupFill(Math.max(0, Math.min(99, Math.floor(res.fill))));
     if (runSerial > 0) {
       const live = hudRef.current;
@@ -358,6 +372,10 @@ export function RailShell() {
     boggybondRef.current = false;
     setGigatronUnlocked(false);
     gigatronRef.current = false;
+    setGimbopopeUnlocked(false);
+    gimbopopeRef.current = false;
+    setGoldfingerUnlocked(false);
+    goldfingerRef.current = false;
     void syncDiamonds({ data: { token: next } })
       .then((res) => {
         if (!res.daily) return;
@@ -431,6 +449,16 @@ export function RailShell() {
     gigatronRef.current = gigatronUnlocked;
     apiRef.current?.setGigatronUnlocked(gigatronUnlocked);
   }, [gigatronUnlocked, hud.phase]);
+
+  useEffect(() => {
+    gimbopopeRef.current = gimbopopeUnlocked;
+    apiRef.current?.setGimbopopeUnlocked(gimbopopeUnlocked);
+  }, [gimbopopeUnlocked, hud.phase]);
+
+  useEffect(() => {
+    goldfingerRef.current = goldfingerUnlocked;
+    apiRef.current?.setGoldfingerUnlocked(goldfingerUnlocked);
+  }, [goldfingerUnlocked, hud.phase]);
 
   useEffect(() => {
     if (hud.phase === "run") setJustEarned([]);
@@ -533,7 +561,9 @@ export function RailShell() {
       (hudRef.current.runner === "QUIT" && !quitRef.current) ||
       (hudRef.current.runner === "DUPES" && !dupesRef.current) ||
       (hudRef.current.runner === "BOGGYBOND" && !boggybondRef.current) ||
-      (hudRef.current.runner === "GIGATRON" && !gigatronRef.current)
+      (hudRef.current.runner === "GIGATRON" && !gigatronRef.current) ||
+      (hudRef.current.runner === "GIMBOPOPE" && !gimbopopeRef.current) ||
+      (hudRef.current.runner === "GOLDFINGER" && !goldfingerRef.current)
     ) {
       apiRef.current?.start();
       return;
@@ -691,6 +721,8 @@ export function RailShell() {
         { name: "DUPES" as const, seconds: 0 },
         { name: "BOGGYBOND" as const, seconds: 0 },
         { name: "GIGATRON" as const, seconds: 0 },
+        { name: "GIMBOPOPE" as const, seconds: 0 },
+        { name: "GOLDFINGER" as const, seconds: 0 },
       ],
     };
     void (async () => getStats({ data: { token } }))()
@@ -1107,6 +1139,20 @@ export function RailShell() {
     if (res?.ok && res.daily) applyWallet(token, res);
   }
 
+  async function onUnlockGimbopope() {
+    if (!token || gimbopopeUnlocked) return;
+    if ((ach?.skulls ?? 0) < GIMBOPOPE_COST) return;
+    const res = await unlockRunner({ data: { token, runner: "GIMBOPOPE" } }).catch(() => null);
+    if (res?.ok && res.daily) applyWallet(token, res);
+  }
+
+  async function onUnlockGoldfinger() {
+    if (!token || goldfingerUnlocked) return;
+    if ((ach?.skulls ?? 0) < GOLDFINGER_COST) return;
+    const res = await unlockRunner({ data: { token, runner: "GOLDFINGER" } }).catch(() => null);
+    if (res?.ok && res.daily) applyWallet(token, res);
+  }
+
   const pickScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -1134,7 +1180,9 @@ export function RailShell() {
     if (name === "QUIT") return quitUnlocked;
     if (name === "DUPES") return dupesUnlocked;
     if (name === "BOGGYBOND") return boggybondUnlocked;
-    return gigatronUnlocked;
+    if (name === "GIGATRON") return gigatronUnlocked;
+    if (name === "GIMBOPOPE") return gimbopopeUnlocked;
+    return goldfingerUnlocked;
   }
 
   function sessionBoard() {
@@ -1191,7 +1239,9 @@ export function RailShell() {
             (runner.name === "QUIT" && !quitUnlocked) ||
             (runner.name === "DUPES" && !dupesUnlocked) ||
             (runner.name === "BOGGYBOND" && !boggybondUnlocked) ||
-            (runner.name === "GIGATRON" && !gigatronUnlocked);
+            (runner.name === "GIGATRON" && !gigatronUnlocked) ||
+            (runner.name === "GIMBOPOPE" && !gimbopopeUnlocked) ||
+            (runner.name === "GOLDFINGER" && !goldfingerUnlocked);
           const cost =
             runner.name === "KOKO"
               ? KOKO_COST
@@ -1217,7 +1267,11 @@ export function RailShell() {
                                 ? BOGGYBOND_COST
                                 : runner.name === "GIGATRON"
                                   ? GIGATRON_COST
-                                  : PINKY_COST;
+                                  : runner.name === "GIMBOPOPE"
+                                    ? GIMBOPOPE_COST
+                                    : runner.name === "GOLDFINGER"
+                                      ? GOLDFINGER_COST
+                                      : PINKY_COST;
           return (
             <button
               key={runner.name}
@@ -1545,7 +1599,9 @@ export function RailShell() {
               (hud.runner === "QUIT" && !quitUnlocked) ||
               (hud.runner === "DUPES" && !dupesUnlocked) ||
               (hud.runner === "BOGGYBOND" && !boggybondUnlocked) ||
-              (hud.runner === "GIGATRON" && !gigatronUnlocked)
+              (hud.runner === "GIGATRON" && !gigatronUnlocked) ||
+              (hud.runner === "GIMBOPOPE" && !gimbopopeUnlocked) ||
+              (hud.runner === "GOLDFINGER" && !goldfingerUnlocked)
                 ? "Unlock for 169 Diamond Skulls."
                 : "Get the highest score. Don’t kiss the bears."}
             </p>
@@ -1583,12 +1639,12 @@ export function RailShell() {
                   <strong>{(ach?.skulls ?? 0).toLocaleString()}</strong>
                 </p>
               </div>
-            </div>
-            <div className="rail-mid-actions">
-              <button type="button" className="rail-kids-open" onClick={enterKids}>
-                <img src="/brand/kids-mode.png" alt="Kids Mode" />
-              </button>
-              {rewardBox()}
+              <div className="rail-mid-actions">
+                <button type="button" className="rail-kids-open" onClick={enterKids}>
+                  <img src="/brand/kids-mode.png" alt="Kids Mode" />
+                </button>
+                {rewardBox()}
+              </div>
             </div>
             {rewardNote ? <p className="rail-reward-note">{rewardNote}</p> : null}
             <div className="rail-pick-block">
@@ -1667,6 +1723,16 @@ export function RailShell() {
             {hud.runner === "GIGATRON" && !gigatronUnlocked ? (
               <button type="button" className="rail-stats-btn" onClick={onUnlockGigatron}>
                 {(ach?.skulls ?? 0) >= GIGATRON_COST ? `Unlock ${runnerLabel("GIGATRON")} · 169` : "Need 169 Diamond Skulls"}
+              </button>
+            ) : null}
+            {hud.runner === "GIMBOPOPE" && !gimbopopeUnlocked ? (
+              <button type="button" className="rail-stats-btn" onClick={onUnlockGimbopope}>
+                {(ach?.skulls ?? 0) >= GIMBOPOPE_COST ? `Unlock ${runnerLabel("GIMBOPOPE")} · 169` : "Need 169 Diamond Skulls"}
+              </button>
+            ) : null}
+            {hud.runner === "GOLDFINGER" && !goldfingerUnlocked ? (
+              <button type="button" className="rail-stats-btn" onClick={onUnlockGoldfinger}>
+                {(ach?.skulls ?? 0) >= GOLDFINGER_COST ? `Unlock ${runnerLabel("GOLDFINGER")} · 169` : "Need 169 Diamond Skulls"}
               </button>
             ) : null}
             {mobile ? null : (

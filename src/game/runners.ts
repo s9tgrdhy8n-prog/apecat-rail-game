@@ -17,6 +17,8 @@ const LABELS: Record<RunnerName, string> = {
   DUPES: "Dupes",
   BOGGYBOND: "Boggy Bond",
   GIGATRON: "GIGATRON",
+  GIMBOPOPE: "Gimbo Pope",
+  GOLDFINGER: "GoldFinger Gimbo",
 };
 
 const HANDLES: Partial<Record<RunnerName, string>> = {

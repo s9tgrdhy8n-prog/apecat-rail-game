@@ -43,6 +43,12 @@ export const BOGGYBOND_COST = 169;
 /** Diamond Skulls to unlock GIGATRON for good. */
 export const GIGATRON_COST = 169;
 
+/** Diamond Skulls to unlock Gimbo Pope for good. */
+export const GIMBOPOPE_COST = 169;
+
+/** Diamond Skulls to unlock GoldFinger Gimbo for good. */
+export const GOLDFINGER_COST = 169;
+
 export type RunFacts = {
   score: number;
   meters: number;
@@ -100,6 +106,8 @@ export type AchievementSave = {
   dupes: boolean;
   boggybond: boolean;
   gigatron: boolean;
+  gimbopope: boolean;
+  goldfinger: boolean;
   claims: string[];
   dailyKey: string;
   weeklyKey: string;
@@ -195,6 +203,8 @@ export const GOALS: Goal[] = [
         dupes: false,
         boggybond: false,
         gigatron: false,
+        gimbopope: false,
+        goldfinger: false,
       }),
   },
   {
@@ -222,6 +232,8 @@ export type UnlockFlags = {
   dupes: boolean;
   boggybond: boolean;
   gigatron: boolean;
+  gimbopope: boolean;
+  goldfinger: boolean;
 };
 
 /** Lowest finished-run count across the crew. Paid runners join after unlock. */
@@ -240,6 +252,8 @@ export function crewProgress(tally: Tally, unlocked: UnlockFlags) {
   if (unlocked.dupes) counts.push(tally.rides.DUPES);
   if (unlocked.boggybond) counts.push(tally.rides.BOGGYBOND);
   if (unlocked.gigatron) counts.push(tally.rides.GIGATRON);
+  if (unlocked.gimbopope) counts.push(tally.rides.GIMBOPOPE);
+  if (unlocked.goldfinger) counts.push(tally.rides.GOLDFINGER);
   return Math.min(...counts);
 }
 
@@ -258,6 +272,8 @@ export function crewDetail(unlocked: UnlockFlags) {
   if (unlocked.dupes) bits.push(`30 as ${runnerLabel("DUPES")}`);
   if (unlocked.boggybond) bits.push(`30 as ${runnerLabel("BOGGYBOND")}`);
   if (unlocked.gigatron) bits.push(`30 as ${runnerLabel("GIGATRON")}`);
+  if (unlocked.gimbopope) bits.push(`30 as ${runnerLabel("GIMBOPOPE")}`);
+  if (unlocked.goldfinger) bits.push(`30 as ${runnerLabel("GOLDFINGER")}`);
   return `Finish ${bits.slice(0, -1).join(", ")}, and ${bits[bits.length - 1]}.`;
 }
 
@@ -294,6 +310,8 @@ export function emptyTally(): Tally {
       DUPES: 0,
       BOGGYBOND: 0,
       GIGATRON: 0,
+      GIMBOPOPE: 0,
+      GOLDFINGER: 0,
     },
   };
 }
@@ -325,6 +343,8 @@ function freshSave(now = new Date()): AchievementSave {
     dupes: false,
     boggybond: false,
     gigatron: false,
+    gimbopope: false,
+    goldfinger: false,
     claims: [],
     dailyKey: utcDay(now),
     weeklyKey: utcWeek(now),
@@ -358,7 +378,9 @@ function tallyFrom(raw: unknown): Tally {
           name === "QUIT" ||
           name === "DUPES" ||
           name === "BOGGYBOND" ||
-          name === "GIGATRON",
+          name === "GIGATRON" ||
+          name === "GIMBOPOPE" ||
+          name === "GOLDFINGER",
       )
     : [];
   return {
@@ -393,6 +415,8 @@ function tallyFrom(raw: unknown): Tally {
       DUPES: num(row.rides?.DUPES),
       BOGGYBOND: num(row.rides?.BOGGYBOND),
       GIGATRON: num(row.rides?.GIGATRON),
+      GIMBOPOPE: num(row.rides?.GIMBOPOPE),
+      GOLDFINGER: num(row.rides?.GOLDFINGER),
     },
   };
 }
@@ -431,6 +455,8 @@ function readRaw(token: string): AchievementSave {
       dupes: parsed.dupes === true,
       boggybond: parsed.boggybond === true,
       gigatron: parsed.gigatron === true,
+      gimbopope: parsed.gimbopope === true,
+      goldfinger: parsed.goldfinger === true,
       claims: Array.isArray(parsed.claims) ? parsed.claims.filter((claim) => typeof claim === "string") : [],
       dailyKey: typeof parsed.dailyKey === "string" ? parsed.dailyKey : "",
       weeklyKey: typeof parsed.weeklyKey === "string" ? parsed.weeklyKey : "",
@@ -523,6 +549,8 @@ export function goalProgress(
     dupes: false,
     boggybond: false,
     gigatron: false,
+    gimbopope: false,
+    goldfinger: false,
   },
 ) {
   return Math.min(goal.target, Math.max(0, goalValue(goal, tally, unlocked)));
@@ -545,6 +573,8 @@ export function goalDone(
     dupes: false,
     boggybond: false,
     gigatron: false,
+    gimbopope: false,
+    goldfinger: false,
   },
 ) {
   return goalValue(goal, tally, unlocked) >= goal.target;
@@ -574,6 +604,8 @@ export type AchievementSnapshot = {
   dupes: boolean;
   boggybond: boolean;
   gigatron: boolean;
+  gimbopope: boolean;
+  goldfinger: boolean;
   paid: string[];
   daily: Tally;
   weekly: Tally;
@@ -598,6 +630,8 @@ export function adoptServerAchievements(token: string, snap: AchievementSnapshot
     dupes: snap.dupes === true,
     boggybond: snap.boggybond === true,
     gigatron: snap.gigatron === true,
+    gimbopope: snap.gimbopope === true,
+    goldfinger: snap.goldfinger === true,
     claims: Array.isArray(snap.paid) ? snap.paid.filter((claim) => typeof claim === "string") : [],
     daily: snap.daily,
     weekly: snap.weekly,
