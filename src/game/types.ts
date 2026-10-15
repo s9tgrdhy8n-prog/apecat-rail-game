@@ -3,6 +3,16 @@ import type { GhostTape } from "@/game/replay";
 
 export type Phase = "loading" | "menu" | "run" | "dead" | "gallery" | "replay";
 
+/** Solo reads every key. A local duel gives each fren one set. `none` ignores keys. */
+export type Pad = "both" | "arrows" | "wasd" | "none";
+
+export type DuelSnap = {
+  score: number;
+  meters: number;
+  /** True when this fren was stopped because the other wrecked first. */
+  held: boolean;
+};
+
 export type RunnerName =
   | "APECAT"
   | "BOGGY"
@@ -58,6 +68,8 @@ export type Hud = {
   magnetLeft: number;
   /** Whole seconds left on Surge. 0 when it is not active. */
   surgeLeft: number;
+  /** Stopped because the other fren wrecked. The run pose stays. */
+  held: boolean;
 };
 
 export type Nudge = -1 | 1 | "jump" | "slide";
@@ -108,6 +120,12 @@ export type RailApi = {
   holdStage: (on: boolean) => void;
   /** Practice tunnel. Scores stay off the ranked rail. */
   setPractice: (opts: { on: boolean; dodge: boolean; speed: number }) => void;
+  /** Which keys this tunnel listens to. */
+  setPad: (pad: Pad) => void;
+  /** Start a run on a shared seed. Scores stay off the ranked rail. */
+  startSeeded: (seed: number) => void;
+  /** Stop a live run and return the score. A wrecked run stays a wreck. */
+  freezeScore: () => DuelSnap;
 };
 
 export const EMPTY_HUD: Hud = {
@@ -139,4 +157,5 @@ export const EMPTY_HUD: Hud = {
   replayDone: false,
   magnetLeft: 0,
   surgeLeft: 0,
+  held: false,
 };

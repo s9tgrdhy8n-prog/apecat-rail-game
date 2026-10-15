@@ -24,6 +24,7 @@ import {
   type AchievementSnapshot,
   type Goal,
 } from "@/game/achievements";
+import { RailVs } from "@/components/rail-vs";
 import { RunnerStage } from "@/components/runner-stage";
 import { EMPTY_HUD, type Hud, type Nudge, type RailApi, type RunnerName, type StageBundle } from "@/game/types";
 import { beginRun, claimName, claimReward, EMPTY_SKULLS, getBoard, getGhost, getStatBoard, getStats, loginName, recordPlay, setPassword as savePassword, submitRun, syncDiamonds, tickRun, unlockRunner, type BoardPeriod, type BoardState, type RailStats, type SkullCounts, type StatBoard, type StatMetric } from "@/game/board";
@@ -236,6 +237,10 @@ export function RailShell() {
   const [stage, setStage] = useState<StageBundle | null>(null);
   const [practice, setPractice] = useState(false);
   const [kidsOpen, setKidsOpen] = useState(false);
+  const [vsOpen, setVsOpen] = useState(false);
+  const [vsHelp, setVsHelp] = useState(false);
+  const [vsCode, setVsCode] = useState<string | null>(null);
+  const [railApi, setRailApi] = useState<RailApi | null>(null);
   const [kidsStyle, setKidsStyle] = useState<"dodge" | "full">("dodge");
   const [kidsSpeed, setKidsSpeed] = useState<(typeof KIDS_SPEEDS)[number]["id"]>("1");
   const [sessionRuns, setSessionRuns] = useState<PracticeRun[]>([]);
@@ -279,9 +284,11 @@ export function RailShell() {
       if (dead) return;
       const handle = mountRail(canvas, setHud);
       apiRef.current = handle.api;
+      setRailApi(handle.api);
       dispose = () => {
         handle.dispose();
         apiRef.current = null;
+        setRailApi(null);
       };
     });
     return () => {
@@ -654,7 +661,25 @@ export function RailShell() {
   }, [practice, kidsStyle, kidsSpeed, hud.phase]);
 
   useEffect(() => {
-    if (practice || !token || board === null || hud.phase !== "dead" || hud.runSerial === 0) return;
+    const code = new URLSearchParams(window.location.search).get("vs")?.toUpperCase() ?? "";
+    if (/^[A-Z0-9]{4}$/.test(code)) {
+      setVsCode(code);
+      setVsOpen(true);
+    }
+  }, []);
+
+  function closeVs() {
+    setVsOpen(false);
+    setVsCode(null);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("vs");
+    window.history.replaceState({}, "", url);
+    apiRef.current?.setPad("both");
+    if (hudRef.current.phase === "run" || hudRef.current.phase === "dead") apiRef.current?.toMenu();
+  }
+
+  useEffect(() => {
+    if (practice || vsOpen || !token || board === null || hud.phase !== "dead" || hud.runSerial === 0) return;
     if (posted.current.has(hud.runSerial)) return;
     posted.current.add(hud.runSerial);
     const runSerial = hud.runSerial;
@@ -711,7 +736,7 @@ export function RailShell() {
           posted.current.delete(runSerial);
         }),
     );
-  }, [practice, token, board, hud.phase, hud.runSerial, hud.score, hud.meters, hud.coins, hud.runner, hud.seconds]);
+  }, [practice, vsOpen, token, board, hud.phase, hud.runSerial, hud.score, hud.meters, hud.coins, hud.runner, hud.seconds]);
 
   useEffect(() => {
     if (!statsOpen) return;
@@ -939,7 +964,8 @@ export function RailShell() {
 
   function onPointerDown(e: React.PointerEvent) {
     if (hud.phase === "gallery") return;
-    if ((e.target as HTMLElement).closest("button, input, textarea, a, .rail-sheet, .rail-menu, .rail-dead, .rail-freeze, .rail-stage")) return;
+    if (vsOpen && hud.phase !== "run") return;
+    if ((e.target as HTMLElement).closest("button, input, textarea, a, .rail-sheet, .rail-menu, .rail-dead, .rail-freeze, .rail-stage, .rail-duel, .rail-vs-card, .rail-vs-chip")) return;
     swipe.current = { x: e.clientX, y: e.clientY, id: e.pointerId, held: null, used: false };
     e.currentTarget.setPointerCapture(e.pointerId);
   }
@@ -1451,6 +1477,7 @@ export function RailShell() {
       data-phase={hud.phase}
       data-mobile={mobile ? "1" : "0"}
       data-clear={clearScreen ? "1" : "0"}
+      data-vs={vsOpen ? "1" : "0"}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={endSwipe}
@@ -1640,6 +1667,37 @@ export function RailShell() {
             >
               Start
             </button>
+            <div className="rail-vs-row">
+              <button
+                type="button"
+                className="rail-board-btn"
+                onClick={() => {
+                  setVsCode(null);
+                  setVsOpen(true);
+                }}
+              >
+                Vs a fren
+              </button>
+              <div className="rail-vs-help">
+                <button
+                  type="button"
+                  className="rail-vs-help-btn"
+                  aria-expanded={vsHelp}
+                  aria-label="How to battle"
+                  onClick={() => setVsHelp((open) => !open)}
+                >
+                  ?
+                </button>
+              </div>
+            </div>
+            {vsHelp ? (
+              <aside className="rail-vs-note">
+                <p className="rail-kicker">How to battle</p>
+                <p>Make a room and send the link, or type their code.</p>
+                <p>You each play on your own screen. Same track.</p>
+                <p>First wreck ends the round. Higher score wins. First to 2.</p>
+              </aside>
+            ) : null}
             {nameSlot()}
             <div className="rail-action-stack">
               <button type="button" className="rail-board-btn" onClick={() => setBoardOpen(true)}>
@@ -2315,6 +2373,16 @@ export function RailShell() {
             Menu
           </button>
         </div>
+      ) : null}
+
+      {vsOpen ? (
+        <RailVs
+          roster={RUNNERS.filter((runner) => runnerOpen(runner.name))}
+          hud={hud}
+          api={railApi}
+          initialCode={vsCode}
+          onClose={closeVs}
+        />
       ) : null}
 
       {stage && hud.phase === "menu" ? (

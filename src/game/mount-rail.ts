@@ -4,7 +4,7 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { clone as cloneSkinned } from "three/addons/utils/SkeletonUtils.js";
 import { mulberry32, type GhostEvent, type GhostInput, type GhostTape } from "@/game/replay";
 import { Sfx } from "@/game/sfx";
-import type { Hud, Nudge, Phase, RailApi, RunnerName, StageBundle } from "@/game/types";
+import type { DuelSnap, Hud, Nudge, Pad, Phase, RailApi, RunnerName, StageBundle } from "@/game/types";
 import { runnerLabel } from "@/game/runners";
 import { applyGimboLook } from "@/game/runner-look";
 
@@ -330,6 +330,10 @@ class RailWorld {
   private jumpCut = 0;
   private roll: () => number = Math.random;
   private seed = 0;
+  private pad: Pad = "both";
+  /** Local duel. The score stays off the solo best and the leaderboard. */
+  private matchOn = false;
+  private matchHeld = false;
   private hasSeed = false;
   private tape: GhostEvent[] = [];
   private tapeI = 0;
@@ -519,6 +523,12 @@ class RailWorld {
         this.kidsMult = Math.max(0.25, Math.min(5, opts.speed || 1));
         this.push(true);
       },
+      setPad: (pad) => {
+        this.pad = pad;
+        this.keys.clear();
+      },
+      startSeeded: (seed) => this.startSeeded(seed),
+      freezeScore: () => this.freezeScore(),
     };
   }
 
@@ -555,7 +565,14 @@ class RailWorld {
     window.visualViewport?.addEventListener("resize", this.resize);
   }
 
+  private ownsKey(code: string) {
+    if (this.pad === "arrows") return code.startsWith("Arrow");
+    if (this.pad === "wasd") return code === "KeyA" || code === "KeyD" || code === "KeyW" || code === "KeyS";
+    return true;
+  }
+
   private onGesture = (e: PointerEvent) => {
+    if (this.pad === "wasd" || this.pad === "none") return;
     const target = e.target as HTMLElement | null;
     if (target?.closest?.(".rail-pause, .rail-track")) return;
     this.sfx.startMusic();
@@ -563,6 +580,8 @@ class RailWorld {
 
   private onKeyDown = (e: KeyboardEvent) => {
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+    if (this.pad === "none") return;
+    if (this.pad !== "both" && !this.ownsKey(e.code)) return;
     if (e.repeat) return;
     if (e.code === "Escape") {
       e.preventDefault();
@@ -1945,6 +1964,42 @@ class RailWorld {
     this.push(true);
   }
 
+  private startSeeded(seed: number) {
+    if (!this.modelReady || this.phase === "run" || this.phase === "replay" || this.phase === "loading" || this.phase === "gallery") return;
+    if (this.lockedRunner(this.runnerName)) {
+      this.flash = "169 Diamond Skulls";
+      this.flashT = 1.6;
+      this.push(true);
+      return;
+    }
+    this.matchOn = true;
+    this.matchHeld = false;
+    this.sfx.unlock();
+    if (this.pad === "arrows") {
+      this.sfx.startMusic();
+      this.sfx.startRumble();
+    }
+    this.beginAttempt(seed >>> 0);
+    this.recording = false;
+    this.phase = "run";
+    this.play("Run");
+    this.push(true);
+  }
+
+  private freezeScore(): DuelSnap {
+    if (this.phase === "run") {
+      this.phase = "dead";
+      this.matchHeld = true;
+      this.recording = false;
+      this.speed = 0;
+      this.clearHolds();
+      this.shield = false;
+      this.shieldRing.visible = false;
+      this.push(true);
+    }
+    return { score: this.score, meters: Math.floor(this.meters), held: this.matchHeld };
+  }
+
   private beginAttempt(seed: number) {
     this.roll = mulberry32(seed);
     this.seed = seed >>> 0;
@@ -2283,6 +2338,8 @@ class RailWorld {
     }
     if (this.phase !== "dead" && this.phase !== "run" && this.phase !== "replay") return;
     this.phase = "menu";
+    this.matchOn = false;
+    this.matchHeld = false;
     this.paused = false;
     this.countdown = 0;
     this.countdownN = 0;
@@ -2383,6 +2440,14 @@ class RailWorld {
     this.shield = false;
     this.shieldRing.visible = false;
     this.trauma = 1;
+    if (this.matchOn) {
+      this.matchHeld = false;
+      this.runSerial += 1;
+      this.sfx.die();
+      this.playDead();
+      this.push(true);
+      return;
+    }
     if (this.kidsOn) {
       this.newBest = this.score > this.kidsBestAtStart && this.score > 0;
       if (this.score > this.kidsBest) this.kidsBest = this.score;
@@ -2494,7 +2559,7 @@ class RailWorld {
       this.hudAcc = 0;
       this.push(false);
     }
-    if (this.saveDirty) {
+    if (this.saveDirty && !this.matchOn) {
       this.saveAcc += dt;
       if (this.saveAcc > 0.6) this.persist();
     }
@@ -2577,6 +2642,7 @@ class RailWorld {
 
   private tally() {
     this.score = Math.floor(this.meters) + this.points;
+    if (this.matchOn) return;
     if (this.kidsOn) {
       if (this.score > this.kidsBest) this.kidsBest = this.score;
       return;
@@ -2890,6 +2956,7 @@ class RailWorld {
       replayDone: this.replayDone,
       magnetLeft: this.magnetT > 0 ? Math.ceil(this.magnetT) : 0,
       surgeLeft: this.surgeT > 0 ? Math.ceil(this.surgeT) : 0,
+      held: this.matchHeld,
     };
     const snap = JSON.stringify(hud);
     if (!force && snap === this.hudSnap) return;
