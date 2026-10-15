@@ -174,7 +174,8 @@ type RunnerId =
   | "boggybond"
   | "gigatron"
   | "gimbopope"
-  | "goldfinger";
+  | "goldfinger"
+  | "beeple";
 
 function meshyRunner(id: RunnerId) {
   return (
@@ -192,7 +193,8 @@ function meshyRunner(id: RunnerId) {
     id === "boggybond" ||
     id === "gigatron" ||
     id === "gimbopope" ||
-    id === "goldfinger"
+    id === "goldfinger" ||
+    id === "beeple"
   );
 }
 
@@ -271,6 +273,7 @@ class RailWorld {
   private gigatronUnlocked = false;
   private gimbopopeUnlocked = false;
   private goldfingerUnlocked = false;
+  private beepleUnlocked = false;
   private kidsOn = false;
   private kidsDodge = false;
   private kidsMult = 1;
@@ -498,6 +501,9 @@ class RailWorld {
       setGoldfingerUnlocked: (unlocked) => {
         this.goldfingerUnlocked = unlocked;
       },
+      setBeepleUnlocked: (unlocked) => {
+        this.beepleUnlocked = unlocked;
+      },
       pause: () => this.freeze(),
       resume: () => this.beginCountdown(),
       playReplay: (tape) => this.playReplay(tape),
@@ -686,6 +692,7 @@ class RailWorld {
       }
     });
     if (spec.id === "gimbo") applyGimboLook(model);
+    if (spec.id === "beeple") model.getObjectByName("Icosphere")?.removeFromParent();
     this.fitGroup.add(model);
     const mixer = new THREE.AnimationMixer(model);
     const clips = new Map<string, THREE.AnimationAction>();
@@ -796,6 +803,7 @@ class RailWorld {
       { id: "gigatron", name: "GIGATRON", url: "/models/gigatron.glb" },
       { id: "gimbopope", name: "GIMBOPOPE", url: "/models/gimbopope.glb" },
       { id: "goldfinger", name: "GOLDFINGER", url: "/models/goldfinger.glb" },
+      { id: "beeple", name: "BEEPLE", url: "/models/beeple.glb" },
     ];
     const loader = new GLTFLoader();
     const phone = window.matchMedia("(pointer: coarse)").matches || Math.min(window.innerWidth, window.innerHeight) < 820;
@@ -951,6 +959,7 @@ class RailWorld {
     if (name === "GIGATRON") return !this.gigatronUnlocked;
     if (name === "GIMBOPOPE") return !this.gimbopopeUnlocked;
     if (name === "GOLDFINGER") return !this.goldfingerUnlocked;
+    if (name === "BEEPLE") return !this.beepleUnlocked;
     return false;
   }
 
@@ -988,6 +997,7 @@ class RailWorld {
       "gigatron",
       "gimbopope",
       "goldfinger",
+      "beeple",
     ];
     const available = order.filter((id) => {
       if (!this.roster.has(id)) return false;
@@ -2038,6 +2048,7 @@ class RailWorld {
     if (name === "GIGATRON") return "gigatron";
     if (name === "GIMBOPOPE") return "gimbopope";
     if (name === "GOLDFINGER") return "goldfinger";
+    if (name === "BEEPLE") return "beeple";
     return "gimbo";
   }
 

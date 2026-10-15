@@ -49,6 +49,9 @@ export const GIMBOPOPE_COST = 169;
 /** Diamond Skulls to unlock GoldFinger Gimbo for good. */
 export const GOLDFINGER_COST = 169;
 
+/** Diamond Skulls to unlock Beeple for good. */
+export const BEEPLE_COST = 169;
+
 export type RunFacts = {
   score: number;
   meters: number;
@@ -108,6 +111,7 @@ export type AchievementSave = {
   gigatron: boolean;
   gimbopope: boolean;
   goldfinger: boolean;
+  beeple: boolean;
   claims: string[];
   dailyKey: string;
   weeklyKey: string;
@@ -205,6 +209,7 @@ export const GOALS: Goal[] = [
         gigatron: false,
         gimbopope: false,
         goldfinger: false,
+        beeple: false,
       }),
   },
   {
@@ -234,6 +239,7 @@ export type UnlockFlags = {
   gigatron: boolean;
   gimbopope: boolean;
   goldfinger: boolean;
+  beeple: boolean;
 };
 
 /** Lowest finished-run count across the crew. Paid runners join after unlock. */
@@ -254,6 +260,7 @@ export function crewProgress(tally: Tally, unlocked: UnlockFlags) {
   if (unlocked.gigatron) counts.push(tally.rides.GIGATRON);
   if (unlocked.gimbopope) counts.push(tally.rides.GIMBOPOPE);
   if (unlocked.goldfinger) counts.push(tally.rides.GOLDFINGER);
+  if (unlocked.beeple) counts.push(tally.rides.BEEPLE);
   return Math.min(...counts);
 }
 
@@ -274,6 +281,7 @@ export function crewDetail(unlocked: UnlockFlags) {
   if (unlocked.gigatron) bits.push(`30 as ${runnerLabel("GIGATRON")}`);
   if (unlocked.gimbopope) bits.push(`30 as ${runnerLabel("GIMBOPOPE")}`);
   if (unlocked.goldfinger) bits.push(`30 as ${runnerLabel("GOLDFINGER")}`);
+  if (unlocked.beeple) bits.push(`30 as ${runnerLabel("BEEPLE")}`);
   return `Finish ${bits.slice(0, -1).join(", ")}, and ${bits[bits.length - 1]}.`;
 }
 
@@ -312,6 +320,7 @@ export function emptyTally(): Tally {
       GIGATRON: 0,
       GIMBOPOPE: 0,
       GOLDFINGER: 0,
+      BEEPLE: 0,
     },
   };
 }
@@ -345,6 +354,7 @@ function freshSave(now = new Date()): AchievementSave {
     gigatron: false,
     gimbopope: false,
     goldfinger: false,
+    beeple: false,
     claims: [],
     dailyKey: utcDay(now),
     weeklyKey: utcWeek(now),
@@ -380,7 +390,8 @@ function tallyFrom(raw: unknown): Tally {
           name === "BOGGYBOND" ||
           name === "GIGATRON" ||
           name === "GIMBOPOPE" ||
-          name === "GOLDFINGER",
+          name === "GOLDFINGER" ||
+          name === "BEEPLE",
       )
     : [];
   return {
@@ -417,6 +428,7 @@ function tallyFrom(raw: unknown): Tally {
       GIGATRON: num(row.rides?.GIGATRON),
       GIMBOPOPE: num(row.rides?.GIMBOPOPE),
       GOLDFINGER: num(row.rides?.GOLDFINGER),
+      BEEPLE: num(row.rides?.BEEPLE),
     },
   };
 }
@@ -457,6 +469,7 @@ function readRaw(token: string): AchievementSave {
       gigatron: parsed.gigatron === true,
       gimbopope: parsed.gimbopope === true,
       goldfinger: parsed.goldfinger === true,
+      beeple: parsed.beeple === true,
       claims: Array.isArray(parsed.claims) ? parsed.claims.filter((claim) => typeof claim === "string") : [],
       dailyKey: typeof parsed.dailyKey === "string" ? parsed.dailyKey : "",
       weeklyKey: typeof parsed.weeklyKey === "string" ? parsed.weeklyKey : "",
@@ -551,6 +564,7 @@ export function goalProgress(
     gigatron: false,
     gimbopope: false,
     goldfinger: false,
+    beeple: false,
   },
 ) {
   return Math.min(goal.target, Math.max(0, goalValue(goal, tally, unlocked)));
@@ -575,6 +589,7 @@ export function goalDone(
     gigatron: false,
     gimbopope: false,
     goldfinger: false,
+    beeple: false,
   },
 ) {
   return goalValue(goal, tally, unlocked) >= goal.target;
@@ -606,6 +621,7 @@ export type AchievementSnapshot = {
   gigatron: boolean;
   gimbopope: boolean;
   goldfinger: boolean;
+  beeple: boolean;
   paid: string[];
   daily: Tally;
   weekly: Tally;
@@ -632,6 +648,7 @@ export function adoptServerAchievements(token: string, snap: AchievementSnapshot
     gigatron: snap.gigatron === true,
     gimbopope: snap.gimbopope === true,
     goldfinger: snap.goldfinger === true,
+    beeple: snap.beeple === true,
     claims: Array.isArray(snap.paid) ? snap.paid.filter((claim) => typeof claim === "string") : [],
     daily: snap.daily,
     weekly: snap.weekly,

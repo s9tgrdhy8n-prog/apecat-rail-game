@@ -11,6 +11,7 @@ import {
   GIGATRON_COST,
   GIMBOPOPE_COST,
   GOLDFINGER_COST,
+  BEEPLE_COST,
   GOALS,
   KOKO_COST,
   OTTER_COST,
@@ -103,6 +104,7 @@ const RUNNERS: { name: RunnerName; src: string }[] = [
   { name: "GIGATRON", src: "/brand/gigatron.png" },
   { name: "GIMBOPOPE", src: "/brand/gimbopope.png" },
   { name: "GOLDFINGER", src: "/brand/goldfinger.jpg" },
+  { name: "BEEPLE", src: "/brand/beeple.jpg" },
 ];
 const KIDS_SPEEDS = [
   { id: "1", label: "1×", mult: 1 },
@@ -218,6 +220,7 @@ export function RailShell() {
   const [gigatronUnlocked, setGigatronUnlocked] = useState(false);
   const [gimbopopeUnlocked, setGimbopopeUnlocked] = useState(false);
   const [goldfingerUnlocked, setGoldfingerUnlocked] = useState(false);
+  const [beepleUnlocked, setBeepleUnlocked] = useState(false);
   const [stats, setStats] = useState<RailStats | null>(null);
   const [nameDraft, setNameDraft] = useState("");
   const [password, setPassword] = useState("");
@@ -252,6 +255,7 @@ export function RailShell() {
   const gigatronRef = useRef(false);
   const gimbopopeRef = useRef(false);
   const goldfingerRef = useRef(false);
+  const beepleRef = useRef(false);
   const settle = useRef<Promise<unknown>>(Promise.resolve());
   const arming = useRef(false);
   const practiceRef = useRef(false);
@@ -334,6 +338,9 @@ export function RailShell() {
     setGoldfingerUnlocked(save.goldfinger);
     goldfingerRef.current = save.goldfinger;
     apiRef.current?.setGoldfingerUnlocked(save.goldfinger);
+    setBeepleUnlocked(save.beeple);
+    beepleRef.current = save.beeple;
+    apiRef.current?.setBeepleUnlocked(save.beeple);
     if (typeof res.fill === "number") setPickupFill(Math.max(0, Math.min(99, Math.floor(res.fill))));
     if (runSerial > 0) {
       const live = hudRef.current;
@@ -376,6 +383,8 @@ export function RailShell() {
     gimbopopeRef.current = false;
     setGoldfingerUnlocked(false);
     goldfingerRef.current = false;
+    setBeepleUnlocked(false);
+    beepleRef.current = false;
     void syncDiamonds({ data: { token: next } })
       .then((res) => {
         if (!res.daily) return;
@@ -459,6 +468,11 @@ export function RailShell() {
     goldfingerRef.current = goldfingerUnlocked;
     apiRef.current?.setGoldfingerUnlocked(goldfingerUnlocked);
   }, [goldfingerUnlocked, hud.phase]);
+
+  useEffect(() => {
+    beepleRef.current = beepleUnlocked;
+    apiRef.current?.setBeepleUnlocked(beepleUnlocked);
+  }, [beepleUnlocked, hud.phase]);
 
   useEffect(() => {
     if (hud.phase === "run") setJustEarned([]);
@@ -563,7 +577,8 @@ export function RailShell() {
       (hudRef.current.runner === "BOGGYBOND" && !boggybondRef.current) ||
       (hudRef.current.runner === "GIGATRON" && !gigatronRef.current) ||
       (hudRef.current.runner === "GIMBOPOPE" && !gimbopopeRef.current) ||
-      (hudRef.current.runner === "GOLDFINGER" && !goldfingerRef.current)
+      (hudRef.current.runner === "GOLDFINGER" && !goldfingerRef.current) ||
+      (hudRef.current.runner === "BEEPLE" && !beepleRef.current)
     ) {
       apiRef.current?.start();
       return;
@@ -723,6 +738,7 @@ export function RailShell() {
         { name: "GIGATRON" as const, seconds: 0 },
         { name: "GIMBOPOPE" as const, seconds: 0 },
         { name: "GOLDFINGER" as const, seconds: 0 },
+        { name: "BEEPLE" as const, seconds: 0 },
       ],
     };
     void (async () => getStats({ data: { token } }))()
@@ -1153,6 +1169,13 @@ export function RailShell() {
     if (res?.ok && res.daily) applyWallet(token, res);
   }
 
+  async function onUnlockBeeple() {
+    if (!token || beepleUnlocked) return;
+    if ((ach?.skulls ?? 0) < BEEPLE_COST) return;
+    const res = await unlockRunner({ data: { token, runner: "BEEPLE" } }).catch(() => null);
+    if (res?.ok && res.daily) applyWallet(token, res);
+  }
+
   const pickScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -1182,7 +1205,8 @@ export function RailShell() {
     if (name === "BOGGYBOND") return boggybondUnlocked;
     if (name === "GIGATRON") return gigatronUnlocked;
     if (name === "GIMBOPOPE") return gimbopopeUnlocked;
-    return goldfingerUnlocked;
+    if (name === "GOLDFINGER") return goldfingerUnlocked;
+    return beepleUnlocked;
   }
 
   function sessionBoard() {
@@ -1241,7 +1265,8 @@ export function RailShell() {
             (runner.name === "BOGGYBOND" && !boggybondUnlocked) ||
             (runner.name === "GIGATRON" && !gigatronUnlocked) ||
             (runner.name === "GIMBOPOPE" && !gimbopopeUnlocked) ||
-            (runner.name === "GOLDFINGER" && !goldfingerUnlocked);
+            (runner.name === "GOLDFINGER" && !goldfingerUnlocked) ||
+            (runner.name === "BEEPLE" && !beepleUnlocked);
           const cost =
             runner.name === "KOKO"
               ? KOKO_COST
@@ -1271,7 +1296,9 @@ export function RailShell() {
                                     ? GIMBOPOPE_COST
                                     : runner.name === "GOLDFINGER"
                                       ? GOLDFINGER_COST
-                                      : PINKY_COST;
+                                      : runner.name === "BEEPLE"
+                                        ? BEEPLE_COST
+                                        : PINKY_COST;
           return (
             <button
               key={runner.name}
@@ -1601,7 +1628,8 @@ export function RailShell() {
               (hud.runner === "BOGGYBOND" && !boggybondUnlocked) ||
               (hud.runner === "GIGATRON" && !gigatronUnlocked) ||
               (hud.runner === "GIMBOPOPE" && !gimbopopeUnlocked) ||
-              (hud.runner === "GOLDFINGER" && !goldfingerUnlocked)
+              (hud.runner === "GOLDFINGER" && !goldfingerUnlocked) ||
+              (hud.runner === "BEEPLE" && !beepleUnlocked)
                 ? "Unlock for 169 Diamond Skulls."
                 : "Get the highest score. Don’t kiss the bears."}
             </p>
@@ -1733,6 +1761,11 @@ export function RailShell() {
             {hud.runner === "GOLDFINGER" && !goldfingerUnlocked ? (
               <button type="button" className="rail-stats-btn" onClick={onUnlockGoldfinger}>
                 {(ach?.skulls ?? 0) >= GOLDFINGER_COST ? `Unlock ${runnerLabel("GOLDFINGER")} · 169` : "Need 169 Diamond Skulls"}
+              </button>
+            ) : null}
+            {hud.runner === "BEEPLE" && !beepleUnlocked ? (
+              <button type="button" className="rail-stats-btn" onClick={onUnlockBeeple}>
+                {(ach?.skulls ?? 0) >= BEEPLE_COST ? `Unlock ${runnerLabel("BEEPLE")} · 169` : "Need 169 Diamond Skulls"}
               </button>
             ) : null}
             {mobile ? null : (
