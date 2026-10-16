@@ -42,6 +42,7 @@ The start menu reads `GAME_VERSION` in `src/game/version.ts`. On every productio
 | 1.12.0 | 2026-10-14 | Published to https://apecat-rail-game.com. Gimbo Pope and GoldFinger Gimbo join the runners and each unlocks for 169 Diamond Skulls. Pope is chrome silver. GoldFinger is gold. Original GIMBO is chrome silver too. Kids Mode and Claim Rewards sit under Achievements so the tunnel runner stays in view. |
 | 1.13.0 | 2026-10-14 | Published to https://apecat-rail-game.com. Beeple joins the runners and unlocks for 169 Diamond Skulls. His X is @beeple. Claim Rewards is back for 24 hours from this publish. One tap adds 169 Diamond Skulls. Existing accounts can claim it, and so can any account created in that window, including people who claimed the first drop. |
 | 1.14.0 | 2026-10-15 | Published to https://apecat-rail-game.com. Vs a fren is a two-player race. Make a room, send the 4-letter code or the link, and both play on their own screen. Same track. First wreck ends the round. Higher score wins. First to 2. A tie scores nobody. A ? beside the button explains how to battle. Versus runs do not post to the solo leaderboard. |
+| 1.15.0 | 2026-10-15 | Published to https://apecat-rail-game.com. Saint and DIBS join the runners, Saint first, and each unlocks for 169 Diamond Skulls. Saint’s X is @Saint10Fourteen. DIBS’s X is @DoinItBetterSan. Finished runs count in Stats and in The whole crew after unlock. |
 
 ## 1.0.5 notes
 

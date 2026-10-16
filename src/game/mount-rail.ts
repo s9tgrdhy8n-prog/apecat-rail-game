@@ -175,7 +175,9 @@ type RunnerId =
   | "gigatron"
   | "gimbopope"
   | "goldfinger"
-  | "beeple";
+  | "beeple"
+  | "saint"
+  | "dibs";
 
 function meshyRunner(id: RunnerId) {
   return (
@@ -194,7 +196,9 @@ function meshyRunner(id: RunnerId) {
     id === "gigatron" ||
     id === "gimbopope" ||
     id === "goldfinger" ||
-    id === "beeple"
+    id === "beeple" ||
+    id === "saint" ||
+    id === "dibs"
   );
 }
 
@@ -274,6 +278,8 @@ class RailWorld {
   private gimbopopeUnlocked = false;
   private goldfingerUnlocked = false;
   private beepleUnlocked = false;
+  private saintUnlocked = false;
+  private dibsUnlocked = false;
   private kidsOn = false;
   private kidsDodge = false;
   private kidsMult = 1;
@@ -507,6 +513,12 @@ class RailWorld {
       },
       setBeepleUnlocked: (unlocked) => {
         this.beepleUnlocked = unlocked;
+      },
+      setSaintUnlocked: (unlocked) => {
+        this.saintUnlocked = unlocked;
+      },
+      setDibsUnlocked: (unlocked) => {
+        this.dibsUnlocked = unlocked;
       },
       pause: () => this.freeze(),
       resume: () => this.beginCountdown(),
@@ -823,6 +835,8 @@ class RailWorld {
       { id: "gimbopope", name: "GIMBOPOPE", url: "/models/gimbopope.glb" },
       { id: "goldfinger", name: "GOLDFINGER", url: "/models/goldfinger.glb" },
       { id: "beeple", name: "BEEPLE", url: "/models/beeple.glb" },
+      { id: "saint", name: "SAINT", url: "/models/saint.glb" },
+      { id: "dibs", name: "DIBS", url: "/models/dibs.glb" },
     ];
     const loader = new GLTFLoader();
     const phone = window.matchMedia("(pointer: coarse)").matches || Math.min(window.innerWidth, window.innerHeight) < 820;
@@ -979,6 +993,8 @@ class RailWorld {
     if (name === "GIMBOPOPE") return !this.gimbopopeUnlocked;
     if (name === "GOLDFINGER") return !this.goldfingerUnlocked;
     if (name === "BEEPLE") return !this.beepleUnlocked;
+    if (name === "SAINT") return !this.saintUnlocked;
+    if (name === "DIBS") return !this.dibsUnlocked;
     return false;
   }
 
@@ -1017,6 +1033,8 @@ class RailWorld {
       "gimbopope",
       "goldfinger",
       "beeple",
+      "saint",
+      "dibs",
     ];
     const available = order.filter((id) => {
       if (!this.roster.has(id)) return false;
@@ -2104,6 +2122,8 @@ class RailWorld {
     if (name === "GIMBOPOPE") return "gimbopope";
     if (name === "GOLDFINGER") return "goldfinger";
     if (name === "BEEPLE") return "beeple";
+    if (name === "SAINT") return "saint";
+    if (name === "DIBS") return "dibs";
     return "gimbo";
   }
 

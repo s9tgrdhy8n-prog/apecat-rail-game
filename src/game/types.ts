@@ -32,7 +32,9 @@ export type RunnerName =
   | "GIGATRON"
   | "GIMBOPOPE"
   | "GOLDFINGER"
-  | "BEEPLE";
+  | "BEEPLE"
+  | "SAINT"
+  | "DIBS";
 
 export type Hud = {
   phase: Phase;
@@ -110,6 +112,8 @@ export type RailApi = {
   setGimbopopeUnlocked: (unlocked: boolean) => void;
   setGoldfingerUnlocked: (unlocked: boolean) => void;
   setBeepleUnlocked: (unlocked: boolean) => void;
+  setSaintUnlocked: (unlocked: boolean) => void;
+  setDibsUnlocked: (unlocked: boolean) => void;
   pause: () => void;
   resume: () => void;
   playReplay: (tape: GhostTape) => void;

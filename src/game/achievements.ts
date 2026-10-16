@@ -52,6 +52,12 @@ export const GOLDFINGER_COST = 169;
 /** Diamond Skulls to unlock Beeple for good. */
 export const BEEPLE_COST = 169;
 
+/** Diamond Skulls to unlock Saint for good. */
+export const SAINT_COST = 169;
+
+/** Diamond Skulls to unlock DIBS for good. */
+export const DIBS_COST = 169;
+
 export type RunFacts = {
   score: number;
   meters: number;
@@ -112,6 +118,8 @@ export type AchievementSave = {
   gimbopope: boolean;
   goldfinger: boolean;
   beeple: boolean;
+  saint: boolean;
+  dibs: boolean;
   claims: string[];
   dailyKey: string;
   weeklyKey: string;
@@ -210,6 +218,8 @@ export const GOALS: Goal[] = [
         gimbopope: false,
         goldfinger: false,
         beeple: false,
+        saint: false,
+        dibs: false,
       }),
   },
   {
@@ -240,6 +250,8 @@ export type UnlockFlags = {
   gimbopope: boolean;
   goldfinger: boolean;
   beeple: boolean;
+  saint: boolean;
+  dibs: boolean;
 };
 
 /** Lowest finished-run count across the crew. Paid runners join after unlock. */
@@ -261,6 +273,8 @@ export function crewProgress(tally: Tally, unlocked: UnlockFlags) {
   if (unlocked.gimbopope) counts.push(tally.rides.GIMBOPOPE);
   if (unlocked.goldfinger) counts.push(tally.rides.GOLDFINGER);
   if (unlocked.beeple) counts.push(tally.rides.BEEPLE);
+  if (unlocked.saint) counts.push(tally.rides.SAINT);
+  if (unlocked.dibs) counts.push(tally.rides.DIBS);
   return Math.min(...counts);
 }
 
@@ -282,6 +296,8 @@ export function crewDetail(unlocked: UnlockFlags) {
   if (unlocked.gimbopope) bits.push(`30 as ${runnerLabel("GIMBOPOPE")}`);
   if (unlocked.goldfinger) bits.push(`30 as ${runnerLabel("GOLDFINGER")}`);
   if (unlocked.beeple) bits.push(`30 as ${runnerLabel("BEEPLE")}`);
+  if (unlocked.saint) bits.push(`30 as ${runnerLabel("SAINT")}`);
+  if (unlocked.dibs) bits.push(`30 as ${runnerLabel("DIBS")}`);
   return `Finish ${bits.slice(0, -1).join(", ")}, and ${bits[bits.length - 1]}.`;
 }
 
@@ -321,6 +337,8 @@ export function emptyTally(): Tally {
       GIMBOPOPE: 0,
       GOLDFINGER: 0,
       BEEPLE: 0,
+      SAINT: 0,
+      DIBS: 0,
     },
   };
 }
@@ -355,6 +373,8 @@ function freshSave(now = new Date()): AchievementSave {
     gimbopope: false,
     goldfinger: false,
     beeple: false,
+        saint: false,
+        dibs: false,
     claims: [],
     dailyKey: utcDay(now),
     weeklyKey: utcWeek(now),
@@ -391,7 +411,9 @@ function tallyFrom(raw: unknown): Tally {
           name === "GIGATRON" ||
           name === "GIMBOPOPE" ||
           name === "GOLDFINGER" ||
-          name === "BEEPLE",
+          name === "BEEPLE" ||
+          name === "SAINT" ||
+          name === "DIBS",
       )
     : [];
   return {
@@ -429,6 +451,8 @@ function tallyFrom(raw: unknown): Tally {
       GIMBOPOPE: num(row.rides?.GIMBOPOPE),
       GOLDFINGER: num(row.rides?.GOLDFINGER),
       BEEPLE: num(row.rides?.BEEPLE),
+      SAINT: num(row.rides?.SAINT),
+      DIBS: num(row.rides?.DIBS),
     },
   };
 }
@@ -470,6 +494,8 @@ function readRaw(token: string): AchievementSave {
       gimbopope: parsed.gimbopope === true,
       goldfinger: parsed.goldfinger === true,
       beeple: parsed.beeple === true,
+      saint: parsed.saint === true,
+      dibs: parsed.dibs === true,
       claims: Array.isArray(parsed.claims) ? parsed.claims.filter((claim) => typeof claim === "string") : [],
       dailyKey: typeof parsed.dailyKey === "string" ? parsed.dailyKey : "",
       weeklyKey: typeof parsed.weeklyKey === "string" ? parsed.weeklyKey : "",
@@ -565,6 +591,8 @@ export function goalProgress(
     gimbopope: false,
     goldfinger: false,
     beeple: false,
+        saint: false,
+        dibs: false,
   },
 ) {
   return Math.min(goal.target, Math.max(0, goalValue(goal, tally, unlocked)));
@@ -590,6 +618,8 @@ export function goalDone(
     gimbopope: false,
     goldfinger: false,
     beeple: false,
+        saint: false,
+        dibs: false,
   },
 ) {
   return goalValue(goal, tally, unlocked) >= goal.target;
@@ -622,6 +652,8 @@ export type AchievementSnapshot = {
   gimbopope: boolean;
   goldfinger: boolean;
   beeple: boolean;
+  saint: boolean;
+  dibs: boolean;
   paid: string[];
   daily: Tally;
   weekly: Tally;
@@ -649,6 +681,8 @@ export function adoptServerAchievements(token: string, snap: AchievementSnapshot
     gimbopope: snap.gimbopope === true,
     goldfinger: snap.goldfinger === true,
     beeple: snap.beeple === true,
+    saint: snap.saint === true,
+    dibs: snap.dibs === true,
     claims: Array.isArray(snap.paid) ? snap.paid.filter((claim) => typeof claim === "string") : [],
     daily: snap.daily,
     weekly: snap.weekly,
