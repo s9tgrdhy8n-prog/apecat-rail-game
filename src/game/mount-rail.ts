@@ -177,7 +177,9 @@ type RunnerId =
   | "goldfinger"
   | "beeple"
   | "saint"
-  | "dibs";
+  | "dibs"
+  | "slimshady"
+  | "lilredmercy";
 
 function meshyRunner(id: RunnerId) {
   return (
@@ -198,7 +200,9 @@ function meshyRunner(id: RunnerId) {
     id === "goldfinger" ||
     id === "beeple" ||
     id === "saint" ||
-    id === "dibs"
+    id === "dibs" ||
+    id === "slimshady" ||
+    id === "lilredmercy"
   );
 }
 
@@ -280,6 +284,8 @@ class RailWorld {
   private beepleUnlocked = false;
   private saintUnlocked = false;
   private dibsUnlocked = false;
+  private slimshadyUnlocked = false;
+  private lilredmercyUnlocked = false;
   private kidsOn = false;
   private kidsDodge = false;
   private kidsMult = 1;
@@ -519,6 +525,12 @@ class RailWorld {
       },
       setDibsUnlocked: (unlocked) => {
         this.dibsUnlocked = unlocked;
+      },
+      setSlimshadyUnlocked: (unlocked) => {
+        this.slimshadyUnlocked = unlocked;
+      },
+      setLilredmercyUnlocked: (unlocked) => {
+        this.lilredmercyUnlocked = unlocked;
       },
       pause: () => this.freeze(),
       resume: () => this.beginCountdown(),
@@ -765,7 +777,7 @@ class RailWorld {
         ? 1.2
         : spec.id === "gimbopope"
           ? 0.84
-          : spec.id === "goldfinger"
+          : spec.id === "goldfinger" || spec.id === "slimshady" || spec.id === "lilredmercy"
             ? 0.77
             : meshyRunner(spec.id)
             ? 1.3
@@ -837,6 +849,8 @@ class RailWorld {
       { id: "beeple", name: "BEEPLE", url: "/models/beeple.glb" },
       { id: "saint", name: "SAINT", url: "/models/saint.glb" },
       { id: "dibs", name: "DIBS", url: "/models/dibs.glb" },
+      { id: "slimshady", name: "SLIMSHADY", url: "/models/slimshady.glb" },
+      { id: "lilredmercy", name: "LILREDMERCY", url: "/models/lilredmercy.glb" },
     ];
     const loader = new GLTFLoader();
     const phone = window.matchMedia("(pointer: coarse)").matches || Math.min(window.innerWidth, window.innerHeight) < 820;
@@ -995,6 +1009,8 @@ class RailWorld {
     if (name === "BEEPLE") return !this.beepleUnlocked;
     if (name === "SAINT") return !this.saintUnlocked;
     if (name === "DIBS") return !this.dibsUnlocked;
+    if (name === "SLIMSHADY") return !this.slimshadyUnlocked;
+    if (name === "LILREDMERCY") return !this.lilredmercyUnlocked;
     return false;
   }
 
@@ -1035,6 +1051,8 @@ class RailWorld {
       "beeple",
       "saint",
       "dibs",
+      "slimshady",
+      "lilredmercy",
     ];
     const available = order.filter((id) => {
       if (!this.roster.has(id)) return false;
@@ -2124,6 +2142,8 @@ class RailWorld {
     if (name === "BEEPLE") return "beeple";
     if (name === "SAINT") return "saint";
     if (name === "DIBS") return "dibs";
+    if (name === "SLIMSHADY") return "slimshady";
+    if (name === "LILREDMERCY") return "lilredmercy";
     return "gimbo";
   }
 
@@ -2932,6 +2952,15 @@ class RailWorld {
       const mag = this.trauma * this.trauma;
       sx = (Math.random() - 0.5) * mag * 0.45;
       sy = (Math.random() - 0.5) * mag * 0.28;
+    }
+    const aspect = this.camera.aspect || 1;
+    const menu = this.phase === "menu";
+    // A wide window drops to a tighter lens and walks the runner into the portraits.
+    // The start screen keeps the open frame so they stay a step down the tunnel.
+    const fov = menu || aspect < 0.9 ? 76 : 58;
+    if (this.camera.fov !== fov) {
+      this.camera.fov = fov;
+      this.camera.updateProjectionMatrix();
     }
     this.camera.position.set(this.camX + sx, 2.42 + bob + sy, 6.25);
     this.camera.lookAt(this.camX * 0.8, 1.15, -8);

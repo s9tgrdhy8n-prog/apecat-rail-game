@@ -58,6 +58,12 @@ export const SAINT_COST = 169;
 /** Diamond Skulls to unlock DIBS for good. */
 export const DIBS_COST = 169;
 
+/** Diamond Skulls to unlock The real Slim Shady for good. */
+export const SLIMSHADY_COST = 169;
+
+/** Diamond Skulls to unlock lil red mercy for good. */
+export const LILREDMERCY_COST = 169;
+
 export type RunFacts = {
   score: number;
   meters: number;
@@ -120,6 +126,8 @@ export type AchievementSave = {
   beeple: boolean;
   saint: boolean;
   dibs: boolean;
+  slimshady: boolean;
+  lilredmercy: boolean;
   claims: string[];
   dailyKey: string;
   weeklyKey: string;
@@ -220,6 +228,8 @@ export const GOALS: Goal[] = [
         beeple: false,
         saint: false,
         dibs: false,
+        slimshady: false,
+        lilredmercy: false,
       }),
   },
   {
@@ -252,6 +262,8 @@ export type UnlockFlags = {
   beeple: boolean;
   saint: boolean;
   dibs: boolean;
+  slimshady: boolean;
+  lilredmercy: boolean;
 };
 
 /** Lowest finished-run count across the crew. Paid runners join after unlock. */
@@ -275,6 +287,8 @@ export function crewProgress(tally: Tally, unlocked: UnlockFlags) {
   if (unlocked.beeple) counts.push(tally.rides.BEEPLE);
   if (unlocked.saint) counts.push(tally.rides.SAINT);
   if (unlocked.dibs) counts.push(tally.rides.DIBS);
+  if (unlocked.slimshady) counts.push(tally.rides.SLIMSHADY);
+  if (unlocked.lilredmercy) counts.push(tally.rides.LILREDMERCY);
   return Math.min(...counts);
 }
 
@@ -298,6 +312,8 @@ export function crewDetail(unlocked: UnlockFlags) {
   if (unlocked.beeple) bits.push(`30 as ${runnerLabel("BEEPLE")}`);
   if (unlocked.saint) bits.push(`30 as ${runnerLabel("SAINT")}`);
   if (unlocked.dibs) bits.push(`30 as ${runnerLabel("DIBS")}`);
+  if (unlocked.slimshady) bits.push(`30 as ${runnerLabel("SLIMSHADY")}`);
+  if (unlocked.lilredmercy) bits.push(`30 as ${runnerLabel("LILREDMERCY")}`);
   return `Finish ${bits.slice(0, -1).join(", ")}, and ${bits[bits.length - 1]}.`;
 }
 
@@ -339,6 +355,8 @@ export function emptyTally(): Tally {
       BEEPLE: 0,
       SAINT: 0,
       DIBS: 0,
+      SLIMSHADY: 0,
+      LILREDMERCY: 0,
     },
   };
 }
@@ -375,6 +393,8 @@ function freshSave(now = new Date()): AchievementSave {
     beeple: false,
         saint: false,
         dibs: false,
+        slimshady: false,
+        lilredmercy: false,
     claims: [],
     dailyKey: utcDay(now),
     weeklyKey: utcWeek(now),
@@ -413,7 +433,9 @@ function tallyFrom(raw: unknown): Tally {
           name === "GOLDFINGER" ||
           name === "BEEPLE" ||
           name === "SAINT" ||
-          name === "DIBS",
+          name === "DIBS" ||
+          name === "SLIMSHADY" ||
+          name === "LILREDMERCY",
       )
     : [];
   return {
@@ -453,6 +475,8 @@ function tallyFrom(raw: unknown): Tally {
       BEEPLE: num(row.rides?.BEEPLE),
       SAINT: num(row.rides?.SAINT),
       DIBS: num(row.rides?.DIBS),
+      SLIMSHADY: num(row.rides?.SLIMSHADY),
+      LILREDMERCY: num(row.rides?.LILREDMERCY),
     },
   };
 }
@@ -496,6 +520,8 @@ function readRaw(token: string): AchievementSave {
       beeple: parsed.beeple === true,
       saint: parsed.saint === true,
       dibs: parsed.dibs === true,
+      slimshady: parsed.slimshady === true,
+      lilredmercy: parsed.lilredmercy === true,
       claims: Array.isArray(parsed.claims) ? parsed.claims.filter((claim) => typeof claim === "string") : [],
       dailyKey: typeof parsed.dailyKey === "string" ? parsed.dailyKey : "",
       weeklyKey: typeof parsed.weeklyKey === "string" ? parsed.weeklyKey : "",
@@ -593,6 +619,8 @@ export function goalProgress(
     beeple: false,
         saint: false,
         dibs: false,
+        slimshady: false,
+        lilredmercy: false,
   },
 ) {
   return Math.min(goal.target, Math.max(0, goalValue(goal, tally, unlocked)));
@@ -620,6 +648,8 @@ export function goalDone(
     beeple: false,
         saint: false,
         dibs: false,
+        slimshady: false,
+        lilredmercy: false,
   },
 ) {
   return goalValue(goal, tally, unlocked) >= goal.target;
@@ -654,6 +684,8 @@ export type AchievementSnapshot = {
   beeple: boolean;
   saint: boolean;
   dibs: boolean;
+  slimshady: boolean;
+  lilredmercy: boolean;
   paid: string[];
   daily: Tally;
   weekly: Tally;
@@ -683,6 +715,8 @@ export function adoptServerAchievements(token: string, snap: AchievementSnapshot
     beeple: snap.beeple === true,
     saint: snap.saint === true,
     dibs: snap.dibs === true,
+    slimshady: snap.slimshady === true,
+    lilredmercy: snap.lilredmercy === true,
     claims: Array.isArray(snap.paid) ? snap.paid.filter((claim) => typeof claim === "string") : [],
     daily: snap.daily,
     weekly: snap.weekly,
