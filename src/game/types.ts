@@ -36,7 +36,9 @@ export type RunnerName =
   | "SAINT"
   | "DIBS"
   | "SLIMSHADY"
-  | "LILREDMERCY";
+  | "LILREDMERCY"
+  | "BLACKNICHOLSON"
+  | "GRIMYFRANKIE";
 
 export type Hud = {
   phase: Phase;
@@ -118,6 +120,8 @@ export type RailApi = {
   setDibsUnlocked: (unlocked: boolean) => void;
   setSlimshadyUnlocked: (unlocked: boolean) => void;
   setLilredmercyUnlocked: (unlocked: boolean) => void;
+  setBlacknicholsonUnlocked: (unlocked: boolean) => void;
+  setGrimyfrankieUnlocked: (unlocked: boolean) => void;
   pause: () => void;
   resume: () => void;
   playReplay: (tape: GhostTape) => void;

@@ -179,7 +179,9 @@ type RunnerId =
   | "saint"
   | "dibs"
   | "slimshady"
-  | "lilredmercy";
+  | "lilredmercy"
+  | "blacknicholson"
+  | "grimyfrankie";
 
 function meshyRunner(id: RunnerId) {
   return (
@@ -202,7 +204,9 @@ function meshyRunner(id: RunnerId) {
     id === "saint" ||
     id === "dibs" ||
     id === "slimshady" ||
-    id === "lilredmercy"
+    id === "lilredmercy" ||
+    id === "blacknicholson" ||
+    id === "grimyfrankie"
   );
 }
 
@@ -286,6 +290,8 @@ class RailWorld {
   private dibsUnlocked = false;
   private slimshadyUnlocked = false;
   private lilredmercyUnlocked = false;
+  private blacknicholsonUnlocked = false;
+  private grimyfrankieUnlocked = false;
   private kidsOn = false;
   private kidsDodge = false;
   private kidsMult = 1;
@@ -531,6 +537,12 @@ class RailWorld {
       },
       setLilredmercyUnlocked: (unlocked) => {
         this.lilredmercyUnlocked = unlocked;
+      },
+      setBlacknicholsonUnlocked: (unlocked) => {
+        this.blacknicholsonUnlocked = unlocked;
+      },
+      setGrimyfrankieUnlocked: (unlocked) => {
+        this.grimyfrankieUnlocked = unlocked;
       },
       pause: () => this.freeze(),
       resume: () => this.beginCountdown(),
@@ -851,6 +863,8 @@ class RailWorld {
       { id: "dibs", name: "DIBS", url: "/models/dibs.glb" },
       { id: "slimshady", name: "SLIMSHADY", url: "/models/slimshady.glb" },
       { id: "lilredmercy", name: "LILREDMERCY", url: "/models/lilredmercy.glb" },
+      { id: "blacknicholson", name: "BLACKNICHOLSON", url: "/models/blacknicholson.glb" },
+      { id: "grimyfrankie", name: "GRIMYFRANKIE", url: "/models/grimyfrankie.glb" },
     ];
     const loader = new GLTFLoader();
     const phone = window.matchMedia("(pointer: coarse)").matches || Math.min(window.innerWidth, window.innerHeight) < 820;
@@ -1011,6 +1025,8 @@ class RailWorld {
     if (name === "DIBS") return !this.dibsUnlocked;
     if (name === "SLIMSHADY") return !this.slimshadyUnlocked;
     if (name === "LILREDMERCY") return !this.lilredmercyUnlocked;
+    if (name === "BLACKNICHOLSON") return !this.blacknicholsonUnlocked;
+    if (name === "GRIMYFRANKIE") return !this.grimyfrankieUnlocked;
     return false;
   }
 
@@ -1053,6 +1069,8 @@ class RailWorld {
       "dibs",
       "slimshady",
       "lilredmercy",
+      "blacknicholson",
+      "grimyfrankie",
     ];
     const available = order.filter((id) => {
       if (!this.roster.has(id)) return false;
@@ -2144,6 +2162,8 @@ class RailWorld {
     if (name === "DIBS") return "dibs";
     if (name === "SLIMSHADY") return "slimshady";
     if (name === "LILREDMERCY") return "lilredmercy";
+    if (name === "BLACKNICHOLSON") return "blacknicholson";
+    if (name === "GRIMYFRANKIE") return "grimyfrankie";
     return "gimbo";
   }
 

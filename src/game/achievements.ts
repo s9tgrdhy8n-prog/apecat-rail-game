@@ -64,6 +64,12 @@ export const SLIMSHADY_COST = 169;
 /** Diamond Skulls to unlock lil red mercy for good. */
 export const LILREDMERCY_COST = 169;
 
+/** Diamond Skulls to unlock BLACK NICHOLSON for good. */
+export const BLACKNICHOLSON_COST = 169;
+
+/** Diamond Skulls to unlock grimyfrankie.eth for good. */
+export const GRIMYFRANKIE_COST = 169;
+
 export type RunFacts = {
   score: number;
   meters: number;
@@ -128,6 +134,8 @@ export type AchievementSave = {
   dibs: boolean;
   slimshady: boolean;
   lilredmercy: boolean;
+  blacknicholson: boolean;
+  grimyfrankie: boolean;
   claims: string[];
   dailyKey: string;
   weeklyKey: string;
@@ -230,6 +238,8 @@ export const GOALS: Goal[] = [
         dibs: false,
         slimshady: false,
         lilredmercy: false,
+        blacknicholson: false,
+        grimyfrankie: false,
       }),
   },
   {
@@ -264,6 +274,8 @@ export type UnlockFlags = {
   dibs: boolean;
   slimshady: boolean;
   lilredmercy: boolean;
+  blacknicholson: boolean;
+  grimyfrankie: boolean;
 };
 
 /** Lowest finished-run count across the crew. Paid runners join after unlock. */
@@ -289,6 +301,8 @@ export function crewProgress(tally: Tally, unlocked: UnlockFlags) {
   if (unlocked.dibs) counts.push(tally.rides.DIBS);
   if (unlocked.slimshady) counts.push(tally.rides.SLIMSHADY);
   if (unlocked.lilredmercy) counts.push(tally.rides.LILREDMERCY);
+  if (unlocked.blacknicholson) counts.push(tally.rides.BLACKNICHOLSON);
+  if (unlocked.grimyfrankie) counts.push(tally.rides.GRIMYFRANKIE);
   return Math.min(...counts);
 }
 
@@ -314,6 +328,8 @@ export function crewDetail(unlocked: UnlockFlags) {
   if (unlocked.dibs) bits.push(`30 as ${runnerLabel("DIBS")}`);
   if (unlocked.slimshady) bits.push(`30 as ${runnerLabel("SLIMSHADY")}`);
   if (unlocked.lilredmercy) bits.push(`30 as ${runnerLabel("LILREDMERCY")}`);
+  if (unlocked.blacknicholson) bits.push(`30 as ${runnerLabel("BLACKNICHOLSON")}`);
+  if (unlocked.grimyfrankie) bits.push(`30 as ${runnerLabel("GRIMYFRANKIE")}`);
   return `Finish ${bits.slice(0, -1).join(", ")}, and ${bits[bits.length - 1]}.`;
 }
 
@@ -357,6 +373,8 @@ export function emptyTally(): Tally {
       DIBS: 0,
       SLIMSHADY: 0,
       LILREDMERCY: 0,
+      BLACKNICHOLSON: 0,
+      GRIMYFRANKIE: 0,
     },
   };
 }
@@ -395,6 +413,8 @@ function freshSave(now = new Date()): AchievementSave {
         dibs: false,
         slimshady: false,
         lilredmercy: false,
+        blacknicholson: false,
+        grimyfrankie: false,
     claims: [],
     dailyKey: utcDay(now),
     weeklyKey: utcWeek(now),
@@ -435,7 +455,9 @@ function tallyFrom(raw: unknown): Tally {
           name === "SAINT" ||
           name === "DIBS" ||
           name === "SLIMSHADY" ||
-          name === "LILREDMERCY",
+          name === "LILREDMERCY" ||
+          name === "BLACKNICHOLSON" ||
+          name === "GRIMYFRANKIE",
       )
     : [];
   return {
@@ -477,6 +499,8 @@ function tallyFrom(raw: unknown): Tally {
       DIBS: num(row.rides?.DIBS),
       SLIMSHADY: num(row.rides?.SLIMSHADY),
       LILREDMERCY: num(row.rides?.LILREDMERCY),
+      BLACKNICHOLSON: num(row.rides?.BLACKNICHOLSON),
+      GRIMYFRANKIE: num(row.rides?.GRIMYFRANKIE),
     },
   };
 }
@@ -522,6 +546,8 @@ function readRaw(token: string): AchievementSave {
       dibs: parsed.dibs === true,
       slimshady: parsed.slimshady === true,
       lilredmercy: parsed.lilredmercy === true,
+      blacknicholson: parsed.blacknicholson === true,
+      grimyfrankie: parsed.grimyfrankie === true,
       claims: Array.isArray(parsed.claims) ? parsed.claims.filter((claim) => typeof claim === "string") : [],
       dailyKey: typeof parsed.dailyKey === "string" ? parsed.dailyKey : "",
       weeklyKey: typeof parsed.weeklyKey === "string" ? parsed.weeklyKey : "",
@@ -621,6 +647,8 @@ export function goalProgress(
         dibs: false,
         slimshady: false,
         lilredmercy: false,
+        blacknicholson: false,
+        grimyfrankie: false,
   },
 ) {
   return Math.min(goal.target, Math.max(0, goalValue(goal, tally, unlocked)));
@@ -650,6 +678,8 @@ export function goalDone(
         dibs: false,
         slimshady: false,
         lilredmercy: false,
+        blacknicholson: false,
+        grimyfrankie: false,
   },
 ) {
   return goalValue(goal, tally, unlocked) >= goal.target;
@@ -686,6 +716,8 @@ export type AchievementSnapshot = {
   dibs: boolean;
   slimshady: boolean;
   lilredmercy: boolean;
+  blacknicholson: boolean;
+  grimyfrankie: boolean;
   paid: string[];
   daily: Tally;
   weekly: Tally;
@@ -717,6 +749,8 @@ export function adoptServerAchievements(token: string, snap: AchievementSnapshot
     dibs: snap.dibs === true,
     slimshady: snap.slimshady === true,
     lilredmercy: snap.lilredmercy === true,
+    blacknicholson: snap.blacknicholson === true,
+    grimyfrankie: snap.grimyfrankie === true,
     claims: Array.isArray(snap.paid) ? snap.paid.filter((claim) => typeof claim === "string") : [],
     daily: snap.daily,
     weekly: snap.weekly,

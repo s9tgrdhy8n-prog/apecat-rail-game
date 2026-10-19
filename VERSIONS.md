@@ -44,6 +44,7 @@ The start menu reads `GAME_VERSION` in `src/game/version.ts`. On every productio
 | 1.14.0 | 2026-10-15 | Published to https://apecat-rail-game.com. Vs a fren is a two-player race. Make a room, send the 4-letter code or the link, and both play on their own screen. Same track. First wreck ends the round. Higher score wins. First to 2. A tie scores nobody. A ? beside the button explains how to battle. Versus runs do not post to the solo leaderboard. |
 | 1.15.0 | 2026-10-15 | Published to https://apecat-rail-game.com. Saint and DIBS join the runners, Saint first, and each unlocks for 169 Diamond Skulls. Saint’s X is @Saint10Fourteen. DIBS’s X is @DoinItBetterSan. Finished runs count in Stats and in The whole crew after unlock. |
 | 1.16.0 | 2026-10-16 | Published to https://apecat-rail-game.com. The real Slim Shady and lil red mercy join the runners, Slim Shady first, and each unlocks for 169 Diamond Skulls. Slim Shady’s X is @slimshadygonwin. lil red mercy’s X is @lilredmercy. Both are the same size as GoldFinger Gimbo. On a wide start screen the runner stays a step down the tunnel, above the portraits. Finished runs count in Stats and in The whole crew after unlock. |
+| 1.17.0 | 2026-10-18 | Published to https://apecat-rail-game.com. BLACK NICHOLSON and grimyfrankie.eth join the runners, BLACK NICHOLSON first, and each unlocks for 169 Diamond Skulls. BLACK NICHOLSON’s X is @BlackNicholson9. grimyfrankie.eth’s X is @grimyfrankie. Finished runs count in Stats and in The whole crew after unlock. |
 
 ## 1.0.5 notes
 

@@ -24,6 +24,8 @@ const LABELS: Record<RunnerName, string> = {
   DIBS: "DIBS",
   SLIMSHADY: "The real Slim Shady",
   LILREDMERCY: "lil red mercy",
+  BLACKNICHOLSON: "BLACK NICHOLSON",
+  GRIMYFRANKIE: "grimyfrankie.eth",
 };
 
 const HANDLES: Partial<Record<RunnerName, string>> = {
@@ -46,6 +48,8 @@ const HANDLES: Partial<Record<RunnerName, string>> = {
   DIBS: "DoinItBetterSan",
   SLIMSHADY: "slimshadygonwin",
   LILREDMERCY: "lilredmercy",
+  BLACKNICHOLSON: "BlackNicholson9",
+  GRIMYFRANKIE: "grimyfrankie",
 };
 
 export function runnerLabel(name: RunnerName | string) {

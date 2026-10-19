@@ -362,6 +362,8 @@ function cleanRunner(raw: string | undefined) {
   if (raw === "DIBS") return "DIBS";
   if (raw === "SLIMSHADY") return "SLIMSHADY";
   if (raw === "LILREDMERCY") return "LILREDMERCY";
+  if (raw === "BLACKNICHOLSON") return "BLACKNICHOLSON";
+  if (raw === "GRIMYFRANKIE") return "GRIMYFRANKIE";
   return "APECAT";
 }
 
@@ -369,7 +371,7 @@ function cleanSeconds(raw: unknown) {
   return Math.max(0, Math.min(21_600, Math.floor(Number(raw) || 0)));
 }
 
-const RUNNER_ORDER = ["APECAT", "BOGGY", "GIMBO", "PINKY", "KOKO", "SPOOKY", "RAMDAWG", "OTTER", "FIGGE", "THEHODLR", "AFTERAPE", "DEADBEAVER", "QUIT", "DUPES", "BOGGYBOND", "GIGATRON", "GIMBOPOPE", "GOLDFINGER", "BEEPLE", "SAINT", "DIBS", "SLIMSHADY", "LILREDMERCY"] as const;
+const RUNNER_ORDER = ["APECAT", "BOGGY", "GIMBO", "PINKY", "KOKO", "SPOOKY", "RAMDAWG", "OTTER", "FIGGE", "THEHODLR", "AFTERAPE", "DEADBEAVER", "QUIT", "DUPES", "BOGGYBOND", "GIGATRON", "GIMBOPOPE", "GOLDFINGER", "BEEPLE", "SAINT", "DIBS", "SLIMSHADY", "LILREDMERCY", "BLACKNICHOLSON", "GRIMYFRANKIE"] as const;
 
 export type PlaySlice = {
   seconds: number;
@@ -640,6 +642,8 @@ function emptyWallet() {
     dibs: false,
     slimshady: false,
     lilredmercy: false,
+    blacknicholson: false,
+    grimyfrankie: false,
     fill: 0,
     paid: [] as string[],
     daily: emptyTally(),
@@ -670,7 +674,7 @@ async function absorbGuest(hash: string, userId: string) {
   await sql`delete from rail_goal_pay where person_key = ${guest}`;
   await sql`
     with guest_row as (
-      select skulls, pinky, koko, spooky, ramdawg, otter, figge, thehodlr, afterape, deadbeaver, quit, dupes, boggybond, gigatron, gimbopope, goldfinger, beeple, saint, dibs, slimshady, lilredmercy, pickup_mark, pickup_paid
+      select skulls, pinky, koko, spooky, ramdawg, otter, figge, thehodlr, afterape, deadbeaver, quit, dupes, boggybond, gigatron, gimbopope, goldfinger, beeple, saint, dibs, slimshady, lilredmercy, blacknicholson, grimyfrankie, pickup_mark, pickup_paid
       from rail_diamond
       where person_key = ${guest}
     ),
@@ -679,8 +683,8 @@ async function absorbGuest(hash: string, userId: string) {
       set skulls = 0, pickup_mark = 0, pickup_paid = 0
       where person_key = ${guest}
     )
-    insert into rail_diamond (person_key, skulls, pinky, koko, spooky, ramdawg, otter, figge, thehodlr, afterape, deadbeaver, quit, dupes, boggybond, gigatron, gimbopope, goldfinger, beeple, saint, dibs, slimshady, lilredmercy, pickup_mark, pickup_paid)
-    select ${userId}, skulls, pinky, koko, spooky, ramdawg, otter, figge, thehodlr, afterape, deadbeaver, quit, dupes, boggybond, gigatron, gimbopope, goldfinger, beeple, saint, dibs, slimshady, lilredmercy, pickup_mark, pickup_paid from guest_row
+    insert into rail_diamond (person_key, skulls, pinky, koko, spooky, ramdawg, otter, figge, thehodlr, afterape, deadbeaver, quit, dupes, boggybond, gigatron, gimbopope, goldfinger, beeple, saint, dibs, slimshady, lilredmercy, blacknicholson, grimyfrankie, pickup_mark, pickup_paid)
+    select ${userId}, skulls, pinky, koko, spooky, ramdawg, otter, figge, thehodlr, afterape, deadbeaver, quit, dupes, boggybond, gigatron, gimbopope, goldfinger, beeple, saint, dibs, slimshady, lilredmercy, blacknicholson, grimyfrankie, pickup_mark, pickup_paid from guest_row
     on conflict (person_key) do update
     set skulls = rail_diamond.skulls + excluded.skulls,
         pinky = greatest(rail_diamond.pinky, excluded.pinky),
@@ -703,6 +707,8 @@ async function absorbGuest(hash: string, userId: string) {
         dibs = greatest(rail_diamond.dibs, excluded.dibs),
         slimshady = greatest(rail_diamond.slimshady, excluded.slimshady),
         lilredmercy = greatest(rail_diamond.lilredmercy, excluded.lilredmercy),
+        blacknicholson = greatest(rail_diamond.blacknicholson, excluded.blacknicholson),
+        grimyfrankie = greatest(rail_diamond.grimyfrankie, excluded.grimyfrankie),
         pickup_mark = rail_diamond.pickup_mark + excluded.pickup_mark,
         pickup_paid = rail_diamond.pickup_paid + excluded.pickup_paid
   `;
@@ -727,7 +733,9 @@ async function absorbGuest(hash: string, userId: string) {
         saint = greatest(saved.saint, guest.saint),
         dibs = greatest(saved.dibs, guest.dibs),
         slimshady = greatest(saved.slimshady, guest.slimshady),
-        lilredmercy = greatest(saved.lilredmercy, guest.lilredmercy)
+        lilredmercy = greatest(saved.lilredmercy, guest.lilredmercy),
+        blacknicholson = greatest(saved.blacknicholson, guest.blacknicholson),
+        grimyfrankie = greatest(saved.grimyfrankie, guest.grimyfrankie)
     from rail_diamond as guest
     where saved.person_key = ${userId}
       and guest.person_key = ${guest}
@@ -768,6 +776,8 @@ async function playTally(personKey: string, start: string, end: string): Promise
     dibs: number;
     slimshady: number;
     lilredmercy: number;
+    blacknicholson: number;
+    grimyfrankie: number;
   }>`
     select count(*)::int as runs,
            coalesce(sum(coins), 0)::int as coins,
@@ -799,7 +809,9 @@ async function playTally(personKey: string, start: string, end: string): Promise
            coalesce(sum(case when runner = 'SAINT' then 1 else 0 end), 0)::int as saint,
            coalesce(sum(case when runner = 'DIBS' then 1 else 0 end), 0)::int as dibs,
            coalesce(sum(case when runner = 'SLIMSHADY' then 1 else 0 end), 0)::int as slimshady,
-           coalesce(sum(case when runner = 'LILREDMERCY' then 1 else 0 end), 0)::int as lilredmercy
+           coalesce(sum(case when runner = 'LILREDMERCY' then 1 else 0 end), 0)::int as lilredmercy,
+           coalesce(sum(case when runner = 'BLACKNICHOLSON' then 1 else 0 end), 0)::int as blacknicholson,
+           coalesce(sum(case when runner = 'GRIMYFRANKIE' then 1 else 0 end), 0)::int as grimyfrankie
     from rail_play
     where person_key = ${personKey}
       and created_at >= ${start}::timestamptz
@@ -843,6 +855,8 @@ async function playTally(personKey: string, start: string, end: string): Promise
     DIBS: Number(row.dibs) || 0,
     SLIMSHADY: Number(row.slimshady) || 0,
     LILREDMERCY: Number(row.lilredmercy) || 0,
+    BLACKNICHOLSON: Number(row.blacknicholson) || 0,
+    GRIMYFRANKIE: Number(row.grimyfrankie) || 0,
   };
   return tally;
 }
@@ -853,8 +867,8 @@ async function creditGoals(personKey: string) {
   const daily = await playTally(personKey, `${day}T00:00:00.000Z`, periodEnd(day, 1));
   const weekly = await playTally(personKey, `${week}T00:00:00.000Z`, periodEnd(week, 7));
   const sql = await getSql();
-  const flags = await sql<{ pinky: number; koko: number; spooky: number; ramdawg: number; otter: number; figge: number; thehodlr: number; afterape: number; deadbeaver: number; quit: number; dupes: number; boggybond: number; gigatron: number; gimbopope: number; goldfinger: number; beeple: number; saint: number; dibs: number; slimshady: number; lilredmercy: number }>`
-    select pinky::int as pinky, koko::int as koko, spooky::int as spooky, ramdawg::int as ramdawg, otter::int as otter, figge::int as figge, thehodlr::int as thehodlr, afterape::int as afterape, deadbeaver::int as deadbeaver, quit::int as quit, dupes::int as dupes, boggybond::int as boggybond, gigatron::int as gigatron, gimbopope::int as gimbopope, goldfinger::int as goldfinger, beeple::int as beeple, saint::int as saint, dibs::int as dibs, slimshady::int as slimshady, lilredmercy::int as lilredmercy
+  const flags = await sql<{ pinky: number; koko: number; spooky: number; ramdawg: number; otter: number; figge: number; thehodlr: number; afterape: number; deadbeaver: number; quit: number; dupes: number; boggybond: number; gigatron: number; gimbopope: number; goldfinger: number; beeple: number; saint: number; dibs: number; slimshady: number; lilredmercy: number; blacknicholson: number; grimyfrankie: number }>`
+    select pinky::int as pinky, koko::int as koko, spooky::int as spooky, ramdawg::int as ramdawg, otter::int as otter, figge::int as figge, thehodlr::int as thehodlr, afterape::int as afterape, deadbeaver::int as deadbeaver, quit::int as quit, dupes::int as dupes, boggybond::int as boggybond, gigatron::int as gigatron, gimbopope::int as gimbopope, goldfinger::int as goldfinger, beeple::int as beeple, saint::int as saint, dibs::int as dibs, slimshady::int as slimshady, lilredmercy::int as lilredmercy, blacknicholson::int as blacknicholson, grimyfrankie::int as grimyfrankie
     from rail_diamond
     where person_key = ${personKey}
   `;
@@ -879,6 +893,8 @@ async function creditGoals(personKey: string) {
     dibs: Number(flags[0]?.dibs) === 1,
     slimshady: Number(flags[0]?.slimshady) === 1,
     lilredmercy: Number(flags[0]?.lilredmercy) === 1,
+    blacknicholson: Number(flags[0]?.blacknicholson) === 1,
+    grimyfrankie: Number(flags[0]?.grimyfrankie) === 1,
   };
   const earned: EarnedGoal[] = [];
   for (const goal of GOALS) {
@@ -964,12 +980,14 @@ async function runnerAllowed(personKey: string, runner: string) {
     runner !== "SAINT" &&
     runner !== "DIBS" &&
     runner !== "SLIMSHADY" &&
-    runner !== "LILREDMERCY"
+    runner !== "LILREDMERCY" &&
+    runner !== "BLACKNICHOLSON" &&
+    runner !== "GRIMYFRANKIE"
   )
     return true;
   const sql = await getSql();
-  const rows = await sql<{ pinky: number; koko: number; spooky: number; ramdawg: number; otter: number; figge: number; thehodlr: number; afterape: number; deadbeaver: number; quit: number; dupes: number; boggybond: number; gigatron: number; gimbopope: number; goldfinger: number; beeple: number; saint: number; dibs: number; slimshady: number; lilredmercy: number }>`
-    select pinky::int as pinky, koko::int as koko, spooky::int as spooky, ramdawg::int as ramdawg, otter::int as otter, figge::int as figge, thehodlr::int as thehodlr, afterape::int as afterape, deadbeaver::int as deadbeaver, quit::int as quit, dupes::int as dupes, boggybond::int as boggybond, gigatron::int as gigatron, gimbopope::int as gimbopope, goldfinger::int as goldfinger, beeple::int as beeple, saint::int as saint, dibs::int as dibs, slimshady::int as slimshady, lilredmercy::int as lilredmercy
+  const rows = await sql<{ pinky: number; koko: number; spooky: number; ramdawg: number; otter: number; figge: number; thehodlr: number; afterape: number; deadbeaver: number; quit: number; dupes: number; boggybond: number; gigatron: number; gimbopope: number; goldfinger: number; beeple: number; saint: number; dibs: number; slimshady: number; lilredmercy: number; blacknicholson: number; grimyfrankie: number }>`
+    select pinky::int as pinky, koko::int as koko, spooky::int as spooky, ramdawg::int as ramdawg, otter::int as otter, figge::int as figge, thehodlr::int as thehodlr, afterape::int as afterape, deadbeaver::int as deadbeaver, quit::int as quit, dupes::int as dupes, boggybond::int as boggybond, gigatron::int as gigatron, gimbopope::int as gimbopope, goldfinger::int as goldfinger, beeple::int as beeple, saint::int as saint, dibs::int as dibs, slimshady::int as slimshady, lilredmercy::int as lilredmercy, blacknicholson::int as blacknicholson, grimyfrankie::int as grimyfrankie
     from rail_diamond
     where person_key = ${personKey}
   `;
@@ -992,6 +1010,8 @@ async function runnerAllowed(personKey: string, runner: string) {
   if (runner === "DIBS") return Number(rows[0]?.dibs) === 1;
   if (runner === "SLIMSHADY") return Number(rows[0]?.slimshady) === 1;
   if (runner === "LILREDMERCY") return Number(rows[0]?.lilredmercy) === 1;
+  if (runner === "BLACKNICHOLSON") return Number(rows[0]?.blacknicholson) === 1;
+  if (runner === "GRIMYFRANKIE") return Number(rows[0]?.grimyfrankie) === 1;
   return Number(rows[0]?.beeple) === 1;
 }
 
@@ -1013,8 +1033,8 @@ async function readWallet(token: string, earned: EarnedGoal[] = []) {
     playTally(key, `${week}T00:00:00.000Z`, periodEnd(week, 7)),
   ]);
   const sql = await getSql();
-  const rows = await sql<{ skulls: number; pinky: number; koko: number; spooky: number; ramdawg: number; otter: number; figge: number; thehodlr: number; afterape: number; deadbeaver: number; quit: number; dupes: number; boggybond: number; gigatron: number; gimbopope: number; goldfinger: number; beeple: number; saint: number; dibs: number; slimshady: number; lilredmercy: number }>`
-    select skulls::int as skulls, pinky::int as pinky, koko::int as koko, spooky::int as spooky, ramdawg::int as ramdawg, otter::int as otter, figge::int as figge, thehodlr::int as thehodlr, afterape::int as afterape, deadbeaver::int as deadbeaver, quit::int as quit, dupes::int as dupes, boggybond::int as boggybond, gigatron::int as gigatron, gimbopope::int as gimbopope, goldfinger::int as goldfinger, beeple::int as beeple, saint::int as saint, dibs::int as dibs, slimshady::int as slimshady, lilredmercy::int as lilredmercy
+  const rows = await sql<{ skulls: number; pinky: number; koko: number; spooky: number; ramdawg: number; otter: number; figge: number; thehodlr: number; afterape: number; deadbeaver: number; quit: number; dupes: number; boggybond: number; gigatron: number; gimbopope: number; goldfinger: number; beeple: number; saint: number; dibs: number; slimshady: number; lilredmercy: number; blacknicholson: number; grimyfrankie: number }>`
+    select skulls::int as skulls, pinky::int as pinky, koko::int as koko, spooky::int as spooky, ramdawg::int as ramdawg, otter::int as otter, figge::int as figge, thehodlr::int as thehodlr, afterape::int as afterape, deadbeaver::int as deadbeaver, quit::int as quit, dupes::int as dupes, boggybond::int as boggybond, gigatron::int as gigatron, gimbopope::int as gimbopope, goldfinger::int as goldfinger, beeple::int as beeple, saint::int as saint, dibs::int as dibs, slimshady::int as slimshady, lilredmercy::int as lilredmercy, blacknicholson::int as blacknicholson, grimyfrankie::int as grimyfrankie
     from rail_diamond
     where person_key = ${key}
   `;
@@ -1049,6 +1069,8 @@ async function readWallet(token: string, earned: EarnedGoal[] = []) {
     dibs: Number(rows[0]?.dibs) === 1,
     slimshady: Number(rows[0]?.slimshady) === 1,
     lilredmercy: Number(rows[0]?.lilredmercy) === 1,
+    blacknicholson: Number(rows[0]?.blacknicholson) === 1,
+    grimyfrankie: Number(rows[0]?.grimyfrankie) === 1,
     fill: wallet.fill,
     paid: paidRows.map((row) => `${row.period_key}:${row.goal_id}`),
     daily,
@@ -1155,7 +1177,11 @@ export const unlockRunner = createServerFn({ method: "POST" })
                                           ? "SLIMSHADY"
                                           : input?.runner === "LILREDMERCY"
                                             ? "LILREDMERCY"
-                                            : "",
+                                            : input?.runner === "BLACKNICHOLSON"
+                                              ? "BLACKNICHOLSON"
+                                              : input?.runner === "GRIMYFRANKIE"
+                                                ? "GRIMYFRANKIE"
+                                                : "",
   }))
   .handler(async ({ data }) => {
     if (!data.runner) return emptyWallet();
@@ -1205,7 +1231,11 @@ export const unlockRunner = createServerFn({ method: "POST" })
                                       ? "dibs"
                                       : data.runner === "SLIMSHADY"
                                         ? "slimshady"
-                                        : "lilredmercy";
+                                        : data.runner === "LILREDMERCY"
+                                        ? "lilredmercy"
+                                        : data.runner === "BLACKNICHOLSON"
+                                          ? "blacknicholson"
+                                          : "grimyfrankie";
     const spent = await sql<{ skulls: number }>`
       update rail_diamond
       set skulls = skulls - ${UNLOCK_COST},
@@ -1228,7 +1258,9 @@ export const unlockRunner = createServerFn({ method: "POST" })
           saint = case when ${column} = 'saint' then 1 else saint end,
           dibs = case when ${column} = 'dibs' then 1 else dibs end,
           slimshady = case when ${column} = 'slimshady' then 1 else slimshady end,
-          lilredmercy = case when ${column} = 'lilredmercy' then 1 else lilredmercy end
+          lilredmercy = case when ${column} = 'lilredmercy' then 1 else lilredmercy end,
+          blacknicholson = case when ${column} = 'blacknicholson' then 1 else blacknicholson end,
+          grimyfrankie = case when ${column} = 'grimyfrankie' then 1 else grimyfrankie end
       where person_key = ${key}
         and skulls >= ${UNLOCK_COST}
         and (
@@ -1252,6 +1284,8 @@ export const unlockRunner = createServerFn({ method: "POST" })
           or (${column} = 'dibs' and dibs = 0)
           or (${column} = 'slimshady' and slimshady = 0)
           or (${column} = 'lilredmercy' and lilredmercy = 0)
+          or (${column} = 'blacknicholson' and blacknicholson = 0)
+          or (${column} = 'grimyfrankie' and grimyfrankie = 0)
         )
       returning skulls::int as skulls
     `;
@@ -1296,7 +1330,11 @@ export const unlockRunner = createServerFn({ method: "POST" })
                                         ? current.dibs
                                         : data.runner === "SLIMSHADY"
                                           ? current.slimshady
-                                          : current.lilredmercy;
+                                          : data.runner === "LILREDMERCY"
+                                          ? current.lilredmercy
+                                          : data.runner === "BLACKNICHOLSON"
+                                            ? current.blacknicholson
+                                            : current.grimyfrankie;
       return already ? { ...current, ok: true as const } : { ...current, ok: false as const };
     }
     return readWallet(data.token);
