@@ -18,6 +18,10 @@ import {
   LILREDMERCY_COST,
   BLACKNICHOLSON_COST,
   GRIMYFRANKIE_COST,
+  DPUCK_COST,
+  RYOSHIPAIN_COST,
+  JAFBOT_COST,
+  J4VAN_COST,
   GOALS,
   KOKO_COST,
   OTTER_COST,
@@ -118,6 +122,10 @@ const RUNNERS: { name: RunnerName; src: string }[] = [
   { name: "LILREDMERCY", src: "/brand/lilredmercy.jpg" },
   { name: "BLACKNICHOLSON", src: "/brand/blacknicholson.jpg" },
   { name: "GRIMYFRANKIE", src: "/brand/grimyfrankie.jpg" },
+  { name: "DPUCK", src: "/brand/dpuck.jpg" },
+  { name: "RYOSHIPAIN", src: "/brand/ryoshipain.jpg" },
+  { name: "JAFBOT", src: "/brand/jafbot.jpg" },
+  { name: "J4VAN", src: "/brand/j4van.jpg" },
 ];
 const KIDS_SPEEDS = [
   { id: "1", label: "1×", mult: 1 },
@@ -240,6 +248,10 @@ export function RailShell() {
   const [lilredmercyUnlocked, setLilredmercyUnlocked] = useState(false);
   const [blacknicholsonUnlocked, setBlacknicholsonUnlocked] = useState(false);
   const [grimyfrankieUnlocked, setGrimyfrankieUnlocked] = useState(false);
+  const [dpuckUnlocked, setDpuckUnlocked] = useState(false);
+  const [ryoshipainUnlocked, setRyoshipainUnlocked] = useState(false);
+  const [jafbotUnlocked, setJafbotUnlocked] = useState(false);
+  const [j4vanUnlocked, setJ4vanUnlocked] = useState(false);
   const [stats, setStats] = useState<RailStats | null>(null);
   const [nameDraft, setNameDraft] = useState("");
   const [password, setPassword] = useState("");
@@ -285,6 +297,10 @@ export function RailShell() {
   const lilredmercyRef = useRef(false);
   const blacknicholsonRef = useRef(false);
   const grimyfrankieRef = useRef(false);
+  const dpuckRef = useRef(false);
+  const ryoshipainRef = useRef(false);
+  const jafbotRef = useRef(false);
+  const j4vanRef = useRef(false);
   const settle = useRef<Promise<unknown>>(Promise.resolve());
   const arming = useRef(false);
   const practiceRef = useRef(false);
@@ -390,6 +406,18 @@ export function RailShell() {
     setGrimyfrankieUnlocked(save.grimyfrankie);
     grimyfrankieRef.current = save.grimyfrankie;
     apiRef.current?.setGrimyfrankieUnlocked(save.grimyfrankie);
+    setDpuckUnlocked(save.dpuck);
+    dpuckRef.current = save.dpuck;
+    apiRef.current?.setDpuckUnlocked(save.dpuck);
+    setRyoshipainUnlocked(save.ryoshipain);
+    ryoshipainRef.current = save.ryoshipain;
+    apiRef.current?.setRyoshipainUnlocked(save.ryoshipain);
+    setJafbotUnlocked(save.jafbot);
+    jafbotRef.current = save.jafbot;
+    apiRef.current?.setJafbotUnlocked(save.jafbot);
+    setJ4vanUnlocked(save.j4van);
+    j4vanRef.current = save.j4van;
+    apiRef.current?.setJ4vanUnlocked(save.j4van);
     if (typeof res.fill === "number") setPickupFill(Math.max(0, Math.min(99, Math.floor(res.fill))));
     if (runSerial > 0) {
       const live = hudRef.current;
@@ -446,6 +474,14 @@ export function RailShell() {
     blacknicholsonRef.current = false;
     setGrimyfrankieUnlocked(false);
     grimyfrankieRef.current = false;
+    setDpuckUnlocked(false);
+    dpuckRef.current = false;
+    setRyoshipainUnlocked(false);
+    ryoshipainRef.current = false;
+    setJafbotUnlocked(false);
+    jafbotRef.current = false;
+    setJ4vanUnlocked(false);
+    j4vanRef.current = false;
     void syncDiamonds({ data: { token: next } })
       .then((res) => {
         if (!res.daily) return;
@@ -566,6 +602,26 @@ export function RailShell() {
   }, [grimyfrankieUnlocked, hud.phase]);
 
   useEffect(() => {
+    dpuckRef.current = dpuckUnlocked;
+    apiRef.current?.setDpuckUnlocked(dpuckUnlocked);
+  }, [dpuckUnlocked, hud.phase]);
+
+  useEffect(() => {
+    ryoshipainRef.current = ryoshipainUnlocked;
+    apiRef.current?.setRyoshipainUnlocked(ryoshipainUnlocked);
+  }, [ryoshipainUnlocked, hud.phase]);
+
+  useEffect(() => {
+    jafbotRef.current = jafbotUnlocked;
+    apiRef.current?.setJafbotUnlocked(jafbotUnlocked);
+  }, [jafbotUnlocked, hud.phase]);
+
+  useEffect(() => {
+    j4vanRef.current = j4vanUnlocked;
+    apiRef.current?.setJ4vanUnlocked(j4vanUnlocked);
+  }, [j4vanUnlocked, hud.phase]);
+
+  useEffect(() => {
     if (hud.phase === "run") setJustEarned([]);
   }, [hud.phase]);
 
@@ -675,7 +731,11 @@ export function RailShell() {
       (hudRef.current.runner === "SLIMSHADY" && !slimshadyRef.current) ||
       (hudRef.current.runner === "LILREDMERCY" && !lilredmercyRef.current) ||
       (hudRef.current.runner === "BLACKNICHOLSON" && !blacknicholsonRef.current) ||
-      (hudRef.current.runner === "GRIMYFRANKIE" && !grimyfrankieRef.current)
+      (hudRef.current.runner === "GRIMYFRANKIE" && !grimyfrankieRef.current) ||
+      (hudRef.current.runner === "DPUCK" && !dpuckRef.current) ||
+      (hudRef.current.runner === "RYOSHIPAIN" && !ryoshipainRef.current) ||
+      (hudRef.current.runner === "JAFBOT" && !jafbotRef.current) ||
+      (hudRef.current.runner === "J4VAN" && !j4vanRef.current)
     ) {
       apiRef.current?.start();
       return;
@@ -860,6 +920,10 @@ export function RailShell() {
         { name: "LILREDMERCY" as const, seconds: 0 },
         { name: "BLACKNICHOLSON" as const, seconds: 0 },
         { name: "GRIMYFRANKIE" as const, seconds: 0 },
+        { name: "DPUCK" as const, seconds: 0 },
+        { name: "RYOSHIPAIN" as const, seconds: 0 },
+        { name: "JAFBOT" as const, seconds: 0 },
+        { name: "J4VAN" as const, seconds: 0 },
       ],
     };
     void (async () => getStats({ data: { token } }))()
@@ -1340,6 +1404,34 @@ export function RailShell() {
     if (res?.ok && res.daily) applyWallet(token, res);
   }
 
+  async function onUnlockDpuck() {
+    if (!token || dpuckUnlocked) return;
+    if ((ach?.skulls ?? 0) < DPUCK_COST) return;
+    const res = await unlockRunner({ data: { token, runner: "DPUCK" } }).catch(() => null);
+    if (res?.ok && res.daily) applyWallet(token, res);
+  }
+
+  async function onUnlockRyoshipain() {
+    if (!token || ryoshipainUnlocked) return;
+    if ((ach?.skulls ?? 0) < RYOSHIPAIN_COST) return;
+    const res = await unlockRunner({ data: { token, runner: "RYOSHIPAIN" } }).catch(() => null);
+    if (res?.ok && res.daily) applyWallet(token, res);
+  }
+
+  async function onUnlockJafbot() {
+    if (!token || jafbotUnlocked) return;
+    if ((ach?.skulls ?? 0) < JAFBOT_COST) return;
+    const res = await unlockRunner({ data: { token, runner: "JAFBOT" } }).catch(() => null);
+    if (res?.ok && res.daily) applyWallet(token, res);
+  }
+
+  async function onUnlockJ4van() {
+    if (!token || j4vanUnlocked) return;
+    if ((ach?.skulls ?? 0) < J4VAN_COST) return;
+    const res = await unlockRunner({ data: { token, runner: "J4VAN" } }).catch(() => null);
+    if (res?.ok && res.daily) applyWallet(token, res);
+  }
+
   const pickScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -1377,6 +1469,10 @@ export function RailShell() {
     if (name === "LILREDMERCY") return lilredmercyUnlocked;
     if (name === "BLACKNICHOLSON") return blacknicholsonUnlocked;
     if (name === "GRIMYFRANKIE") return grimyfrankieUnlocked;
+    if (name === "DPUCK") return dpuckUnlocked;
+    if (name === "RYOSHIPAIN") return ryoshipainUnlocked;
+    if (name === "JAFBOT") return jafbotUnlocked;
+    if (name === "J4VAN") return j4vanUnlocked;
     return false;
   }
 
@@ -1443,7 +1539,11 @@ export function RailShell() {
             (runner.name === "SLIMSHADY" && !slimshadyUnlocked) ||
             (runner.name === "LILREDMERCY" && !lilredmercyUnlocked) ||
             (runner.name === "BLACKNICHOLSON" && !blacknicholsonUnlocked) ||
-            (runner.name === "GRIMYFRANKIE" && !grimyfrankieUnlocked);
+            (runner.name === "GRIMYFRANKIE" && !grimyfrankieUnlocked) ||
+            (runner.name === "DPUCK" && !dpuckUnlocked) ||
+            (runner.name === "RYOSHIPAIN" && !ryoshipainUnlocked) ||
+            (runner.name === "JAFBOT" && !jafbotUnlocked) ||
+            (runner.name === "J4VAN" && !j4vanUnlocked);
           const cost =
             runner.name === "KOKO"
               ? KOKO_COST
@@ -1487,7 +1587,15 @@ export function RailShell() {
                                                   ? BLACKNICHOLSON_COST
                                                   : runner.name === "GRIMYFRANKIE"
                                                     ? GRIMYFRANKIE_COST
-                                                    : PINKY_COST;
+                                                    : runner.name === "DPUCK"
+                                                      ? DPUCK_COST
+                                                      : runner.name === "RYOSHIPAIN"
+                                                        ? RYOSHIPAIN_COST
+                                                        : runner.name === "JAFBOT"
+                                                          ? JAFBOT_COST
+                                                          : runner.name === "J4VAN"
+                                                            ? J4VAN_COST
+                                                            : PINKY_COST;
           return (
             <button
               key={runner.name}
@@ -1825,7 +1933,11 @@ export function RailShell() {
               (hud.runner === "SLIMSHADY" && !slimshadyUnlocked) ||
               (hud.runner === "LILREDMERCY" && !lilredmercyUnlocked) ||
               (hud.runner === "BLACKNICHOLSON" && !blacknicholsonUnlocked) ||
-              (hud.runner === "GRIMYFRANKIE" && !grimyfrankieUnlocked)
+              (hud.runner === "GRIMYFRANKIE" && !grimyfrankieUnlocked) ||
+              (hud.runner === "DPUCK" && !dpuckUnlocked) ||
+              (hud.runner === "RYOSHIPAIN" && !ryoshipainUnlocked) ||
+              (hud.runner === "JAFBOT" && !jafbotUnlocked) ||
+              (hud.runner === "J4VAN" && !j4vanUnlocked)
                 ? "Unlock for 169 Diamond Skulls."
                 : "Get the highest score. Don’t kiss the bears."}
             </p>
@@ -2023,6 +2135,26 @@ export function RailShell() {
             {hud.runner === "GRIMYFRANKIE" && !grimyfrankieUnlocked ? (
               <button type="button" className="rail-stats-btn" onClick={onUnlockGrimyfrankie}>
                 {(ach?.skulls ?? 0) >= GRIMYFRANKIE_COST ? `Unlock ${runnerLabel("GRIMYFRANKIE")} · 169` : "Need 169 Diamond Skulls"}
+              </button>
+            ) : null}
+            {hud.runner === "DPUCK" && !dpuckUnlocked ? (
+              <button type="button" className="rail-stats-btn" onClick={onUnlockDpuck}>
+                {(ach?.skulls ?? 0) >= DPUCK_COST ? `Unlock ${runnerLabel("DPUCK")} · 169` : "Need 169 Diamond Skulls"}
+              </button>
+            ) : null}
+            {hud.runner === "RYOSHIPAIN" && !ryoshipainUnlocked ? (
+              <button type="button" className="rail-stats-btn" onClick={onUnlockRyoshipain}>
+                {(ach?.skulls ?? 0) >= RYOSHIPAIN_COST ? `Unlock ${runnerLabel("RYOSHIPAIN")} · 169` : "Need 169 Diamond Skulls"}
+              </button>
+            ) : null}
+            {hud.runner === "JAFBOT" && !jafbotUnlocked ? (
+              <button type="button" className="rail-stats-btn" onClick={onUnlockJafbot}>
+                {(ach?.skulls ?? 0) >= JAFBOT_COST ? `Unlock ${runnerLabel("JAFBOT")} · 169` : "Need 169 Diamond Skulls"}
+              </button>
+            ) : null}
+            {hud.runner === "J4VAN" && !j4vanUnlocked ? (
+              <button type="button" className="rail-stats-btn" onClick={onUnlockJ4van}>
+                {(ach?.skulls ?? 0) >= J4VAN_COST ? `Unlock ${runnerLabel("J4VAN")} · 169` : "Need 169 Diamond Skulls"}
               </button>
             ) : null}
             {mobile ? null : (

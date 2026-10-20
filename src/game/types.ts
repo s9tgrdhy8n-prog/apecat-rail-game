@@ -38,7 +38,11 @@ export type RunnerName =
   | "SLIMSHADY"
   | "LILREDMERCY"
   | "BLACKNICHOLSON"
-  | "GRIMYFRANKIE";
+  | "GRIMYFRANKIE"
+  | "DPUCK"
+  | "RYOSHIPAIN"
+  | "JAFBOT"
+  | "J4VAN";
 
 export type Hud = {
   phase: Phase;
@@ -122,6 +126,10 @@ export type RailApi = {
   setLilredmercyUnlocked: (unlocked: boolean) => void;
   setBlacknicholsonUnlocked: (unlocked: boolean) => void;
   setGrimyfrankieUnlocked: (unlocked: boolean) => void;
+  setDpuckUnlocked: (unlocked: boolean) => void;
+  setRyoshipainUnlocked: (unlocked: boolean) => void;
+  setJafbotUnlocked: (unlocked: boolean) => void;
+  setJ4vanUnlocked: (unlocked: boolean) => void;
   pause: () => void;
   resume: () => void;
   playReplay: (tape: GhostTape) => void;

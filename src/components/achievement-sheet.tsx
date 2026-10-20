@@ -43,6 +43,10 @@ function crewLine(tally: Tally, unlocked: UnlockFlags) {
   if (unlocked.lilredmercy) parts.push(`${runnerLabel("LILREDMERCY")} ${tally.rides.LILREDMERCY}`);
   if (unlocked.blacknicholson) parts.push(`${runnerLabel("BLACKNICHOLSON")} ${tally.rides.BLACKNICHOLSON}`);
   if (unlocked.grimyfrankie) parts.push(`${runnerLabel("GRIMYFRANKIE")} ${tally.rides.GRIMYFRANKIE}`);
+  if (unlocked.dpuck) parts.push(`${runnerLabel("DPUCK")} ${tally.rides.DPUCK}`);
+  if (unlocked.ryoshipain) parts.push(`${runnerLabel("RYOSHIPAIN")} ${tally.rides.RYOSHIPAIN}`);
+  if (unlocked.jafbot) parts.push(`${runnerLabel("JAFBOT")} ${tally.rides.JAFBOT}`);
+  if (unlocked.j4van) parts.push(`${runnerLabel("J4VAN")} ${tally.rides.J4VAN}`);
   return ` · ${parts.join(" · ")}`;
 }
 
@@ -122,6 +126,10 @@ export function AchievementSheet({
     lilredmercy: save.lilredmercy,
     blacknicholson: save.blacknicholson,
     grimyfrankie: save.grimyfrankie,
+    dpuck: save.dpuck,
+    ryoshipain: save.ryoshipain,
+    jafbot: save.jafbot,
+    j4van: save.j4van,
   };
   const daily = GOALS.filter((goal) => goal.period === "daily");
   const weekly = GOALS.filter((goal) => goal.period === "weekly");

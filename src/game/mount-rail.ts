@@ -181,7 +181,11 @@ type RunnerId =
   | "slimshady"
   | "lilredmercy"
   | "blacknicholson"
-  | "grimyfrankie";
+  | "grimyfrankie"
+  | "dpuck"
+  | "ryoshipain"
+  | "jafbot"
+  | "j4van";
 
 function meshyRunner(id: RunnerId) {
   return (
@@ -206,7 +210,11 @@ function meshyRunner(id: RunnerId) {
     id === "slimshady" ||
     id === "lilredmercy" ||
     id === "blacknicholson" ||
-    id === "grimyfrankie"
+    id === "grimyfrankie" ||
+    id === "dpuck" ||
+    id === "ryoshipain" ||
+    id === "jafbot" ||
+    id === "j4van"
   );
 }
 
@@ -292,6 +300,10 @@ class RailWorld {
   private lilredmercyUnlocked = false;
   private blacknicholsonUnlocked = false;
   private grimyfrankieUnlocked = false;
+  private dpuckUnlocked = false;
+  private ryoshipainUnlocked = false;
+  private jafbotUnlocked = false;
+  private j4vanUnlocked = false;
   private kidsOn = false;
   private kidsDodge = false;
   private kidsMult = 1;
@@ -544,6 +556,18 @@ class RailWorld {
       setGrimyfrankieUnlocked: (unlocked) => {
         this.grimyfrankieUnlocked = unlocked;
       },
+      setDpuckUnlocked: (unlocked) => {
+        this.dpuckUnlocked = unlocked;
+      },
+      setRyoshipainUnlocked: (unlocked) => {
+        this.ryoshipainUnlocked = unlocked;
+      },
+      setJafbotUnlocked: (unlocked) => {
+        this.jafbotUnlocked = unlocked;
+      },
+      setJ4vanUnlocked: (unlocked) => {
+        this.j4vanUnlocked = unlocked;
+      },
       pause: () => this.freeze(),
       resume: () => this.beginCountdown(),
       playReplay: (tape) => this.playReplay(tape),
@@ -785,7 +809,7 @@ class RailWorld {
       }
     }
     const fit =
-      spec.id === "boggo"
+      spec.id === "boggo" || spec.id === "jafbot" || spec.id === "j4van"
         ? 1.2
         : spec.id === "gimbopope"
           ? 0.84
@@ -865,6 +889,10 @@ class RailWorld {
       { id: "lilredmercy", name: "LILREDMERCY", url: "/models/lilredmercy.glb" },
       { id: "blacknicholson", name: "BLACKNICHOLSON", url: "/models/blacknicholson.glb" },
       { id: "grimyfrankie", name: "GRIMYFRANKIE", url: "/models/grimyfrankie.glb" },
+      { id: "dpuck", name: "DPUCK", url: "/models/dpuck.glb" },
+      { id: "ryoshipain", name: "RYOSHIPAIN", url: "/models/ryoshipain.glb" },
+      { id: "jafbot", name: "JAFBOT", url: "/models/jafbot.glb" },
+      { id: "j4van", name: "J4VAN", url: "/models/j4van.glb" },
     ];
     const loader = new GLTFLoader();
     const phone = window.matchMedia("(pointer: coarse)").matches || Math.min(window.innerWidth, window.innerHeight) < 820;
@@ -1027,6 +1055,10 @@ class RailWorld {
     if (name === "LILREDMERCY") return !this.lilredmercyUnlocked;
     if (name === "BLACKNICHOLSON") return !this.blacknicholsonUnlocked;
     if (name === "GRIMYFRANKIE") return !this.grimyfrankieUnlocked;
+    if (name === "DPUCK") return !this.dpuckUnlocked;
+    if (name === "RYOSHIPAIN") return !this.ryoshipainUnlocked;
+    if (name === "JAFBOT") return !this.jafbotUnlocked;
+    if (name === "J4VAN") return !this.j4vanUnlocked;
     return false;
   }
 
@@ -1071,6 +1103,10 @@ class RailWorld {
       "lilredmercy",
       "blacknicholson",
       "grimyfrankie",
+      "dpuck",
+      "ryoshipain",
+      "jafbot",
+      "j4van",
     ];
     const available = order.filter((id) => {
       if (!this.roster.has(id)) return false;
@@ -2164,6 +2200,10 @@ class RailWorld {
     if (name === "LILREDMERCY") return "lilredmercy";
     if (name === "BLACKNICHOLSON") return "blacknicholson";
     if (name === "GRIMYFRANKIE") return "grimyfrankie";
+    if (name === "DPUCK") return "dpuck";
+    if (name === "RYOSHIPAIN") return "ryoshipain";
+    if (name === "JAFBOT") return "jafbot";
+    if (name === "J4VAN") return "j4van";
     return "gimbo";
   }
 
