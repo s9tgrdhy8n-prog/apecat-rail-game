@@ -47,6 +47,8 @@ function crewLine(tally: Tally, unlocked: UnlockFlags) {
   if (unlocked.ryoshipain) parts.push(`${runnerLabel("RYOSHIPAIN")} ${tally.rides.RYOSHIPAIN}`);
   if (unlocked.jafbot) parts.push(`${runnerLabel("JAFBOT")} ${tally.rides.JAFBOT}`);
   if (unlocked.j4van) parts.push(`${runnerLabel("J4VAN")} ${tally.rides.J4VAN}`);
+  if (unlocked.lampseternal) parts.push(`${runnerLabel("LAMPSETERNAL")} ${tally.rides.LAMPSETERNAL}`);
+  if (unlocked.chris) parts.push(`${runnerLabel("CHRIS")} ${tally.rides.CHRIS}`);
   return ` · ${parts.join(" · ")}`;
 }
 
@@ -130,6 +132,8 @@ export function AchievementSheet({
     ryoshipain: save.ryoshipain,
     jafbot: save.jafbot,
     j4van: save.j4van,
+    lampseternal: save.lampseternal,
+    chris: save.chris,
   };
   const daily = GOALS.filter((goal) => goal.period === "daily");
   const weekly = GOALS.filter((goal) => goal.period === "weekly");

@@ -22,6 +22,8 @@ import {
   RYOSHIPAIN_COST,
   JAFBOT_COST,
   J4VAN_COST,
+  LAMPSETERNAL_COST,
+  CHRIS_COST,
   GOALS,
   KOKO_COST,
   OTTER_COST,
@@ -126,6 +128,8 @@ const RUNNERS: { name: RunnerName; src: string }[] = [
   { name: "RYOSHIPAIN", src: "/brand/ryoshipain.jpg" },
   { name: "JAFBOT", src: "/brand/jafbot.jpg" },
   { name: "J4VAN", src: "/brand/j4van.jpg" },
+  { name: "LAMPSETERNAL", src: "/brand/lampseternal.jpg" },
+  { name: "CHRIS", src: "/brand/chris.jpg" },
 ];
 const KIDS_SPEEDS = [
   { id: "1", label: "1×", mult: 1 },
@@ -252,6 +256,8 @@ export function RailShell() {
   const [ryoshipainUnlocked, setRyoshipainUnlocked] = useState(false);
   const [jafbotUnlocked, setJafbotUnlocked] = useState(false);
   const [j4vanUnlocked, setJ4vanUnlocked] = useState(false);
+  const [lampseternalUnlocked, setLampseternalUnlocked] = useState(false);
+  const [chrisUnlocked, setChrisUnlocked] = useState(false);
   const [stats, setStats] = useState<RailStats | null>(null);
   const [nameDraft, setNameDraft] = useState("");
   const [password, setPassword] = useState("");
@@ -301,6 +307,8 @@ export function RailShell() {
   const ryoshipainRef = useRef(false);
   const jafbotRef = useRef(false);
   const j4vanRef = useRef(false);
+  const lampseternalRef = useRef(false);
+  const chrisRef = useRef(false);
   const settle = useRef<Promise<unknown>>(Promise.resolve());
   const arming = useRef(false);
   const practiceRef = useRef(false);
@@ -418,6 +426,12 @@ export function RailShell() {
     setJ4vanUnlocked(save.j4van);
     j4vanRef.current = save.j4van;
     apiRef.current?.setJ4vanUnlocked(save.j4van);
+    setLampseternalUnlocked(save.lampseternal);
+    lampseternalRef.current = save.lampseternal;
+    apiRef.current?.setLampseternalUnlocked(save.lampseternal);
+    setChrisUnlocked(save.chris);
+    chrisRef.current = save.chris;
+    apiRef.current?.setChrisUnlocked(save.chris);
     if (typeof res.fill === "number") setPickupFill(Math.max(0, Math.min(99, Math.floor(res.fill))));
     if (runSerial > 0) {
       const live = hudRef.current;
@@ -482,6 +496,10 @@ export function RailShell() {
     jafbotRef.current = false;
     setJ4vanUnlocked(false);
     j4vanRef.current = false;
+    setLampseternalUnlocked(false);
+    lampseternalRef.current = false;
+    setChrisUnlocked(false);
+    chrisRef.current = false;
     void syncDiamonds({ data: { token: next } })
       .then((res) => {
         if (!res.daily) return;
@@ -622,6 +640,16 @@ export function RailShell() {
   }, [j4vanUnlocked, hud.phase]);
 
   useEffect(() => {
+    lampseternalRef.current = lampseternalUnlocked;
+    apiRef.current?.setLampseternalUnlocked(lampseternalUnlocked);
+  }, [lampseternalUnlocked, hud.phase]);
+
+  useEffect(() => {
+    chrisRef.current = chrisUnlocked;
+    apiRef.current?.setChrisUnlocked(chrisUnlocked);
+  }, [chrisUnlocked, hud.phase]);
+
+  useEffect(() => {
     if (hud.phase === "run") setJustEarned([]);
   }, [hud.phase]);
 
@@ -735,7 +763,9 @@ export function RailShell() {
       (hudRef.current.runner === "DPUCK" && !dpuckRef.current) ||
       (hudRef.current.runner === "RYOSHIPAIN" && !ryoshipainRef.current) ||
       (hudRef.current.runner === "JAFBOT" && !jafbotRef.current) ||
-      (hudRef.current.runner === "J4VAN" && !j4vanRef.current)
+      (hudRef.current.runner === "J4VAN" && !j4vanRef.current) ||
+      (hudRef.current.runner === "LAMPSETERNAL" && !lampseternalRef.current) ||
+      (hudRef.current.runner === "CHRIS" && !chrisRef.current)
     ) {
       apiRef.current?.start();
       return;
@@ -924,6 +954,8 @@ export function RailShell() {
         { name: "RYOSHIPAIN" as const, seconds: 0 },
         { name: "JAFBOT" as const, seconds: 0 },
         { name: "J4VAN" as const, seconds: 0 },
+        { name: "LAMPSETERNAL" as const, seconds: 0 },
+        { name: "CHRIS" as const, seconds: 0 },
       ],
     };
     void (async () => getStats({ data: { token } }))()
@@ -1432,6 +1464,20 @@ export function RailShell() {
     if (res?.ok && res.daily) applyWallet(token, res);
   }
 
+  async function onUnlockLampseternal() {
+    if (!token || lampseternalUnlocked) return;
+    if ((ach?.skulls ?? 0) < LAMPSETERNAL_COST) return;
+    const res = await unlockRunner({ data: { token, runner: "LAMPSETERNAL" } }).catch(() => null);
+    if (res?.ok && res.daily) applyWallet(token, res);
+  }
+
+  async function onUnlockChris() {
+    if (!token || chrisUnlocked) return;
+    if ((ach?.skulls ?? 0) < CHRIS_COST) return;
+    const res = await unlockRunner({ data: { token, runner: "CHRIS" } }).catch(() => null);
+    if (res?.ok && res.daily) applyWallet(token, res);
+  }
+
   const pickScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -1473,6 +1519,8 @@ export function RailShell() {
     if (name === "RYOSHIPAIN") return ryoshipainUnlocked;
     if (name === "JAFBOT") return jafbotUnlocked;
     if (name === "J4VAN") return j4vanUnlocked;
+    if (name === "LAMPSETERNAL") return lampseternalUnlocked;
+    if (name === "CHRIS") return chrisUnlocked;
     return false;
   }
 
@@ -1543,7 +1591,9 @@ export function RailShell() {
             (runner.name === "DPUCK" && !dpuckUnlocked) ||
             (runner.name === "RYOSHIPAIN" && !ryoshipainUnlocked) ||
             (runner.name === "JAFBOT" && !jafbotUnlocked) ||
-            (runner.name === "J4VAN" && !j4vanUnlocked);
+            (runner.name === "J4VAN" && !j4vanUnlocked) ||
+            (runner.name === "LAMPSETERNAL" && !lampseternalUnlocked) ||
+            (runner.name === "CHRIS" && !chrisUnlocked);
           const cost =
             runner.name === "KOKO"
               ? KOKO_COST
@@ -1595,7 +1645,11 @@ export function RailShell() {
                                                           ? JAFBOT_COST
                                                           : runner.name === "J4VAN"
                                                             ? J4VAN_COST
-                                                            : PINKY_COST;
+                                                            : runner.name === "LAMPSETERNAL"
+                                                              ? LAMPSETERNAL_COST
+                                                              : runner.name === "CHRIS"
+                                                                ? CHRIS_COST
+                                                                : PINKY_COST;
           return (
             <button
               key={runner.name}
@@ -1937,7 +1991,9 @@ export function RailShell() {
               (hud.runner === "DPUCK" && !dpuckUnlocked) ||
               (hud.runner === "RYOSHIPAIN" && !ryoshipainUnlocked) ||
               (hud.runner === "JAFBOT" && !jafbotUnlocked) ||
-              (hud.runner === "J4VAN" && !j4vanUnlocked)
+              (hud.runner === "J4VAN" && !j4vanUnlocked) ||
+              (hud.runner === "LAMPSETERNAL" && !lampseternalUnlocked) ||
+              (hud.runner === "CHRIS" && !chrisUnlocked)
                 ? "Unlock for 169 Diamond Skulls."
                 : "Get the highest score. Don’t kiss the bears."}
             </p>
@@ -2155,6 +2211,16 @@ export function RailShell() {
             {hud.runner === "J4VAN" && !j4vanUnlocked ? (
               <button type="button" className="rail-stats-btn" onClick={onUnlockJ4van}>
                 {(ach?.skulls ?? 0) >= J4VAN_COST ? `Unlock ${runnerLabel("J4VAN")} · 169` : "Need 169 Diamond Skulls"}
+              </button>
+            ) : null}
+            {hud.runner === "LAMPSETERNAL" && !lampseternalUnlocked ? (
+              <button type="button" className="rail-stats-btn" onClick={onUnlockLampseternal}>
+                {(ach?.skulls ?? 0) >= LAMPSETERNAL_COST ? `Unlock ${runnerLabel("LAMPSETERNAL")} · 169` : "Need 169 Diamond Skulls"}
+              </button>
+            ) : null}
+            {hud.runner === "CHRIS" && !chrisUnlocked ? (
+              <button type="button" className="rail-stats-btn" onClick={onUnlockChris}>
+                {(ach?.skulls ?? 0) >= CHRIS_COST ? `Unlock ${runnerLabel("CHRIS")} · 169` : "Need 169 Diamond Skulls"}
               </button>
             ) : null}
             {mobile ? null : (
