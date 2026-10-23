@@ -24,6 +24,8 @@ import {
   J4VAN_COST,
   LAMPSETERNAL_COST,
   CHRIS_COST,
+  BOGGYMOSIAC_COST,
+  BOGGYCLAUS_COST,
   GOALS,
   KOKO_COST,
   OTTER_COST,
@@ -130,6 +132,8 @@ const RUNNERS: { name: RunnerName; src: string }[] = [
   { name: "J4VAN", src: "/brand/j4van.jpg" },
   { name: "LAMPSETERNAL", src: "/brand/lampseternal.jpg" },
   { name: "CHRIS", src: "/brand/chris.jpg" },
+  { name: "BOGGYMOSIAC", src: "/brand/boggymosiac.jpg" },
+  { name: "BOGGYCLAUS", src: "/brand/boggyclaus.jpg" },
 ];
 const KIDS_SPEEDS = [
   { id: "1", label: "1×", mult: 1 },
@@ -258,6 +262,8 @@ export function RailShell() {
   const [j4vanUnlocked, setJ4vanUnlocked] = useState(false);
   const [lampseternalUnlocked, setLampseternalUnlocked] = useState(false);
   const [chrisUnlocked, setChrisUnlocked] = useState(false);
+  const [boggymosiacUnlocked, setBoggymosiacUnlocked] = useState(false);
+  const [boggyclausUnlocked, setBoggyclausUnlocked] = useState(false);
   const [stats, setStats] = useState<RailStats | null>(null);
   const [nameDraft, setNameDraft] = useState("");
   const [password, setPassword] = useState("");
@@ -309,6 +315,8 @@ export function RailShell() {
   const j4vanRef = useRef(false);
   const lampseternalRef = useRef(false);
   const chrisRef = useRef(false);
+  const boggymosiacRef = useRef(false);
+  const boggyclausRef = useRef(false);
   const settle = useRef<Promise<unknown>>(Promise.resolve());
   const arming = useRef(false);
   const practiceRef = useRef(false);
@@ -432,6 +440,12 @@ export function RailShell() {
     setChrisUnlocked(save.chris);
     chrisRef.current = save.chris;
     apiRef.current?.setChrisUnlocked(save.chris);
+    setBoggymosiacUnlocked(save.boggymosiac);
+    boggymosiacRef.current = save.boggymosiac;
+    apiRef.current?.setBoggymosiacUnlocked(save.boggymosiac);
+    setBoggyclausUnlocked(save.boggyclaus);
+    boggyclausRef.current = save.boggyclaus;
+    apiRef.current?.setBoggyclausUnlocked(save.boggyclaus);
     if (typeof res.fill === "number") setPickupFill(Math.max(0, Math.min(99, Math.floor(res.fill))));
     if (runSerial > 0) {
       const live = hudRef.current;
@@ -500,6 +514,10 @@ export function RailShell() {
     lampseternalRef.current = false;
     setChrisUnlocked(false);
     chrisRef.current = false;
+    setBoggymosiacUnlocked(false);
+    boggymosiacRef.current = false;
+    setBoggyclausUnlocked(false);
+    boggyclausRef.current = false;
     void syncDiamonds({ data: { token: next } })
       .then((res) => {
         if (!res.daily) return;
@@ -650,6 +668,16 @@ export function RailShell() {
   }, [chrisUnlocked, hud.phase]);
 
   useEffect(() => {
+    boggymosiacRef.current = boggymosiacUnlocked;
+    apiRef.current?.setBoggymosiacUnlocked(boggymosiacUnlocked);
+  }, [boggymosiacUnlocked, hud.phase]);
+
+  useEffect(() => {
+    boggyclausRef.current = boggyclausUnlocked;
+    apiRef.current?.setBoggyclausUnlocked(boggyclausUnlocked);
+  }, [boggyclausUnlocked, hud.phase]);
+
+  useEffect(() => {
     if (hud.phase === "run") setJustEarned([]);
   }, [hud.phase]);
 
@@ -765,7 +793,9 @@ export function RailShell() {
       (hudRef.current.runner === "JAFBOT" && !jafbotRef.current) ||
       (hudRef.current.runner === "J4VAN" && !j4vanRef.current) ||
       (hudRef.current.runner === "LAMPSETERNAL" && !lampseternalRef.current) ||
-      (hudRef.current.runner === "CHRIS" && !chrisRef.current)
+      (hudRef.current.runner === "CHRIS" && !chrisRef.current) ||
+      (hudRef.current.runner === "BOGGYMOSIAC" && !boggymosiacRef.current) ||
+      (hudRef.current.runner === "BOGGYCLAUS" && !boggyclausRef.current)
     ) {
       apiRef.current?.start();
       return;
@@ -956,6 +986,8 @@ export function RailShell() {
         { name: "J4VAN" as const, seconds: 0 },
         { name: "LAMPSETERNAL" as const, seconds: 0 },
         { name: "CHRIS" as const, seconds: 0 },
+        { name: "BOGGYMOSIAC" as const, seconds: 0 },
+        { name: "BOGGYCLAUS" as const, seconds: 0 },
       ],
     };
     void (async () => getStats({ data: { token } }))()
@@ -1478,6 +1510,20 @@ export function RailShell() {
     if (res?.ok && res.daily) applyWallet(token, res);
   }
 
+  async function onUnlockBoggymosiac() {
+    if (!token || boggymosiacUnlocked) return;
+    if ((ach?.skulls ?? 0) < BOGGYMOSIAC_COST) return;
+    const res = await unlockRunner({ data: { token, runner: "BOGGYMOSIAC" } }).catch(() => null);
+    if (res?.ok && res.daily) applyWallet(token, res);
+  }
+
+  async function onUnlockBoggyclaus() {
+    if (!token || boggyclausUnlocked) return;
+    if ((ach?.skulls ?? 0) < BOGGYCLAUS_COST) return;
+    const res = await unlockRunner({ data: { token, runner: "BOGGYCLAUS" } }).catch(() => null);
+    if (res?.ok && res.daily) applyWallet(token, res);
+  }
+
   const pickScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -1521,6 +1567,8 @@ export function RailShell() {
     if (name === "J4VAN") return j4vanUnlocked;
     if (name === "LAMPSETERNAL") return lampseternalUnlocked;
     if (name === "CHRIS") return chrisUnlocked;
+    if (name === "BOGGYMOSIAC") return boggymosiacUnlocked;
+    if (name === "BOGGYCLAUS") return boggyclausUnlocked;
     return false;
   }
 
@@ -1560,8 +1608,16 @@ export function RailShell() {
     if (hudRef.current.phase === "dead") apiRef.current?.toMenu();
   }
 
-  function picks() {
-    const roster = practice ? RUNNERS.filter((runner) => runnerOpen(runner.name)) : RUNNERS;
+  function picks(visible?: number) {
+    const duringRun = visible != null;
+    let roster = practice || duringRun ? RUNNERS.filter((runner) => runnerOpen(runner.name)) : RUNNERS;
+    if (visible != null && roster.length > visible) {
+      const at = Math.max(0, roster.findIndex((runner) => runner.name === hud.runner));
+      let start = at - 1;
+      if (start < 0) start = 0;
+      if (start > roster.length - visible) start = roster.length - visible;
+      roster = roster.slice(start, start + visible);
+    }
     return (
       <div className="rail-picks" role="group" aria-label="Runners">
         {roster.map((runner) => {
@@ -1593,7 +1649,9 @@ export function RailShell() {
             (runner.name === "JAFBOT" && !jafbotUnlocked) ||
             (runner.name === "J4VAN" && !j4vanUnlocked) ||
             (runner.name === "LAMPSETERNAL" && !lampseternalUnlocked) ||
-            (runner.name === "CHRIS" && !chrisUnlocked);
+            (runner.name === "CHRIS" && !chrisUnlocked) ||
+            (runner.name === "BOGGYMOSIAC" && !boggymosiacUnlocked) ||
+            (runner.name === "BOGGYCLAUS" && !boggyclausUnlocked);
           const cost =
             runner.name === "KOKO"
               ? KOKO_COST
@@ -1649,7 +1707,11 @@ export function RailShell() {
                                                               ? LAMPSETERNAL_COST
                                                               : runner.name === "CHRIS"
                                                                 ? CHRIS_COST
-                                                                : PINKY_COST;
+                                                                : runner.name === "BOGGYMOSIAC"
+                                                                  ? BOGGYMOSIAC_COST
+                                                                  : runner.name === "BOGGYCLAUS"
+                                                                    ? BOGGYCLAUS_COST
+                                                                    : PINKY_COST;
           return (
             <button
               key={runner.name}
@@ -1860,7 +1922,7 @@ export function RailShell() {
       {showHud ? (
         <div className="rail-picks-bar">
           <div className="rail-pick-scroll">
-            {picks()}
+            {picks(3)}
           </div>
         </div>
       ) : null}
@@ -1993,7 +2055,9 @@ export function RailShell() {
               (hud.runner === "JAFBOT" && !jafbotUnlocked) ||
               (hud.runner === "J4VAN" && !j4vanUnlocked) ||
               (hud.runner === "LAMPSETERNAL" && !lampseternalUnlocked) ||
-              (hud.runner === "CHRIS" && !chrisUnlocked)
+              (hud.runner === "CHRIS" && !chrisUnlocked) ||
+              (hud.runner === "BOGGYMOSIAC" && !boggymosiacUnlocked) ||
+              (hud.runner === "BOGGYCLAUS" && !boggyclausUnlocked)
                 ? "Unlock for 169 Diamond Skulls."
                 : "Get the highest score. Don’t kiss the bears."}
             </p>
@@ -2221,6 +2285,16 @@ export function RailShell() {
             {hud.runner === "CHRIS" && !chrisUnlocked ? (
               <button type="button" className="rail-stats-btn" onClick={onUnlockChris}>
                 {(ach?.skulls ?? 0) >= CHRIS_COST ? `Unlock ${runnerLabel("CHRIS")} · 169` : "Need 169 Diamond Skulls"}
+              </button>
+            ) : null}
+            {hud.runner === "BOGGYMOSIAC" && !boggymosiacUnlocked ? (
+              <button type="button" className="rail-stats-btn" onClick={onUnlockBoggymosiac}>
+                {(ach?.skulls ?? 0) >= BOGGYMOSIAC_COST ? `Unlock ${runnerLabel("BOGGYMOSIAC")} · 169` : "Need 169 Diamond Skulls"}
+              </button>
+            ) : null}
+            {hud.runner === "BOGGYCLAUS" && !boggyclausUnlocked ? (
+              <button type="button" className="rail-stats-btn" onClick={onUnlockBoggyclaus}>
+                {(ach?.skulls ?? 0) >= BOGGYCLAUS_COST ? `Unlock ${runnerLabel("BOGGYCLAUS")} · 169` : "Need 169 Diamond Skulls"}
               </button>
             ) : null}
             {mobile ? null : (

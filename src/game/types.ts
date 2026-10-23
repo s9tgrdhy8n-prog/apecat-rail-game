@@ -44,7 +44,9 @@ export type RunnerName =
   | "JAFBOT"
   | "J4VAN"
   | "LAMPSETERNAL"
-  | "CHRIS";
+  | "CHRIS"
+  | "BOGGYMOSIAC"
+  | "BOGGYCLAUS";
 
 export type Hud = {
   phase: Phase;
@@ -134,6 +136,8 @@ export type RailApi = {
   setJ4vanUnlocked: (unlocked: boolean) => void;
   setLampseternalUnlocked: (unlocked: boolean) => void;
   setChrisUnlocked: (unlocked: boolean) => void;
+  setBoggymosiacUnlocked: (unlocked: boolean) => void;
+  setBoggyclausUnlocked: (unlocked: boolean) => void;
   pause: () => void;
   resume: () => void;
   playReplay: (tape: GhostTape) => void;

@@ -88,6 +88,12 @@ export const LAMPSETERNAL_COST = 169;
 /** Diamond Skulls to unlock Chris for good. */
 export const CHRIS_COST = 169;
 
+/** Diamond Skulls to unlock Boggy Mosiac for good. */
+export const BOGGYMOSIAC_COST = 169;
+
+/** Diamond Skulls to unlock Boggy Claus for good. */
+export const BOGGYCLAUS_COST = 169;
+
 export type RunFacts = {
   score: number;
   meters: number;
@@ -160,6 +166,8 @@ export type AchievementSave = {
   j4van: boolean;
   lampseternal: boolean;
   chris: boolean;
+  boggymosiac: boolean;
+  boggyclaus: boolean;
   claims: string[];
   dailyKey: string;
   weeklyKey: string;
@@ -270,6 +278,8 @@ export const GOALS: Goal[] = [
         j4van: false,
         lampseternal: false,
         chris: false,
+        boggymosiac: false,
+        boggyclaus: false,
       }),
   },
   {
@@ -312,6 +322,8 @@ export type UnlockFlags = {
   j4van: boolean;
   lampseternal: boolean;
   chris: boolean;
+  boggymosiac: boolean;
+  boggyclaus: boolean;
 };
 
 /** Lowest finished-run count across the crew. Paid runners join after unlock. */
@@ -345,6 +357,8 @@ export function crewProgress(tally: Tally, unlocked: UnlockFlags) {
   if (unlocked.j4van) counts.push(tally.rides.J4VAN);
   if (unlocked.lampseternal) counts.push(tally.rides.LAMPSETERNAL);
   if (unlocked.chris) counts.push(tally.rides.CHRIS);
+  if (unlocked.boggymosiac) counts.push(tally.rides.BOGGYMOSIAC);
+  if (unlocked.boggyclaus) counts.push(tally.rides.BOGGYCLAUS);
   return Math.min(...counts);
 }
 
@@ -378,6 +392,8 @@ export function crewDetail(unlocked: UnlockFlags) {
   if (unlocked.j4van) bits.push(`30 as ${runnerLabel("J4VAN")}`);
   if (unlocked.lampseternal) bits.push(`30 as ${runnerLabel("LAMPSETERNAL")}`);
   if (unlocked.chris) bits.push(`30 as ${runnerLabel("CHRIS")}`);
+  if (unlocked.boggymosiac) bits.push(`30 as ${runnerLabel("BOGGYMOSIAC")}`);
+  if (unlocked.boggyclaus) bits.push(`30 as ${runnerLabel("BOGGYCLAUS")}`);
   return `Finish ${bits.slice(0, -1).join(", ")}, and ${bits[bits.length - 1]}.`;
 }
 
@@ -429,6 +445,8 @@ export function emptyTally(): Tally {
       J4VAN: 0,
       LAMPSETERNAL: 0,
       CHRIS: 0,
+      BOGGYMOSIAC: 0,
+      BOGGYCLAUS: 0,
     },
   };
 }
@@ -475,6 +493,8 @@ function freshSave(now = new Date()): AchievementSave {
         j4van: false,
         lampseternal: false,
         chris: false,
+        boggymosiac: false,
+        boggyclaus: false,
     claims: [],
     dailyKey: utcDay(now),
     weeklyKey: utcWeek(now),
@@ -523,7 +543,9 @@ function tallyFrom(raw: unknown): Tally {
           name === "JAFBOT" ||
           name === "J4VAN" ||
           name === "LAMPSETERNAL" ||
-          name === "CHRIS",
+          name === "CHRIS" ||
+          name === "BOGGYMOSIAC" ||
+          name === "BOGGYCLAUS",
       )
     : [];
   return {
@@ -573,6 +595,8 @@ function tallyFrom(raw: unknown): Tally {
       J4VAN: num(row.rides?.J4VAN),
       LAMPSETERNAL: num(row.rides?.LAMPSETERNAL),
       CHRIS: num(row.rides?.CHRIS),
+      BOGGYMOSIAC: num(row.rides?.BOGGYMOSIAC),
+      BOGGYCLAUS: num(row.rides?.BOGGYCLAUS),
     },
   };
 }
@@ -626,6 +650,8 @@ function readRaw(token: string): AchievementSave {
       j4van: parsed.j4van === true,
       lampseternal: parsed.lampseternal === true,
       chris: parsed.chris === true,
+      boggymosiac: parsed.boggymosiac === true,
+      boggyclaus: parsed.boggyclaus === true,
       claims: Array.isArray(parsed.claims) ? parsed.claims.filter((claim) => typeof claim === "string") : [],
       dailyKey: typeof parsed.dailyKey === "string" ? parsed.dailyKey : "",
       weeklyKey: typeof parsed.weeklyKey === "string" ? parsed.weeklyKey : "",
@@ -733,6 +759,8 @@ export function goalProgress(
         j4van: false,
         lampseternal: false,
         chris: false,
+        boggymosiac: false,
+        boggyclaus: false,
   },
 ) {
   return Math.min(goal.target, Math.max(0, goalValue(goal, tally, unlocked)));
@@ -770,6 +798,8 @@ export function goalDone(
         j4van: false,
         lampseternal: false,
         chris: false,
+        boggymosiac: false,
+        boggyclaus: false,
   },
 ) {
   return goalValue(goal, tally, unlocked) >= goal.target;
@@ -814,6 +844,8 @@ export type AchievementSnapshot = {
   j4van: boolean;
   lampseternal: boolean;
   chris: boolean;
+  boggymosiac: boolean;
+  boggyclaus: boolean;
   paid: string[];
   daily: Tally;
   weekly: Tally;
@@ -853,6 +885,8 @@ export function adoptServerAchievements(token: string, snap: AchievementSnapshot
     j4van: snap.j4van === true,
     lampseternal: snap.lampseternal === true,
     chris: snap.chris === true,
+    boggymosiac: snap.boggymosiac === true,
+    boggyclaus: snap.boggyclaus === true,
     claims: Array.isArray(snap.paid) ? snap.paid.filter((claim) => typeof claim === "string") : [],
     daily: snap.daily,
     weekly: snap.weekly,

@@ -187,7 +187,9 @@ type RunnerId =
   | "jafbot"
   | "j4van"
   | "lampseternal"
-  | "chris";
+  | "chris"
+  | "boggymosiac"
+  | "boggyclaus";
 
 function meshyRunner(id: RunnerId) {
   return (
@@ -218,7 +220,9 @@ function meshyRunner(id: RunnerId) {
     id === "jafbot" ||
     id === "j4van" ||
     id === "lampseternal" ||
-    id === "chris"
+    id === "chris" ||
+    id === "boggymosiac" ||
+    id === "boggyclaus"
   );
 }
 
@@ -310,6 +314,8 @@ class RailWorld {
   private j4vanUnlocked = false;
   private lampseternalUnlocked = false;
   private chrisUnlocked = false;
+  private boggymosiacUnlocked = false;
+  private boggyclausUnlocked = false;
   private kidsOn = false;
   private kidsDodge = false;
   private kidsMult = 1;
@@ -579,6 +585,12 @@ class RailWorld {
       },
       setChrisUnlocked: (unlocked) => {
         this.chrisUnlocked = unlocked;
+      },
+      setBoggymosiacUnlocked: (unlocked) => {
+        this.boggymosiacUnlocked = unlocked;
+      },
+      setBoggyclausUnlocked: (unlocked) => {
+        this.boggyclausUnlocked = unlocked;
       },
       pause: () => this.freeze(),
       resume: () => this.beginCountdown(),
@@ -907,6 +919,8 @@ class RailWorld {
       { id: "j4van", name: "J4VAN", url: "/models/j4van.glb" },
       { id: "lampseternal", name: "LAMPSETERNAL", url: "/models/lampseternal.glb" },
       { id: "chris", name: "CHRIS", url: "/models/chris.glb" },
+      { id: "boggymosiac", name: "BOGGYMOSIAC", url: "/models/boggymosiac.glb" },
+      { id: "boggyclaus", name: "BOGGYCLAUS", url: "/models/boggyclaus.glb" },
     ];
     const loader = new GLTFLoader();
     const phone = window.matchMedia("(pointer: coarse)").matches || Math.min(window.innerWidth, window.innerHeight) < 820;
@@ -1075,6 +1089,8 @@ class RailWorld {
     if (name === "J4VAN") return !this.j4vanUnlocked;
     if (name === "LAMPSETERNAL") return !this.lampseternalUnlocked;
     if (name === "CHRIS") return !this.chrisUnlocked;
+    if (name === "BOGGYMOSIAC") return !this.boggymosiacUnlocked;
+    if (name === "BOGGYCLAUS") return !this.boggyclausUnlocked;
     return false;
   }
 
@@ -1125,6 +1141,8 @@ class RailWorld {
       "j4van",
       "lampseternal",
       "chris",
+      "boggymosiac",
+      "boggyclaus",
     ];
     const available = order.filter((id) => {
       if (!this.roster.has(id)) return false;
@@ -2224,6 +2242,8 @@ class RailWorld {
     if (name === "J4VAN") return "j4van";
     if (name === "LAMPSETERNAL") return "lampseternal";
     if (name === "CHRIS") return "chris";
+    if (name === "BOGGYMOSIAC") return "boggymosiac";
+    if (name === "BOGGYCLAUS") return "boggyclaus";
     return "gimbo";
   }
 
