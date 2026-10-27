@@ -189,7 +189,9 @@ type RunnerId =
   | "lampseternal"
   | "chris"
   | "boggymosiac"
-  | "boggyclaus";
+  | "boggyclaus"
+  | "blackbull"
+  | "soltrain";
 
 function meshyRunner(id: RunnerId) {
   return (
@@ -222,7 +224,9 @@ function meshyRunner(id: RunnerId) {
     id === "lampseternal" ||
     id === "chris" ||
     id === "boggymosiac" ||
-    id === "boggyclaus"
+    id === "boggyclaus" ||
+    id === "blackbull" ||
+    id === "soltrain"
   );
 }
 
@@ -316,6 +320,8 @@ class RailWorld {
   private chrisUnlocked = false;
   private boggymosiacUnlocked = false;
   private boggyclausUnlocked = false;
+  private blackbullUnlocked = false;
+  private soltrainUnlocked = false;
   private kidsOn = false;
   private kidsDodge = false;
   private kidsMult = 1;
@@ -591,6 +597,12 @@ class RailWorld {
       },
       setBoggyclausUnlocked: (unlocked) => {
         this.boggyclausUnlocked = unlocked;
+      },
+      setBlackbullUnlocked: (unlocked) => {
+        this.blackbullUnlocked = unlocked;
+      },
+      setSoltrainUnlocked: (unlocked) => {
+        this.soltrainUnlocked = unlocked;
       },
       pause: () => this.freeze(),
       resume: () => this.beginCountdown(),
@@ -921,6 +933,8 @@ class RailWorld {
       { id: "chris", name: "CHRIS", url: "/models/chris.glb" },
       { id: "boggymosiac", name: "BOGGYMOSIAC", url: "/models/boggymosiac.glb" },
       { id: "boggyclaus", name: "BOGGYCLAUS", url: "/models/boggyclaus.glb" },
+      { id: "blackbull", name: "BLACKBULL", url: "/models/blackbull.glb" },
+      { id: "soltrain", name: "SOLTRAIN", url: "/models/soltrain.glb" },
     ];
     const loader = new GLTFLoader();
     const phone = window.matchMedia("(pointer: coarse)").matches || Math.min(window.innerWidth, window.innerHeight) < 820;
@@ -1091,6 +1105,8 @@ class RailWorld {
     if (name === "CHRIS") return !this.chrisUnlocked;
     if (name === "BOGGYMOSIAC") return !this.boggymosiacUnlocked;
     if (name === "BOGGYCLAUS") return !this.boggyclausUnlocked;
+    if (name === "BLACKBULL") return !this.blackbullUnlocked;
+    if (name === "SOLTRAIN") return !this.soltrainUnlocked;
     return false;
   }
 
@@ -1143,6 +1159,8 @@ class RailWorld {
       "chris",
       "boggymosiac",
       "boggyclaus",
+      "blackbull",
+      "soltrain",
     ];
     const available = order.filter((id) => {
       if (!this.roster.has(id)) return false;
@@ -2244,6 +2262,8 @@ class RailWorld {
     if (name === "CHRIS") return "chris";
     if (name === "BOGGYMOSIAC") return "boggymosiac";
     if (name === "BOGGYCLAUS") return "boggyclaus";
+    if (name === "BLACKBULL") return "blackbull";
+    if (name === "SOLTRAIN") return "soltrain";
     return "gimbo";
   }
 

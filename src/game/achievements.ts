@@ -94,6 +94,12 @@ export const BOGGYMOSIAC_COST = 169;
 /** Diamond Skulls to unlock Boggy Claus for good. */
 export const BOGGYCLAUS_COST = 169;
 
+/** Diamond Skulls to unlock The Black Bull for good. */
+export const BLACKBULL_COST = 169;
+
+/** Diamond Skulls to unlock soltrain for good. */
+export const SOLTRAIN_COST = 169;
+
 export type RunFacts = {
   score: number;
   meters: number;
@@ -168,6 +174,8 @@ export type AchievementSave = {
   chris: boolean;
   boggymosiac: boolean;
   boggyclaus: boolean;
+  blackbull: boolean;
+  soltrain: boolean;
   claims: string[];
   dailyKey: string;
   weeklyKey: string;
@@ -280,6 +288,8 @@ export const GOALS: Goal[] = [
         chris: false,
         boggymosiac: false,
         boggyclaus: false,
+        blackbull: false,
+        soltrain: false,
       }),
   },
   {
@@ -324,6 +334,8 @@ export type UnlockFlags = {
   chris: boolean;
   boggymosiac: boolean;
   boggyclaus: boolean;
+  blackbull: boolean;
+  soltrain: boolean;
 };
 
 /** Lowest finished-run count across the crew. Paid runners join after unlock. */
@@ -359,6 +371,8 @@ export function crewProgress(tally: Tally, unlocked: UnlockFlags) {
   if (unlocked.chris) counts.push(tally.rides.CHRIS);
   if (unlocked.boggymosiac) counts.push(tally.rides.BOGGYMOSIAC);
   if (unlocked.boggyclaus) counts.push(tally.rides.BOGGYCLAUS);
+  if (unlocked.blackbull) counts.push(tally.rides.BLACKBULL);
+  if (unlocked.soltrain) counts.push(tally.rides.SOLTRAIN);
   return Math.min(...counts);
 }
 
@@ -394,6 +408,8 @@ export function crewDetail(unlocked: UnlockFlags) {
   if (unlocked.chris) bits.push(`30 as ${runnerLabel("CHRIS")}`);
   if (unlocked.boggymosiac) bits.push(`30 as ${runnerLabel("BOGGYMOSIAC")}`);
   if (unlocked.boggyclaus) bits.push(`30 as ${runnerLabel("BOGGYCLAUS")}`);
+  if (unlocked.blackbull) bits.push(`30 as ${runnerLabel("BLACKBULL")}`);
+  if (unlocked.soltrain) bits.push(`30 as ${runnerLabel("SOLTRAIN")}`);
   return `Finish ${bits.slice(0, -1).join(", ")}, and ${bits[bits.length - 1]}.`;
 }
 
@@ -447,6 +463,8 @@ export function emptyTally(): Tally {
       CHRIS: 0,
       BOGGYMOSIAC: 0,
       BOGGYCLAUS: 0,
+      BLACKBULL: 0,
+      SOLTRAIN: 0,
     },
   };
 }
@@ -495,6 +513,8 @@ function freshSave(now = new Date()): AchievementSave {
         chris: false,
         boggymosiac: false,
         boggyclaus: false,
+        blackbull: false,
+        soltrain: false,
     claims: [],
     dailyKey: utcDay(now),
     weeklyKey: utcWeek(now),
@@ -545,7 +565,9 @@ function tallyFrom(raw: unknown): Tally {
           name === "LAMPSETERNAL" ||
           name === "CHRIS" ||
           name === "BOGGYMOSIAC" ||
-          name === "BOGGYCLAUS",
+          name === "BOGGYCLAUS" ||
+          name === "BLACKBULL" ||
+          name === "SOLTRAIN",
       )
     : [];
   return {
@@ -597,6 +619,8 @@ function tallyFrom(raw: unknown): Tally {
       CHRIS: num(row.rides?.CHRIS),
       BOGGYMOSIAC: num(row.rides?.BOGGYMOSIAC),
       BOGGYCLAUS: num(row.rides?.BOGGYCLAUS),
+      BLACKBULL: num(row.rides?.BLACKBULL),
+      SOLTRAIN: num(row.rides?.SOLTRAIN),
     },
   };
 }
@@ -652,6 +676,8 @@ function readRaw(token: string): AchievementSave {
       chris: parsed.chris === true,
       boggymosiac: parsed.boggymosiac === true,
       boggyclaus: parsed.boggyclaus === true,
+      blackbull: parsed.blackbull === true,
+      soltrain: parsed.soltrain === true,
       claims: Array.isArray(parsed.claims) ? parsed.claims.filter((claim) => typeof claim === "string") : [],
       dailyKey: typeof parsed.dailyKey === "string" ? parsed.dailyKey : "",
       weeklyKey: typeof parsed.weeklyKey === "string" ? parsed.weeklyKey : "",
@@ -761,6 +787,8 @@ export function goalProgress(
         chris: false,
         boggymosiac: false,
         boggyclaus: false,
+        blackbull: false,
+        soltrain: false,
   },
 ) {
   return Math.min(goal.target, Math.max(0, goalValue(goal, tally, unlocked)));
@@ -800,6 +828,8 @@ export function goalDone(
         chris: false,
         boggymosiac: false,
         boggyclaus: false,
+        blackbull: false,
+        soltrain: false,
   },
 ) {
   return goalValue(goal, tally, unlocked) >= goal.target;
@@ -846,6 +876,8 @@ export type AchievementSnapshot = {
   chris: boolean;
   boggymosiac: boolean;
   boggyclaus: boolean;
+  blackbull: boolean;
+  soltrain: boolean;
   paid: string[];
   daily: Tally;
   weekly: Tally;
@@ -887,6 +919,8 @@ export function adoptServerAchievements(token: string, snap: AchievementSnapshot
     chris: snap.chris === true,
     boggymosiac: snap.boggymosiac === true,
     boggyclaus: snap.boggyclaus === true,
+    blackbull: snap.blackbull === true,
+    soltrain: snap.soltrain === true,
     claims: Array.isArray(snap.paid) ? snap.paid.filter((claim) => typeof claim === "string") : [],
     daily: snap.daily,
     weekly: snap.weekly,
