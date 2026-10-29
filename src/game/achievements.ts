@@ -100,6 +100,9 @@ export const BLACKBULL_COST = 169;
 /** Diamond Skulls to unlock soltrain for good. */
 export const SOLTRAIN_COST = 169;
 
+/** Diamond Skulls to unlock Dippy for good. */
+export const DIPPY_COST = 169;
+
 export type RunFacts = {
   score: number;
   meters: number;
@@ -176,6 +179,7 @@ export type AchievementSave = {
   boggyclaus: boolean;
   blackbull: boolean;
   soltrain: boolean;
+  dippy: boolean;
   claims: string[];
   dailyKey: string;
   weeklyKey: string;
@@ -290,6 +294,7 @@ export const GOALS: Goal[] = [
         boggyclaus: false,
         blackbull: false,
         soltrain: false,
+        dippy: false,
       }),
   },
   {
@@ -336,6 +341,7 @@ export type UnlockFlags = {
   boggyclaus: boolean;
   blackbull: boolean;
   soltrain: boolean;
+  dippy: boolean;
 };
 
 /** Lowest finished-run count across the crew. Paid runners join after unlock. */
@@ -373,6 +379,7 @@ export function crewProgress(tally: Tally, unlocked: UnlockFlags) {
   if (unlocked.boggyclaus) counts.push(tally.rides.BOGGYCLAUS);
   if (unlocked.blackbull) counts.push(tally.rides.BLACKBULL);
   if (unlocked.soltrain) counts.push(tally.rides.SOLTRAIN);
+  if (unlocked.dippy) counts.push(tally.rides.DIPPY);
   return Math.min(...counts);
 }
 
@@ -410,6 +417,7 @@ export function crewDetail(unlocked: UnlockFlags) {
   if (unlocked.boggyclaus) bits.push(`30 as ${runnerLabel("BOGGYCLAUS")}`);
   if (unlocked.blackbull) bits.push(`30 as ${runnerLabel("BLACKBULL")}`);
   if (unlocked.soltrain) bits.push(`30 as ${runnerLabel("SOLTRAIN")}`);
+  if (unlocked.dippy) bits.push(`30 as ${runnerLabel("DIPPY")}`);
   return `Finish ${bits.slice(0, -1).join(", ")}, and ${bits[bits.length - 1]}.`;
 }
 
@@ -465,6 +473,7 @@ export function emptyTally(): Tally {
       BOGGYCLAUS: 0,
       BLACKBULL: 0,
       SOLTRAIN: 0,
+      DIPPY: 0,
     },
   };
 }
@@ -515,6 +524,7 @@ function freshSave(now = new Date()): AchievementSave {
         boggyclaus: false,
         blackbull: false,
         soltrain: false,
+        dippy: false,
     claims: [],
     dailyKey: utcDay(now),
     weeklyKey: utcWeek(now),
@@ -567,7 +577,8 @@ function tallyFrom(raw: unknown): Tally {
           name === "BOGGYMOSIAC" ||
           name === "BOGGYCLAUS" ||
           name === "BLACKBULL" ||
-          name === "SOLTRAIN",
+          name === "SOLTRAIN" ||
+          name === "DIPPY",
       )
     : [];
   return {
@@ -621,6 +632,7 @@ function tallyFrom(raw: unknown): Tally {
       BOGGYCLAUS: num(row.rides?.BOGGYCLAUS),
       BLACKBULL: num(row.rides?.BLACKBULL),
       SOLTRAIN: num(row.rides?.SOLTRAIN),
+      DIPPY: num(row.rides?.DIPPY),
     },
   };
 }
@@ -678,6 +690,7 @@ function readRaw(token: string): AchievementSave {
       boggyclaus: parsed.boggyclaus === true,
       blackbull: parsed.blackbull === true,
       soltrain: parsed.soltrain === true,
+      dippy: parsed.dippy === true,
       claims: Array.isArray(parsed.claims) ? parsed.claims.filter((claim) => typeof claim === "string") : [],
       dailyKey: typeof parsed.dailyKey === "string" ? parsed.dailyKey : "",
       weeklyKey: typeof parsed.weeklyKey === "string" ? parsed.weeklyKey : "",
@@ -789,6 +802,7 @@ export function goalProgress(
         boggyclaus: false,
         blackbull: false,
         soltrain: false,
+        dippy: false,
   },
 ) {
   return Math.min(goal.target, Math.max(0, goalValue(goal, tally, unlocked)));
@@ -830,6 +844,7 @@ export function goalDone(
         boggyclaus: false,
         blackbull: false,
         soltrain: false,
+        dippy: false,
   },
 ) {
   return goalValue(goal, tally, unlocked) >= goal.target;
@@ -878,6 +893,7 @@ export type AchievementSnapshot = {
   boggyclaus: boolean;
   blackbull: boolean;
   soltrain: boolean;
+  dippy: boolean;
   paid: string[];
   daily: Tally;
   weekly: Tally;
@@ -921,6 +937,7 @@ export function adoptServerAchievements(token: string, snap: AchievementSnapshot
     boggyclaus: snap.boggyclaus === true,
     blackbull: snap.blackbull === true,
     soltrain: snap.soltrain === true,
+    dippy: snap.dippy === true,
     claims: Array.isArray(snap.paid) ? snap.paid.filter((claim) => typeof claim === "string") : [],
     daily: snap.daily,
     weekly: snap.weekly,

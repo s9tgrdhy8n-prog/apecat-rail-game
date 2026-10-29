@@ -49,6 +49,7 @@ The start menu reads `GAME_VERSION` in `src/game/version.ts`. On every productio
 | 1.19.0 | 2026-10-22 | Published to https://apecat-rail-game.com. Lamp's Eternal and Chris join the runners, Lamp's Eternal first, and each unlocks for 169 Diamond Skulls. Lamp's Eternal’s X is @ShadyLampX. Chris’s X is @Chriswayne11250. Finished runs count in Stats and in The whole crew after unlock. |
 | 1.20.0 | 2026-10-23 | Published to https://apecat-rail-game.com. Boggy Mosiac and Boggy Claus join the runners, Boggy Mosiac first, and each unlocks for 169 Diamond Skulls. Both use @BoggyCoinSol. During a run the portrait row shows only unlocked characters, three at a time. Tab switches through the rest. The start menu still shows the full row. Finished runs count in Stats and in The whole crew after unlock. |
 | 1.21.0 | 2026-10-26 | Published to https://apecat-rail-game.com. The Black Bull and soltrain join the runners, The Black Bull first, and each unlocks for 169 Diamond Skulls. The Black Bull’s X is @BlackBullSol. soltrain’s X is @soltrainpali. Finished runs count in Stats and in The whole crew after unlock. |
+| 1.22.0 | 2026-10-28 | Published to https://apecat-rail-game.com. Dippy joins the runners after soltrain and unlocks for 169 Diamond Skulls. Dippy’s X is @dippylvs. Claim Rewards is open for 48 hours from this publish and adds 169 Diamond Skulls, including for accounts that already claimed an earlier drop. Finished Dippy runs count in Stats and in The whole crew after unlock. |
 
 ## 1.0.5 notes
 

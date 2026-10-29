@@ -48,7 +48,8 @@ export type RunnerName =
   | "BOGGYMOSIAC"
   | "BOGGYCLAUS"
   | "BLACKBULL"
-  | "SOLTRAIN";
+  | "SOLTRAIN"
+  | "DIPPY";
 
 export type Hud = {
   phase: Phase;
@@ -142,6 +143,7 @@ export type RailApi = {
   setBoggyclausUnlocked: (unlocked: boolean) => void;
   setBlackbullUnlocked: (unlocked: boolean) => void;
   setSoltrainUnlocked: (unlocked: boolean) => void;
+  setDippyUnlocked: (unlocked: boolean) => void;
   pause: () => void;
   resume: () => void;
   playReplay: (tape: GhostTape) => void;

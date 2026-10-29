@@ -28,6 +28,7 @@ import {
   BOGGYCLAUS_COST,
   BLACKBULL_COST,
   SOLTRAIN_COST,
+  DIPPY_COST,
   GOALS,
   KOKO_COST,
   OTTER_COST,
@@ -138,6 +139,7 @@ const RUNNERS: { name: RunnerName; src: string }[] = [
   { name: "BOGGYCLAUS", src: "/brand/boggyclaus.jpg" },
   { name: "BLACKBULL", src: "/brand/blackbull.jpg" },
   { name: "SOLTRAIN", src: "/brand/soltrain.jpg" },
+  { name: "DIPPY", src: "/brand/dippy.jpg" },
 ];
 const KIDS_SPEEDS = [
   { id: "1", label: "1×", mult: 1 },
@@ -270,6 +272,7 @@ export function RailShell() {
   const [boggyclausUnlocked, setBoggyclausUnlocked] = useState(false);
   const [blackbullUnlocked, setBlackbullUnlocked] = useState(false);
   const [soltrainUnlocked, setSoltrainUnlocked] = useState(false);
+  const [dippyUnlocked, setDippyUnlocked] = useState(false);
   const [stats, setStats] = useState<RailStats | null>(null);
   const [nameDraft, setNameDraft] = useState("");
   const [password, setPassword] = useState("");
@@ -325,6 +328,7 @@ export function RailShell() {
   const boggyclausRef = useRef(false);
   const blackbullRef = useRef(false);
   const soltrainRef = useRef(false);
+  const dippyRef = useRef(false);
   const settle = useRef<Promise<unknown>>(Promise.resolve());
   const arming = useRef(false);
   const practiceRef = useRef(false);
@@ -460,6 +464,9 @@ export function RailShell() {
     setSoltrainUnlocked(save.soltrain);
     soltrainRef.current = save.soltrain;
     apiRef.current?.setSoltrainUnlocked(save.soltrain);
+    setDippyUnlocked(save.dippy);
+    dippyRef.current = save.dippy;
+    apiRef.current?.setDippyUnlocked(save.dippy);
     if (typeof res.fill === "number") setPickupFill(Math.max(0, Math.min(99, Math.floor(res.fill))));
     if (runSerial > 0) {
       const live = hudRef.current;
@@ -536,6 +543,8 @@ export function RailShell() {
     blackbullRef.current = false;
     setSoltrainUnlocked(false);
     soltrainRef.current = false;
+    setDippyUnlocked(false);
+    dippyRef.current = false;
     void syncDiamonds({ data: { token: next } })
       .then((res) => {
         if (!res.daily) return;
@@ -706,6 +715,11 @@ export function RailShell() {
   }, [soltrainUnlocked, hud.phase]);
 
   useEffect(() => {
+    dippyRef.current = dippyUnlocked;
+    apiRef.current?.setDippyUnlocked(dippyUnlocked);
+  }, [dippyUnlocked, hud.phase]);
+
+  useEffect(() => {
     if (hud.phase === "run") setJustEarned([]);
   }, [hud.phase]);
 
@@ -825,7 +839,8 @@ export function RailShell() {
       (hudRef.current.runner === "BOGGYMOSIAC" && !boggymosiacRef.current) ||
       (hudRef.current.runner === "BOGGYCLAUS" && !boggyclausRef.current) ||
       (hudRef.current.runner === "BLACKBULL" && !blackbullRef.current) ||
-      (hudRef.current.runner === "SOLTRAIN" && !soltrainRef.current)
+      (hudRef.current.runner === "SOLTRAIN" && !soltrainRef.current) ||
+      (hudRef.current.runner === "DIPPY" && !dippyRef.current)
     ) {
       apiRef.current?.start();
       return;
@@ -1020,6 +1035,7 @@ export function RailShell() {
         { name: "BOGGYCLAUS" as const, seconds: 0 },
         { name: "BLACKBULL" as const, seconds: 0 },
         { name: "SOLTRAIN" as const, seconds: 0 },
+        { name: "DIPPY" as const, seconds: 0 },
       ],
     };
     void (async () => getStats({ data: { token } }))()
@@ -1570,6 +1586,13 @@ export function RailShell() {
     if (res?.ok && res.daily) applyWallet(token, res);
   }
 
+  async function onUnlockDippy() {
+    if (!token || dippyUnlocked) return;
+    if ((ach?.skulls ?? 0) < DIPPY_COST) return;
+    const res = await unlockRunner({ data: { token, runner: "DIPPY" } }).catch(() => null);
+    if (res?.ok && res.daily) applyWallet(token, res);
+  }
+
   const pickScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -1617,6 +1640,7 @@ export function RailShell() {
     if (name === "BOGGYCLAUS") return boggyclausUnlocked;
     if (name === "BLACKBULL") return blackbullUnlocked;
     if (name === "SOLTRAIN") return soltrainUnlocked;
+    if (name === "DIPPY") return dippyUnlocked;
     return false;
   }
 
@@ -1701,7 +1725,8 @@ export function RailShell() {
             (runner.name === "BOGGYMOSIAC" && !boggymosiacUnlocked) ||
             (runner.name === "BOGGYCLAUS" && !boggyclausUnlocked) ||
             (runner.name === "BLACKBULL" && !blackbullUnlocked) ||
-            (runner.name === "SOLTRAIN" && !soltrainUnlocked);
+            (runner.name === "SOLTRAIN" && !soltrainUnlocked) ||
+            (runner.name === "DIPPY" && !dippyUnlocked);
           const cost =
             runner.name === "KOKO"
               ? KOKO_COST
@@ -1765,7 +1790,9 @@ export function RailShell() {
                                                                       ? BLACKBULL_COST
                                                                       : runner.name === "SOLTRAIN"
                                                                         ? SOLTRAIN_COST
-                                                                        : PINKY_COST;
+                                                                        : runner.name === "DIPPY"
+                                                                          ? DIPPY_COST
+                                                                          : PINKY_COST;
           return (
             <button
               key={runner.name}
@@ -2113,7 +2140,8 @@ export function RailShell() {
               (hud.runner === "BOGGYMOSIAC" && !boggymosiacUnlocked) ||
               (hud.runner === "BOGGYCLAUS" && !boggyclausUnlocked) ||
               (hud.runner === "BLACKBULL" && !blackbullUnlocked) ||
-              (hud.runner === "SOLTRAIN" && !soltrainUnlocked)
+              (hud.runner === "SOLTRAIN" && !soltrainUnlocked) ||
+              (hud.runner === "DIPPY" && !dippyUnlocked)
                 ? "Unlock for 169 Diamond Skulls."
                 : "Get the highest score. Don’t kiss the bears."}
             </p>
@@ -2361,6 +2389,11 @@ export function RailShell() {
             {hud.runner === "SOLTRAIN" && !soltrainUnlocked ? (
               <button type="button" className="rail-stats-btn" onClick={onUnlockSoltrain}>
                 {(ach?.skulls ?? 0) >= SOLTRAIN_COST ? `Unlock ${runnerLabel("SOLTRAIN")} · 169` : "Need 169 Diamond Skulls"}
+              </button>
+            ) : null}
+            {hud.runner === "DIPPY" && !dippyUnlocked ? (
+              <button type="button" className="rail-stats-btn" onClick={onUnlockDippy}>
+                {(ach?.skulls ?? 0) >= DIPPY_COST ? `Unlock ${runnerLabel("DIPPY")} · 169` : "Need 169 Diamond Skulls"}
               </button>
             ) : null}
             {mobile ? null : (
