@@ -192,7 +192,8 @@ type RunnerId =
   | "boggyclaus"
   | "blackbull"
   | "soltrain"
-  | "dippy";
+  | "dippy"
+  | "cz";
 
 function meshyRunner(id: RunnerId) {
   return (
@@ -228,7 +229,8 @@ function meshyRunner(id: RunnerId) {
     id === "boggyclaus" ||
     id === "blackbull" ||
     id === "soltrain" ||
-    id === "dippy"
+    id === "dippy" ||
+    id === "cz"
   );
 }
 
@@ -325,6 +327,7 @@ class RailWorld {
   private blackbullUnlocked = false;
   private soltrainUnlocked = false;
   private dippyUnlocked = false;
+  private czUnlocked = false;
   private kidsOn = false;
   private kidsDodge = false;
   private kidsMult = 1;
@@ -609,6 +612,9 @@ class RailWorld {
       },
       setDippyUnlocked: (unlocked) => {
         this.dippyUnlocked = unlocked;
+      },
+      setCzUnlocked: (unlocked) => {
+        this.czUnlocked = unlocked;
       },
       pause: () => this.freeze(),
       resume: () => this.beginCountdown(),
@@ -942,6 +948,7 @@ class RailWorld {
       { id: "blackbull", name: "BLACKBULL", url: "/models/blackbull.glb" },
       { id: "soltrain", name: "SOLTRAIN", url: "/models/soltrain.glb" },
       { id: "dippy", name: "DIPPY", url: "/models/dippy.glb" },
+      { id: "cz", name: "CZ", url: "/models/cz.glb" },
     ];
     const loader = new GLTFLoader();
     const phone = window.matchMedia("(pointer: coarse)").matches || Math.min(window.innerWidth, window.innerHeight) < 820;
@@ -1115,6 +1122,7 @@ class RailWorld {
     if (name === "BLACKBULL") return !this.blackbullUnlocked;
     if (name === "SOLTRAIN") return !this.soltrainUnlocked;
     if (name === "DIPPY") return !this.dippyUnlocked;
+    if (name === "CZ") return !this.czUnlocked;
     return false;
   }
 
@@ -1170,6 +1178,7 @@ class RailWorld {
       "blackbull",
       "soltrain",
       "dippy",
+      "cz",
     ];
     const available = order.filter((id) => {
       if (!this.roster.has(id)) return false;
@@ -2274,6 +2283,7 @@ class RailWorld {
     if (name === "BLACKBULL") return "blackbull";
     if (name === "SOLTRAIN") return "soltrain";
     if (name === "DIPPY") return "dippy";
+    if (name === "CZ") return "cz";
     return "gimbo";
   }
 

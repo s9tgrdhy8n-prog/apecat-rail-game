@@ -103,6 +103,9 @@ export const SOLTRAIN_COST = 169;
 /** Diamond Skulls to unlock Dippy for good. */
 export const DIPPY_COST = 169;
 
+/** Diamond Skulls to unlock CZ for good. */
+export const CZ_COST = 169;
+
 export type RunFacts = {
   score: number;
   meters: number;
@@ -180,6 +183,7 @@ export type AchievementSave = {
   blackbull: boolean;
   soltrain: boolean;
   dippy: boolean;
+  cz: boolean;
   claims: string[];
   dailyKey: string;
   weeklyKey: string;
@@ -295,6 +299,7 @@ export const GOALS: Goal[] = [
         blackbull: false,
         soltrain: false,
         dippy: false,
+        cz: false,
       }),
   },
   {
@@ -342,6 +347,7 @@ export type UnlockFlags = {
   blackbull: boolean;
   soltrain: boolean;
   dippy: boolean;
+  cz: boolean;
 };
 
 /** Lowest finished-run count across the crew. Paid runners join after unlock. */
@@ -380,6 +386,7 @@ export function crewProgress(tally: Tally, unlocked: UnlockFlags) {
   if (unlocked.blackbull) counts.push(tally.rides.BLACKBULL);
   if (unlocked.soltrain) counts.push(tally.rides.SOLTRAIN);
   if (unlocked.dippy) counts.push(tally.rides.DIPPY);
+  if (unlocked.cz) counts.push(tally.rides.CZ);
   return Math.min(...counts);
 }
 
@@ -418,6 +425,7 @@ export function crewDetail(unlocked: UnlockFlags) {
   if (unlocked.blackbull) bits.push(`30 as ${runnerLabel("BLACKBULL")}`);
   if (unlocked.soltrain) bits.push(`30 as ${runnerLabel("SOLTRAIN")}`);
   if (unlocked.dippy) bits.push(`30 as ${runnerLabel("DIPPY")}`);
+  if (unlocked.cz) bits.push(`30 as ${runnerLabel("CZ")}`);
   return `Finish ${bits.slice(0, -1).join(", ")}, and ${bits[bits.length - 1]}.`;
 }
 
@@ -474,6 +482,7 @@ export function emptyTally(): Tally {
       BLACKBULL: 0,
       SOLTRAIN: 0,
       DIPPY: 0,
+      CZ: 0,
     },
   };
 }
@@ -525,6 +534,7 @@ function freshSave(now = new Date()): AchievementSave {
         blackbull: false,
         soltrain: false,
         dippy: false,
+        cz: false,
     claims: [],
     dailyKey: utcDay(now),
     weeklyKey: utcWeek(now),
@@ -578,7 +588,8 @@ function tallyFrom(raw: unknown): Tally {
           name === "BOGGYCLAUS" ||
           name === "BLACKBULL" ||
           name === "SOLTRAIN" ||
-          name === "DIPPY",
+          name === "DIPPY" ||
+          name === "CZ",
       )
     : [];
   return {
@@ -633,6 +644,7 @@ function tallyFrom(raw: unknown): Tally {
       BLACKBULL: num(row.rides?.BLACKBULL),
       SOLTRAIN: num(row.rides?.SOLTRAIN),
       DIPPY: num(row.rides?.DIPPY),
+      CZ: num(row.rides?.CZ),
     },
   };
 }
@@ -691,6 +703,7 @@ function readRaw(token: string): AchievementSave {
       blackbull: parsed.blackbull === true,
       soltrain: parsed.soltrain === true,
       dippy: parsed.dippy === true,
+      cz: parsed.cz === true,
       claims: Array.isArray(parsed.claims) ? parsed.claims.filter((claim) => typeof claim === "string") : [],
       dailyKey: typeof parsed.dailyKey === "string" ? parsed.dailyKey : "",
       weeklyKey: typeof parsed.weeklyKey === "string" ? parsed.weeklyKey : "",
@@ -803,6 +816,7 @@ export function goalProgress(
         blackbull: false,
         soltrain: false,
         dippy: false,
+        cz: false,
   },
 ) {
   return Math.min(goal.target, Math.max(0, goalValue(goal, tally, unlocked)));
@@ -845,6 +859,7 @@ export function goalDone(
         blackbull: false,
         soltrain: false,
         dippy: false,
+        cz: false,
   },
 ) {
   return goalValue(goal, tally, unlocked) >= goal.target;
@@ -894,6 +909,7 @@ export type AchievementSnapshot = {
   blackbull: boolean;
   soltrain: boolean;
   dippy: boolean;
+  cz: boolean;
   paid: string[];
   daily: Tally;
   weekly: Tally;
@@ -938,6 +954,7 @@ export function adoptServerAchievements(token: string, snap: AchievementSnapshot
     blackbull: snap.blackbull === true,
     soltrain: snap.soltrain === true,
     dippy: snap.dippy === true,
+    cz: snap.cz === true,
     claims: Array.isArray(snap.paid) ? snap.paid.filter((claim) => typeof claim === "string") : [],
     daily: snap.daily,
     weekly: snap.weekly,

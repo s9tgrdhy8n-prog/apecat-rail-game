@@ -29,6 +29,7 @@ import {
   BLACKBULL_COST,
   SOLTRAIN_COST,
   DIPPY_COST,
+  CZ_COST,
   GOALS,
   KOKO_COST,
   OTTER_COST,
@@ -140,6 +141,7 @@ const RUNNERS: { name: RunnerName; src: string }[] = [
   { name: "BLACKBULL", src: "/brand/blackbull.jpg" },
   { name: "SOLTRAIN", src: "/brand/soltrain.jpg" },
   { name: "DIPPY", src: "/brand/dippy.jpg" },
+  { name: "CZ", src: "/brand/cz.jpg" },
 ];
 const KIDS_SPEEDS = [
   { id: "1", label: "1×", mult: 1 },
@@ -273,6 +275,7 @@ export function RailShell() {
   const [blackbullUnlocked, setBlackbullUnlocked] = useState(false);
   const [soltrainUnlocked, setSoltrainUnlocked] = useState(false);
   const [dippyUnlocked, setDippyUnlocked] = useState(false);
+  const [czUnlocked, setCzUnlocked] = useState(false);
   const [stats, setStats] = useState<RailStats | null>(null);
   const [nameDraft, setNameDraft] = useState("");
   const [password, setPassword] = useState("");
@@ -329,6 +332,7 @@ export function RailShell() {
   const blackbullRef = useRef(false);
   const soltrainRef = useRef(false);
   const dippyRef = useRef(false);
+  const czRef = useRef(false);
   const settle = useRef<Promise<unknown>>(Promise.resolve());
   const arming = useRef(false);
   const practiceRef = useRef(false);
@@ -467,6 +471,9 @@ export function RailShell() {
     setDippyUnlocked(save.dippy);
     dippyRef.current = save.dippy;
     apiRef.current?.setDippyUnlocked(save.dippy);
+    setCzUnlocked(save.cz);
+    czRef.current = save.cz;
+    apiRef.current?.setCzUnlocked(save.cz);
     if (typeof res.fill === "number") setPickupFill(Math.max(0, Math.min(99, Math.floor(res.fill))));
     if (runSerial > 0) {
       const live = hudRef.current;
@@ -545,6 +552,8 @@ export function RailShell() {
     soltrainRef.current = false;
     setDippyUnlocked(false);
     dippyRef.current = false;
+    setCzUnlocked(false);
+    czRef.current = false;
     void syncDiamonds({ data: { token: next } })
       .then((res) => {
         if (!res.daily) return;
@@ -720,6 +729,11 @@ export function RailShell() {
   }, [dippyUnlocked, hud.phase]);
 
   useEffect(() => {
+    czRef.current = czUnlocked;
+    apiRef.current?.setCzUnlocked(czUnlocked);
+  }, [czUnlocked, hud.phase]);
+
+  useEffect(() => {
     if (hud.phase === "run") setJustEarned([]);
   }, [hud.phase]);
 
@@ -840,7 +854,8 @@ export function RailShell() {
       (hudRef.current.runner === "BOGGYCLAUS" && !boggyclausRef.current) ||
       (hudRef.current.runner === "BLACKBULL" && !blackbullRef.current) ||
       (hudRef.current.runner === "SOLTRAIN" && !soltrainRef.current) ||
-      (hudRef.current.runner === "DIPPY" && !dippyRef.current)
+      (hudRef.current.runner === "DIPPY" && !dippyRef.current) ||
+      (hudRef.current.runner === "CZ" && !czRef.current)
     ) {
       apiRef.current?.start();
       return;
@@ -1036,6 +1051,7 @@ export function RailShell() {
         { name: "BLACKBULL" as const, seconds: 0 },
         { name: "SOLTRAIN" as const, seconds: 0 },
         { name: "DIPPY" as const, seconds: 0 },
+        { name: "CZ" as const, seconds: 0 },
       ],
     };
     void (async () => getStats({ data: { token } }))()
@@ -1593,6 +1609,13 @@ export function RailShell() {
     if (res?.ok && res.daily) applyWallet(token, res);
   }
 
+  async function onUnlockCz() {
+    if (!token || czUnlocked) return;
+    if ((ach?.skulls ?? 0) < CZ_COST) return;
+    const res = await unlockRunner({ data: { token, runner: "CZ" } }).catch(() => null);
+    if (res?.ok && res.daily) applyWallet(token, res);
+  }
+
   const pickScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -1641,6 +1664,7 @@ export function RailShell() {
     if (name === "BLACKBULL") return blackbullUnlocked;
     if (name === "SOLTRAIN") return soltrainUnlocked;
     if (name === "DIPPY") return dippyUnlocked;
+    if (name === "CZ") return czUnlocked;
     return false;
   }
 
@@ -1726,7 +1750,8 @@ export function RailShell() {
             (runner.name === "BOGGYCLAUS" && !boggyclausUnlocked) ||
             (runner.name === "BLACKBULL" && !blackbullUnlocked) ||
             (runner.name === "SOLTRAIN" && !soltrainUnlocked) ||
-            (runner.name === "DIPPY" && !dippyUnlocked);
+            (runner.name === "DIPPY" && !dippyUnlocked) ||
+            (runner.name === "CZ" && !czUnlocked);
           const cost =
             runner.name === "KOKO"
               ? KOKO_COST
@@ -1792,7 +1817,9 @@ export function RailShell() {
                                                                         ? SOLTRAIN_COST
                                                                         : runner.name === "DIPPY"
                                                                           ? DIPPY_COST
-                                                                          : PINKY_COST;
+                                                                          : runner.name === "CZ"
+                                                                            ? CZ_COST
+                                                                            : PINKY_COST;
           return (
             <button
               key={runner.name}
@@ -2141,7 +2168,8 @@ export function RailShell() {
               (hud.runner === "BOGGYCLAUS" && !boggyclausUnlocked) ||
               (hud.runner === "BLACKBULL" && !blackbullUnlocked) ||
               (hud.runner === "SOLTRAIN" && !soltrainUnlocked) ||
-              (hud.runner === "DIPPY" && !dippyUnlocked)
+              (hud.runner === "DIPPY" && !dippyUnlocked) ||
+              (hud.runner === "CZ" && !czUnlocked)
                 ? "Unlock for 169 Diamond Skulls."
                 : "Get the highest score. Don’t kiss the bears."}
             </p>
@@ -2394,6 +2422,11 @@ export function RailShell() {
             {hud.runner === "DIPPY" && !dippyUnlocked ? (
               <button type="button" className="rail-stats-btn" onClick={onUnlockDippy}>
                 {(ach?.skulls ?? 0) >= DIPPY_COST ? `Unlock ${runnerLabel("DIPPY")} · 169` : "Need 169 Diamond Skulls"}
+              </button>
+            ) : null}
+            {hud.runner === "CZ" && !czUnlocked ? (
+              <button type="button" className="rail-stats-btn" onClick={onUnlockCz}>
+                {(ach?.skulls ?? 0) >= CZ_COST ? `Unlock ${runnerLabel("CZ")} · 169` : "Need 169 Diamond Skulls"}
               </button>
             ) : null}
             {mobile ? null : (
