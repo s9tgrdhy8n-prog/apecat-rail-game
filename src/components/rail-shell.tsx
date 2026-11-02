@@ -30,6 +30,7 @@ import {
   SOLTRAIN_COST,
   DIPPY_COST,
   CZ_COST,
+  GMA_COST,
   GOALS,
   KOKO_COST,
   OTTER_COST,
@@ -142,6 +143,7 @@ const RUNNERS: { name: RunnerName; src: string }[] = [
   { name: "SOLTRAIN", src: "/brand/soltrain.jpg" },
   { name: "DIPPY", src: "/brand/dippy.jpg" },
   { name: "CZ", src: "/brand/cz.jpg" },
+  { name: "GMA", src: "/brand/gma.jpg" },
 ];
 const KIDS_SPEEDS = [
   { id: "1", label: "1×", mult: 1 },
@@ -276,6 +278,7 @@ export function RailShell() {
   const [soltrainUnlocked, setSoltrainUnlocked] = useState(false);
   const [dippyUnlocked, setDippyUnlocked] = useState(false);
   const [czUnlocked, setCzUnlocked] = useState(false);
+  const [gmaUnlocked, setGmaUnlocked] = useState(false);
   const [stats, setStats] = useState<RailStats | null>(null);
   const [nameDraft, setNameDraft] = useState("");
   const [password, setPassword] = useState("");
@@ -333,6 +336,7 @@ export function RailShell() {
   const soltrainRef = useRef(false);
   const dippyRef = useRef(false);
   const czRef = useRef(false);
+  const gmaRef = useRef(false);
   const settle = useRef<Promise<unknown>>(Promise.resolve());
   const arming = useRef(false);
   const practiceRef = useRef(false);
@@ -474,6 +478,9 @@ export function RailShell() {
     setCzUnlocked(save.cz);
     czRef.current = save.cz;
     apiRef.current?.setCzUnlocked(save.cz);
+    setGmaUnlocked(save.gma);
+    gmaRef.current = save.gma;
+    apiRef.current?.setGmaUnlocked(save.gma);
     if (typeof res.fill === "number") setPickupFill(Math.max(0, Math.min(99, Math.floor(res.fill))));
     if (runSerial > 0) {
       const live = hudRef.current;
@@ -554,6 +561,8 @@ export function RailShell() {
     dippyRef.current = false;
     setCzUnlocked(false);
     czRef.current = false;
+    setGmaUnlocked(false);
+    gmaRef.current = false;
     void syncDiamonds({ data: { token: next } })
       .then((res) => {
         if (!res.daily) return;
@@ -734,6 +743,11 @@ export function RailShell() {
   }, [czUnlocked, hud.phase]);
 
   useEffect(() => {
+    gmaRef.current = gmaUnlocked;
+    apiRef.current?.setGmaUnlocked(gmaUnlocked);
+  }, [gmaUnlocked, hud.phase]);
+
+  useEffect(() => {
     if (hud.phase === "run") setJustEarned([]);
   }, [hud.phase]);
 
@@ -855,7 +869,8 @@ export function RailShell() {
       (hudRef.current.runner === "BLACKBULL" && !blackbullRef.current) ||
       (hudRef.current.runner === "SOLTRAIN" && !soltrainRef.current) ||
       (hudRef.current.runner === "DIPPY" && !dippyRef.current) ||
-      (hudRef.current.runner === "CZ" && !czRef.current)
+      (hudRef.current.runner === "CZ" && !czRef.current) ||
+      (hudRef.current.runner === "GMA" && !gmaRef.current)
     ) {
       apiRef.current?.start();
       return;
@@ -1052,6 +1067,7 @@ export function RailShell() {
         { name: "SOLTRAIN" as const, seconds: 0 },
         { name: "DIPPY" as const, seconds: 0 },
         { name: "CZ" as const, seconds: 0 },
+        { name: "GMA" as const, seconds: 0 },
       ],
     };
     void (async () => getStats({ data: { token } }))()
@@ -1616,6 +1632,13 @@ export function RailShell() {
     if (res?.ok && res.daily) applyWallet(token, res);
   }
 
+  async function onUnlockGma() {
+    if (!token || gmaUnlocked) return;
+    if ((ach?.skulls ?? 0) < GMA_COST) return;
+    const res = await unlockRunner({ data: { token, runner: "GMA" } }).catch(() => null);
+    if (res?.ok && res.daily) applyWallet(token, res);
+  }
+
   const pickScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -1665,6 +1688,7 @@ export function RailShell() {
     if (name === "SOLTRAIN") return soltrainUnlocked;
     if (name === "DIPPY") return dippyUnlocked;
     if (name === "CZ") return czUnlocked;
+    if (name === "GMA") return gmaUnlocked;
     return false;
   }
 
@@ -1751,7 +1775,8 @@ export function RailShell() {
             (runner.name === "BLACKBULL" && !blackbullUnlocked) ||
             (runner.name === "SOLTRAIN" && !soltrainUnlocked) ||
             (runner.name === "DIPPY" && !dippyUnlocked) ||
-            (runner.name === "CZ" && !czUnlocked);
+            (runner.name === "CZ" && !czUnlocked) ||
+            (runner.name === "GMA" && !gmaUnlocked);
           const cost =
             runner.name === "KOKO"
               ? KOKO_COST
@@ -1819,7 +1844,9 @@ export function RailShell() {
                                                                           ? DIPPY_COST
                                                                           : runner.name === "CZ"
                                                                             ? CZ_COST
-                                                                            : PINKY_COST;
+                                                                            : runner.name === "GMA"
+                                                                              ? GMA_COST
+                                                                              : PINKY_COST;
           return (
             <button
               key={runner.name}
@@ -2169,7 +2196,8 @@ export function RailShell() {
               (hud.runner === "BLACKBULL" && !blackbullUnlocked) ||
               (hud.runner === "SOLTRAIN" && !soltrainUnlocked) ||
               (hud.runner === "DIPPY" && !dippyUnlocked) ||
-              (hud.runner === "CZ" && !czUnlocked)
+              (hud.runner === "CZ" && !czUnlocked) ||
+              (hud.runner === "GMA" && !gmaUnlocked)
                 ? "Unlock for 169 Diamond Skulls."
                 : "Get the highest score. Don’t kiss the bears."}
             </p>
@@ -2427,6 +2455,11 @@ export function RailShell() {
             {hud.runner === "CZ" && !czUnlocked ? (
               <button type="button" className="rail-stats-btn" onClick={onUnlockCz}>
                 {(ach?.skulls ?? 0) >= CZ_COST ? `Unlock ${runnerLabel("CZ")} · 169` : "Need 169 Diamond Skulls"}
+              </button>
+            ) : null}
+            {hud.runner === "GMA" && !gmaUnlocked ? (
+              <button type="button" className="rail-stats-btn" onClick={onUnlockGma}>
+                {(ach?.skulls ?? 0) >= GMA_COST ? `Unlock ${runnerLabel("GMA")} · 169` : "Need 169 Diamond Skulls"}
               </button>
             ) : null}
             {mobile ? null : (

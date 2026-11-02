@@ -51,6 +51,7 @@ The start menu reads `GAME_VERSION` in `src/game/version.ts`. On every productio
 | 1.21.0 | 2026-10-26 | Published to https://apecat-rail-game.com. The Black Bull and soltrain join the runners, The Black Bull first, and each unlocks for 169 Diamond Skulls. The Black Bull’s X is @BlackBullSol. soltrain’s X is @soltrainpali. Finished runs count in Stats and in The whole crew after unlock. |
 | 1.22.0 | 2026-10-28 | Published to https://apecat-rail-game.com. Dippy joins the runners after soltrain and unlocks for 169 Diamond Skulls. Dippy’s X is @dippylvs. Claim Rewards is open for 48 hours from this publish and adds 169 Diamond Skulls, including for accounts that already claimed an earlier drop. Finished Dippy runs count in Stats and in The whole crew after unlock. |
 | 1.23.0 | 2026-10-29 | Published to https://apecat-rail-game.com. CZ joins the runners after Dippy and unlocks for 169 Diamond Skulls. CZ’s X is @cz_binance. Finished CZ runs count in Stats and in The whole crew after unlock. |
+| 1.24.0 | 2026-11-02 | Published to https://apecat-rail-game.com. GmA joins the runners after CZ and unlocks for 169 Diamond Skulls. GmA’s X is @gmatoall. Finished GmA runs count in Stats and in The whole crew after unlock. |
 
 ## 1.0.5 notes
 

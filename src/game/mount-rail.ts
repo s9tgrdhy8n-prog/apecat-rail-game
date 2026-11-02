@@ -193,7 +193,8 @@ type RunnerId =
   | "blackbull"
   | "soltrain"
   | "dippy"
-  | "cz";
+  | "cz"
+  | "gma";
 
 function meshyRunner(id: RunnerId) {
   return (
@@ -230,7 +231,8 @@ function meshyRunner(id: RunnerId) {
     id === "blackbull" ||
     id === "soltrain" ||
     id === "dippy" ||
-    id === "cz"
+    id === "cz" ||
+    id === "gma"
   );
 }
 
@@ -328,6 +330,7 @@ class RailWorld {
   private soltrainUnlocked = false;
   private dippyUnlocked = false;
   private czUnlocked = false;
+  private gmaUnlocked = false;
   private kidsOn = false;
   private kidsDodge = false;
   private kidsMult = 1;
@@ -615,6 +618,9 @@ class RailWorld {
       },
       setCzUnlocked: (unlocked) => {
         this.czUnlocked = unlocked;
+      },
+      setGmaUnlocked: (unlocked) => {
+        this.gmaUnlocked = unlocked;
       },
       pause: () => this.freeze(),
       resume: () => this.beginCountdown(),
@@ -949,6 +955,7 @@ class RailWorld {
       { id: "soltrain", name: "SOLTRAIN", url: "/models/soltrain.glb" },
       { id: "dippy", name: "DIPPY", url: "/models/dippy.glb" },
       { id: "cz", name: "CZ", url: "/models/cz.glb" },
+      { id: "gma", name: "GMA", url: "/models/gma.glb" },
     ];
     const loader = new GLTFLoader();
     const phone = window.matchMedia("(pointer: coarse)").matches || Math.min(window.innerWidth, window.innerHeight) < 820;
@@ -1123,6 +1130,7 @@ class RailWorld {
     if (name === "SOLTRAIN") return !this.soltrainUnlocked;
     if (name === "DIPPY") return !this.dippyUnlocked;
     if (name === "CZ") return !this.czUnlocked;
+    if (name === "GMA") return !this.gmaUnlocked;
     return false;
   }
 
@@ -1179,6 +1187,7 @@ class RailWorld {
       "soltrain",
       "dippy",
       "cz",
+      "gma",
     ];
     const available = order.filter((id) => {
       if (!this.roster.has(id)) return false;
@@ -2284,6 +2293,7 @@ class RailWorld {
     if (name === "SOLTRAIN") return "soltrain";
     if (name === "DIPPY") return "dippy";
     if (name === "CZ") return "cz";
+    if (name === "GMA") return "gma";
     return "gimbo";
   }
 
