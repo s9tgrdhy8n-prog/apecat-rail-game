@@ -56,6 +56,7 @@ function crewLine(tally: Tally, unlocked: UnlockFlags) {
   if (unlocked.dippy) parts.push(`${runnerLabel("DIPPY")} ${tally.rides.DIPPY}`);
   if (unlocked.cz) parts.push(`${runnerLabel("CZ")} ${tally.rides.CZ}`);
   if (unlocked.gma) parts.push(`${runnerLabel("GMA")} ${tally.rides.GMA}`);
+  if (unlocked.gmamutant) parts.push(`${runnerLabel("GMAMUTANT")} ${tally.rides.GMAMUTANT}`);
   return ` · ${parts.join(" · ")}`;
 }
 
@@ -148,6 +149,7 @@ export function AchievementSheet({
     dippy: save.dippy,
     cz: save.cz,
     gma: save.gma,
+    gmamutant: save.gmamutant,
   };
   const daily = GOALS.filter((goal) => goal.period === "daily");
   const weekly = GOALS.filter((goal) => goal.period === "weekly");
