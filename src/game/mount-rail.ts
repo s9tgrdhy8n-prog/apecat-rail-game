@@ -195,7 +195,8 @@ type RunnerId =
   | "dippy"
   | "cz"
   | "gma"
-  | "gmamutant";
+  | "gmamutant"
+  | "sammi";
 
 function meshyRunner(id: RunnerId) {
   return (
@@ -234,7 +235,8 @@ function meshyRunner(id: RunnerId) {
     id === "dippy" ||
     id === "cz" ||
     id === "gma" ||
-    id === "gmamutant"
+    id === "gmamutant" ||
+    id === "sammi"
   );
 }
 
@@ -334,6 +336,7 @@ class RailWorld {
   private czUnlocked = false;
   private gmaUnlocked = false;
   private gmamutantUnlocked = false;
+  private sammiUnlocked = false;
   private kidsOn = false;
   private kidsDodge = false;
   private kidsMult = 1;
@@ -627,6 +630,9 @@ class RailWorld {
       },
       setGmamutantUnlocked: (unlocked) => {
         this.gmamutantUnlocked = unlocked;
+      },
+      setSammiUnlocked: (unlocked) => {
+        this.sammiUnlocked = unlocked;
       },
       pause: () => this.freeze(),
       resume: () => this.beginCountdown(),
@@ -963,6 +969,7 @@ class RailWorld {
       { id: "cz", name: "CZ", url: "/models/cz.glb" },
       { id: "gma", name: "GMA", url: "/models/gma.glb" },
       { id: "gmamutant", name: "GMAMUTANT", url: "/models/gmamutant.glb" },
+      { id: "sammi", name: "SAMMI", url: "/models/sammi.glb" },
     ];
     const loader = new GLTFLoader();
     const phone = window.matchMedia("(pointer: coarse)").matches || Math.min(window.innerWidth, window.innerHeight) < 820;
@@ -1139,6 +1146,7 @@ class RailWorld {
     if (name === "CZ") return !this.czUnlocked;
     if (name === "GMA") return !this.gmaUnlocked;
     if (name === "GMAMUTANT") return !this.gmamutantUnlocked;
+    if (name === "SAMMI") return !this.sammiUnlocked;
     return false;
   }
 
@@ -1197,6 +1205,7 @@ class RailWorld {
       "cz",
       "gma",
       "gmamutant",
+      "sammi",
     ];
     const available = order.filter((id) => {
       if (!this.roster.has(id)) return false;
@@ -2304,6 +2313,7 @@ class RailWorld {
     if (name === "CZ") return "cz";
     if (name === "GMA") return "gma";
     if (name === "GMAMUTANT") return "gmamutant";
+    if (name === "SAMMI") return "sammi";
     return "gimbo";
   }
 

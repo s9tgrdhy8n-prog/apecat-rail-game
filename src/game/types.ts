@@ -52,7 +52,8 @@ export type RunnerName =
   | "DIPPY"
   | "CZ"
   | "GMA"
-  | "GMAMUTANT";
+  | "GMAMUTANT"
+  | "SAMMI";
 
 export type Hud = {
   phase: Phase;
@@ -150,6 +151,7 @@ export type RailApi = {
   setCzUnlocked: (unlocked: boolean) => void;
   setGmaUnlocked: (unlocked: boolean) => void;
   setGmamutantUnlocked: (unlocked: boolean) => void;
+  setSammiUnlocked: (unlocked: boolean) => void;
   pause: () => void;
   resume: () => void;
   playReplay: (tape: GhostTape) => void;
