@@ -41,6 +41,7 @@ const LABELS: Record<RunnerName, string> = {
   GMA: "GmA",
   GMAMUTANT: "GmA Mutant",
   SAMMI: "Sammi",
+  RAF: "RAF",
 };
 
 const HANDLES: Partial<Record<RunnerName, string>> = {
@@ -80,6 +81,7 @@ const HANDLES: Partial<Record<RunnerName, string>> = {
   GMA: "gmatoall",
   GMAMUTANT: "gmatoall",
   SAMMI: "SScheiwe85496",
+  RAF: "RAP3MEFR",
 };
 
 export function runnerLabel(name: RunnerName | string) {

@@ -115,6 +115,9 @@ export const GMAMUTANT_COST = 169;
 /** Diamond Skulls to unlock Sammi for good. */
 export const SAMMI_COST = 169;
 
+/** Diamond Skulls to unlock RAF for good. */
+export const RAF_COST = 169;
+
 export type RunFacts = {
   score: number;
   meters: number;
@@ -196,6 +199,7 @@ export type AchievementSave = {
   gma: boolean;
   gmamutant: boolean;
   sammi: boolean;
+  raf: boolean;
   claims: string[];
   dailyKey: string;
   weeklyKey: string;
@@ -315,6 +319,7 @@ export const GOALS: Goal[] = [
         gma: false,
         gmamutant: false,
         sammi: false,
+        raf: false,
       }),
   },
   {
@@ -366,6 +371,7 @@ export type UnlockFlags = {
   gma: boolean;
   gmamutant: boolean;
   sammi: boolean;
+  raf: boolean;
 };
 
 /** Lowest finished-run count across the crew. Paid runners join after unlock. */
@@ -408,6 +414,7 @@ export function crewProgress(tally: Tally, unlocked: UnlockFlags) {
   if (unlocked.gma) counts.push(tally.rides.GMA);
   if (unlocked.gmamutant) counts.push(tally.rides.GMAMUTANT);
   if (unlocked.sammi) counts.push(tally.rides.SAMMI);
+  if (unlocked.raf) counts.push(tally.rides.RAF);
   return Math.min(...counts);
 }
 
@@ -450,6 +457,7 @@ export function crewDetail(unlocked: UnlockFlags) {
   if (unlocked.gma) bits.push(`30 as ${runnerLabel("GMA")}`);
   if (unlocked.gmamutant) bits.push(`30 as ${runnerLabel("GMAMUTANT")}`);
   if (unlocked.sammi) bits.push(`30 as ${runnerLabel("SAMMI")}`);
+  if (unlocked.raf) bits.push(`30 as ${runnerLabel("RAF")}`);
   return `Finish ${bits.slice(0, -1).join(", ")}, and ${bits[bits.length - 1]}.`;
 }
 
@@ -510,6 +518,7 @@ export function emptyTally(): Tally {
       GMA: 0,
       GMAMUTANT: 0,
       SAMMI: 0,
+      RAF: 0,
     },
   };
 }
@@ -565,6 +574,7 @@ function freshSave(now = new Date()): AchievementSave {
         gma: false,
         gmamutant: false,
         sammi: false,
+        raf: false,
     claims: [],
     dailyKey: utcDay(now),
     weeklyKey: utcWeek(now),
@@ -622,7 +632,8 @@ function tallyFrom(raw: unknown): Tally {
           name === "CZ" ||
           name === "GMA" ||
           name === "GMAMUTANT" ||
-          name === "SAMMI",
+          name === "SAMMI" ||
+          name === "RAF",
       )
     : [];
   return {
@@ -681,6 +692,7 @@ function tallyFrom(raw: unknown): Tally {
       GMA: num(row.rides?.GMA),
       GMAMUTANT: num(row.rides?.GMAMUTANT),
       SAMMI: num(row.rides?.SAMMI),
+      RAF: num(row.rides?.RAF),
     },
   };
 }
@@ -743,6 +755,7 @@ function readRaw(token: string): AchievementSave {
       gma: parsed.gma === true,
       gmamutant: parsed.gmamutant === true,
       sammi: parsed.sammi === true,
+      raf: parsed.raf === true,
       claims: Array.isArray(parsed.claims) ? parsed.claims.filter((claim) => typeof claim === "string") : [],
       dailyKey: typeof parsed.dailyKey === "string" ? parsed.dailyKey : "",
       weeklyKey: typeof parsed.weeklyKey === "string" ? parsed.weeklyKey : "",
@@ -859,6 +872,7 @@ export function goalProgress(
         gma: false,
         gmamutant: false,
         sammi: false,
+        raf: false,
   },
 ) {
   return Math.min(goal.target, Math.max(0, goalValue(goal, tally, unlocked)));
@@ -905,6 +919,7 @@ export function goalDone(
         gma: false,
         gmamutant: false,
         sammi: false,
+        raf: false,
   },
 ) {
   return goalValue(goal, tally, unlocked) >= goal.target;
@@ -958,6 +973,7 @@ export type AchievementSnapshot = {
   gma: boolean;
   gmamutant: boolean;
   sammi: boolean;
+  raf: boolean;
   paid: string[];
   daily: Tally;
   weekly: Tally;
@@ -1006,6 +1022,7 @@ export function adoptServerAchievements(token: string, snap: AchievementSnapshot
     gma: snap.gma === true,
     gmamutant: snap.gmamutant === true,
     sammi: snap.sammi === true,
+    raf: snap.raf === true,
     claims: Array.isArray(snap.paid) ? snap.paid.filter((claim) => typeof claim === "string") : [],
     daily: snap.daily,
     weekly: snap.weekly,

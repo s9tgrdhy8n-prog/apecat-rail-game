@@ -56,6 +56,7 @@ The start menu reads `GAME_VERSION` in `src/game/version.ts`. On every productio
 | 1.26.0 | 2026-11-03 | Published to https://apecat-rail-game.com. Claim Rewards is open for 48 hours from this publish and adds 169 Diamond Skulls, including for accounts that already claimed an earlier drop. |
 | 1.27.0 | 2026-11-04 | Published to https://apecat-rail-game.com. Sammi joins the runners after GmA Mutant and unlocks for 169 Diamond Skulls. Sammi’s X is @SScheiwe85496. Finished Sammi runs count in Stats and in The whole crew after unlock. |
 | 1.28.0 | 2026-11-05 | Published to https://apecat-rail-game.com. Claim Rewards is open for 48 hours from this publish and adds 169 Diamond Skulls, including for accounts that already claimed an earlier drop. |
+| 1.29.0 | 2026-11-05 | Published to https://apecat-rail-game.com. RAF joins the runners after Sammi and unlocks for 169 Diamond Skulls. RAF’s X is @RAP3MEFR. Finished RAF runs count in Stats and in The whole crew after unlock. |
 
 ## 1.0.5 notes
 

@@ -58,6 +58,7 @@ function crewLine(tally: Tally, unlocked: UnlockFlags) {
   if (unlocked.gma) parts.push(`${runnerLabel("GMA")} ${tally.rides.GMA}`);
   if (unlocked.gmamutant) parts.push(`${runnerLabel("GMAMUTANT")} ${tally.rides.GMAMUTANT}`);
   if (unlocked.sammi) parts.push(`${runnerLabel("SAMMI")} ${tally.rides.SAMMI}`);
+  if (unlocked.raf) parts.push(`${runnerLabel("RAF")} ${tally.rides.RAF}`);
   return ` · ${parts.join(" · ")}`;
 }
 
@@ -152,6 +153,7 @@ export function AchievementSheet({
     gma: save.gma,
     gmamutant: save.gmamutant,
     sammi: save.sammi,
+    raf: save.raf,
   };
   const daily = GOALS.filter((goal) => goal.period === "daily");
   const weekly = GOALS.filter((goal) => goal.period === "weekly");

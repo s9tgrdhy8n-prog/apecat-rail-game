@@ -196,7 +196,8 @@ type RunnerId =
   | "cz"
   | "gma"
   | "gmamutant"
-  | "sammi";
+  | "sammi"
+  | "raf";
 
 function meshyRunner(id: RunnerId) {
   return (
@@ -236,7 +237,8 @@ function meshyRunner(id: RunnerId) {
     id === "cz" ||
     id === "gma" ||
     id === "gmamutant" ||
-    id === "sammi"
+    id === "sammi" ||
+    id === "raf"
   );
 }
 
@@ -337,6 +339,7 @@ class RailWorld {
   private gmaUnlocked = false;
   private gmamutantUnlocked = false;
   private sammiUnlocked = false;
+  private rafUnlocked = false;
   private kidsOn = false;
   private kidsDodge = false;
   private kidsMult = 1;
@@ -633,6 +636,9 @@ class RailWorld {
       },
       setSammiUnlocked: (unlocked) => {
         this.sammiUnlocked = unlocked;
+      },
+      setRafUnlocked: (unlocked) => {
+        this.rafUnlocked = unlocked;
       },
       pause: () => this.freeze(),
       resume: () => this.beginCountdown(),
@@ -970,6 +976,7 @@ class RailWorld {
       { id: "gma", name: "GMA", url: "/models/gma.glb" },
       { id: "gmamutant", name: "GMAMUTANT", url: "/models/gmamutant.glb" },
       { id: "sammi", name: "SAMMI", url: "/models/sammi.glb" },
+      { id: "raf", name: "RAF", url: "/models/raf.glb" },
     ];
     const loader = new GLTFLoader();
     const phone = window.matchMedia("(pointer: coarse)").matches || Math.min(window.innerWidth, window.innerHeight) < 820;
@@ -1147,6 +1154,7 @@ class RailWorld {
     if (name === "GMA") return !this.gmaUnlocked;
     if (name === "GMAMUTANT") return !this.gmamutantUnlocked;
     if (name === "SAMMI") return !this.sammiUnlocked;
+    if (name === "RAF") return !this.rafUnlocked;
     return false;
   }
 
@@ -1206,6 +1214,7 @@ class RailWorld {
       "gma",
       "gmamutant",
       "sammi",
+      "raf",
     ];
     const available = order.filter((id) => {
       if (!this.roster.has(id)) return false;
@@ -2314,6 +2323,7 @@ class RailWorld {
     if (name === "GMA") return "gma";
     if (name === "GMAMUTANT") return "gmamutant";
     if (name === "SAMMI") return "sammi";
+    if (name === "RAF") return "raf";
     return "gimbo";
   }
 
