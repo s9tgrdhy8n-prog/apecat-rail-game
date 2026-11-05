@@ -160,6 +160,8 @@ export type RailApi = {
   takeGhost: () => GhostTape | null;
   /** A copy of the chosen runner for the view box. Does not touch the one in the tunnel. */
   takeStage: (name: RunnerName) => StageBundle | null;
+  /** Load a runner that is not in the tunnel yet, then hand back the view copy. */
+  whenRunner: (name: RunnerName, ready: (bundle: StageBundle) => void) => void;
   /** Freeze the tunnel while the view box is open so only that window is drawing. */
   holdStage: (on: boolean) => void;
   /** Practice tunnel. Scores stay off the ranked rail. */

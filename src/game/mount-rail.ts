@@ -148,6 +148,10 @@ function lockRootXZ(clip: THREE.AnimationClip) {
   }
 }
 
+const _aimQ = new THREE.Quaternion();
+const _aimParent = new THREE.Quaternion();
+const _aimEuler = new THREE.Euler(0, 0, 0, "YXZ");
+
 export function mountRail(canvas: HTMLCanvasElement, onHud: (h: Hud) => void) {
   const game = new RailWorld(canvas, onHud);
   return {
@@ -295,6 +299,7 @@ class RailWorld {
       model: THREE.Object3D;
       mixer: THREE.AnimationMixer;
       clips: Map<string, THREE.AnimationAction>;
+      straight: { bone: THREE.Object3D; yaw: number }[];
     }
   >();
   private deadSource: THREE.AnimationClip | null = null;
@@ -436,8 +441,15 @@ class RailWorld {
   private clips = new Map<string, THREE.AnimationAction>();
   private current: THREE.AnimationAction | null = null;
   private modelReady = false;
-  private phoneQueue: (() => void) | null = null;
   private wantedRunner: RunnerName | null = null;
+  private runnerLoader = new GLTFLoader();
+  private runnerSpecs = new Map<RunnerId, { id: RunnerId; name: RunnerName; url: string }>();
+  private runnerStarted = new Set<RunnerId>();
+  private runnerQueue: RunnerId[] = [];
+  private runnerLoading: RunnerId | null = null;
+  private pendingReplay: GhostTape | null = null;
+  private pendingStart: { seeded: boolean; seed: number } | null = null;
+  private stageWaiters = new Map<RunnerName, ((bundle: StageBundle) => void)[]>();
   private lightFx: { mat: THREE.MeshBasicMaterial; base: number; phase: number }[] = [];
   private tunnelLamps: { light: THREE.PointLight; base: number; phase: number }[] = [];
   private sconces: THREE.Object3D[] = [];
@@ -645,6 +657,7 @@ class RailWorld {
       playReplay: (tape) => this.playReplay(tape),
       takeGhost: () => this.takeGhost(),
       takeStage: (name) => this.takeStage(name),
+      whenRunner: (name, ready) => this.whenRunner(name, ready),
       holdStage: (on) => {
         this.stageHold = on;
         if (!on) this.clockLast = -1;
@@ -844,7 +857,6 @@ class RailWorld {
     });
     if (spec.id === "gimbo") applyGimboLook(model);
     if (spec.id === "beeple") model.getObjectByName("Icosphere")?.removeFromParent();
-    this.fitGroup.add(model);
     const mixer = new THREE.AnimationMixer(model);
     const clips = new Map<string, THREE.AnimationAction>();
     for (const clip of gltf.animations) {
@@ -863,10 +875,13 @@ class RailWorld {
       const idle = clips.get("Walk") ?? clips.get("Run");
       if (idle) clips.set("Idle", idle);
     }
-    if (spec.id === "pinky") {
-      this.deadSource = gltf.animations.find((clip) => clip.name === "Dead") ?? null;
-      const hips = model.getObjectByName("mixamorig:Hips");
-      if (hips) this.deadHipsRest.copy(hips.position);
+    if (!this.deadSource) {
+      const dead = gltf.animations.find((clip) => clip.name === "Dead") ?? null;
+      if (dead) {
+        this.deadSource = dead;
+        const hips = model.getObjectByName("mixamorig:Hips");
+        if (hips) this.deadHipsRest.copy(hips.position);
+      }
     }
     if (!this.danceSource) {
       const dance = gltf.animations.find((clip) => /dance/i.test(clip.name)) ?? null;
@@ -892,7 +907,8 @@ class RailWorld {
             : 0.7;
     const yaw = runnerYaw(spec.id);
     this.fitModel(model, fit, yaw);
-    this.roster.set(spec.id, { id: spec.id, name: spec.name, model, mixer, clips });
+    const straight = this.captureHeading(model);
+    this.roster.set(spec.id, { id: spec.id, name: spec.name, model, mixer, clips, straight });
     this.giveDeadToAll();
     this.giveDanceToAll();
   }
@@ -903,6 +919,11 @@ class RailWorld {
     gateMenu: boolean,
     onDone?: () => void,
   ) {
+    if (this.runnerStarted.has(spec.id)) {
+      onDone?.();
+      return;
+    }
+    this.runnerStarted.add(spec.id);
     if (gateMenu) this.armLoad();
     loader.load(
       spec.url,
@@ -910,11 +931,19 @@ class RailWorld {
         try {
           if (!this.disposed) {
             this.ingestRunner(spec, gltf);
-            if (!gateMenu && this.modelReady && (this.runnerName === spec.name || this.wantedRunner === spec.name)) {
+            this.flushStage(spec.name);
+            const tape = this.pendingReplay;
+            if (tape && this.runnerIdFor(tape.runner) === spec.id) {
+              this.pendingReplay = null;
+              this.pendingStart = null;
+              this.wantedRunner = null;
+              this.beginReplay(tape);
+            } else if (!gateMenu && this.modelReady && (this.runnerName === spec.name || this.wantedRunner === spec.name)) {
               const announce = this.wantedRunner === spec.name;
               this.wantedRunner = null;
               this.activate(spec.id, announce);
               this.push(true);
+              this.firePendingStart();
             }
           }
         } catch {
@@ -978,27 +1007,36 @@ class RailWorld {
       { id: "sammi", name: "SAMMI", url: "/models/sammi.glb" },
       { id: "raf", name: "RAF", url: "/models/raf.glb" },
     ];
-    const loader = new GLTFLoader();
-    const phone = window.matchMedia("(pointer: coarse)").matches || Math.min(window.innerWidth, window.innerHeight) < 820;
-    if (!phone) {
-      for (const spec of starters) this.loadRunnerGltf(spec, loader, true);
-      for (const spec of rest.slice(0, 9)) this.loadRunnerGltf(spec, loader, true);
-      for (const spec of rest.slice(9)) this.loadRunnerGltf(spec, loader, false);
-      return;
-    }
-    for (const spec of starters) this.loadRunnerGltf(spec, loader, true);
-    this.phoneQueue = () => this.queueRunners(rest, loader);
+    for (const spec of [...starters, ...rest]) this.runnerSpecs.set(spec.id, spec);
+    for (const spec of starters) this.loadRunnerGltf(spec, this.runnerLoader, true);
   }
 
-  /** Phones die if every runner GLB decodes at once. Load the rest one at a time after the menu opens. */
-  private queueRunners(specs: { id: RunnerId; name: RunnerName; url: string }[], loader: GLTFLoader) {
-    const step = () => {
-      if (this.disposed) return;
-      const spec = specs.shift();
-      if (!spec) return;
-      this.loadRunnerGltf(spec, loader, false, step);
-    };
-    step();
+  /** One runner at a time. The rest stay out of the scene until someone picks them. */
+  private requestRunner(id: RunnerId) {
+    if (this.roster.has(id) || this.runnerLoading === id || this.runnerQueue.includes(id)) return;
+    if (!this.runnerSpecs.has(id)) return;
+    this.runnerQueue.push(id);
+    this.pumpRunners();
+  }
+
+  private pumpRunners() {
+    if (this.runnerLoading || this.disposed) return;
+    const id = this.runnerQueue.shift();
+    if (!id) return;
+    if (this.roster.has(id)) {
+      this.pumpRunners();
+      return;
+    }
+    const spec = this.runnerSpecs.get(id);
+    if (!spec) {
+      this.pumpRunners();
+      return;
+    }
+    this.runnerLoading = id;
+    this.loadRunnerGltf(spec, this.runnerLoader, false, () => {
+      if (this.runnerLoading === id) this.runnerLoading = null;
+      this.pumpRunners();
+    });
   }
 
   private giveDeadToAll() {
@@ -1091,17 +1129,18 @@ class RailWorld {
     this.modelReady = true;
     this.phase = "menu";
     this.push(true);
-    const queued = this.phoneQueue;
-    this.phoneQueue = null;
-    queued?.();
   }
 
   private activate(id: RunnerId, announce: boolean) {
     const next = this.roster.get(id);
     if (!next) return;
     if (this.current) this.current.stop();
-    for (const runner of this.roster.values()) runner.model.visible = false;
+    for (const runner of this.roster.values()) {
+      runner.model.visible = false;
+      runner.model.removeFromParent();
+    }
     next.model.visible = true;
+    this.fitGroup.add(next.model);
     this.runnerId = id;
     this.runnerName = next.name;
     this.cat = next.model;
@@ -1162,9 +1201,13 @@ class RailWorld {
     if (!this.modelReady) return;
     if (this.lockedRunner(name) && this.phase === "run") return;
     const id = this.runnerIdFor(name);
-    if (id === this.runnerId) return;
+    if (id === this.runnerId && this.roster.has(id)) return;
     if (!this.roster.has(id)) {
       this.wantedRunner = name;
+      this.flash = runnerLabel(name);
+      this.flashT = 1.2;
+      this.push(true);
+      this.requestRunner(id);
       return;
     }
     this.wantedRunner = null;
@@ -1173,59 +1216,59 @@ class RailWorld {
 
   private swapRunner() {
     if (!this.modelReady) return;
-    const order: RunnerId[] = [
-      "apecat",
-      "boggo",
-      "gimbo",
-      "pinky",
-      "koko",
-      "spooky",
-      "ramdawg",
-      "otter",
-      "figge",
-      "thehodlr",
-      "afterape",
-      "deadbeaver",
-      "quit",
-      "dupes",
-      "boggybond",
-      "gigatron",
-      "gimbopope",
-      "goldfinger",
-      "beeple",
-      "saint",
-      "dibs",
-      "slimshady",
-      "lilredmercy",
-      "blacknicholson",
-      "grimyfrankie",
-      "dpuck",
-      "ryoshipain",
-      "jafbot",
-      "j4van",
-      "lampseternal",
-      "chris",
-      "boggymosiac",
-      "boggyclaus",
-      "blackbull",
-      "soltrain",
-      "dippy",
-      "cz",
-      "gma",
-      "gmamutant",
-      "sammi",
-      "raf",
-    ];
-    const available = order.filter((id) => {
-      if (!this.roster.has(id)) return false;
-      const name = this.roster.get(id)?.name;
-      if (name && this.lockedRunner(name) && this.phase === "run") return false;
-      return true;
+    const order = [...this.runnerSpecs.keys()];
+    if (order.length === 0) return;
+    const start = Math.max(0, order.indexOf(this.runnerId));
+    for (let step = 1; step <= order.length; step++) {
+      const id = order[(start + step) % order.length];
+      if (!id) continue;
+      const spec = this.runnerSpecs.get(id);
+      if (!spec) continue;
+      if (this.lockedRunner(spec.name) && this.phase === "run") continue;
+      if (!this.roster.has(id)) {
+        this.wantedRunner = spec.name;
+        this.flash = runnerLabel(spec.name);
+        this.flashT = 1.2;
+        this.push(true);
+        this.requestRunner(id);
+        return;
+      }
+      this.wantedRunner = null;
+      this.activate(id, true);
+      return;
+    }
+  }
+
+  /** Keep the chest, neck, and head aimed down the rail. The stride still swings the arms and legs. */
+  private captureHeading(model: THREE.Object3D) {
+    model.updateMatrixWorld(true);
+    const straight: { bone: THREE.Object3D; yaw: number }[] = [];
+    model.traverse((obj) => {
+      if (!obj.name || /socket/i.test(obj.name)) return;
+      if (!/hips|spine|neck|head/i.test(obj.name)) return;
+      obj.getWorldQuaternion(_aimQ);
+      _aimEuler.setFromQuaternion(_aimQ, "YXZ");
+      straight.push({ bone: obj, yaw: _aimEuler.y });
     });
-    if (available.length === 0) return;
-    const i = Math.max(0, available.indexOf(this.runnerId));
-    const next = available[(i + 1) % available.length];
-    if (next && next !== this.runnerId) this.activate(next, true);
+    return straight;
+  }
+
+  private straightenHeading() {
+    if (this.phase === "dead") return;
+    const runner = this.roster.get(this.runnerId);
+    if (!runner?.straight.length) return;
+    runner.model.updateMatrixWorld(true);
+    for (const { bone, yaw } of runner.straight) {
+      if (!bone.parent) continue;
+      bone.updateWorldMatrix(true, false);
+      bone.getWorldQuaternion(_aimQ);
+      _aimEuler.setFromQuaternion(_aimQ, "YXZ");
+      _aimEuler.y = yaw;
+      _aimQ.setFromEuler(_aimEuler);
+      bone.parent.getWorldQuaternion(_aimParent);
+      bone.quaternion.copy(_aimParent.invert()).multiply(_aimQ);
+      bone.updateMatrixWorld(true);
+    }
   }
 
   private fitModel(model: THREE.Object3D, extra = 1, yaw = MODEL_YAW) {
@@ -2146,12 +2189,48 @@ class RailWorld {
 
   private start() {
     if (!this.modelReady || this.phase === "run" || this.phase === "replay" || this.phase === "loading" || this.phase === "gallery") return;
-    if (this.lockedRunner(this.runnerName)) {
-      this.flash = "169 Diamond Skulls";
-      this.flashT = 1.6;
-      this.push(true);
-      return;
-    }
+    if (this.blockLocked()) return;
+    if (this.deferUntilRunner("free")) return;
+    this.launchFree();
+  }
+
+  private startSeeded(seed: number) {
+    if (!this.modelReady || this.phase === "run" || this.phase === "replay" || this.phase === "loading" || this.phase === "gallery") return;
+    if (this.blockLocked()) return;
+    if (this.deferUntilRunner(seed >>> 0)) return;
+    this.launchSeeded(seed >>> 0);
+  }
+
+  private chosenName() {
+    return this.wantedRunner ?? this.runnerName;
+  }
+
+  private blockLocked() {
+    if (!this.lockedRunner(this.chosenName())) return false;
+    this.pendingStart = null;
+    this.flash = "169 Diamond Skulls";
+    this.flashT = 1.6;
+    this.push(true);
+    return true;
+  }
+
+  /** The portrait changed before that model finished. Hold the start until they are the one on the rail. */
+  private deferUntilRunner(seed: "free" | number) {
+    if (!this.wantedRunner || this.wantedRunner === this.runnerName) return false;
+    this.pendingStart = seed === "free" ? { seeded: false, seed: 0 } : { seeded: true, seed };
+    return true;
+  }
+
+  private firePendingStart() {
+    const pending = this.pendingStart;
+    if (!pending) return;
+    this.pendingStart = null;
+    if (this.phase === "run" || this.phase === "replay") return;
+    if (pending.seeded) this.launchSeeded(pending.seed);
+    else this.launchFree();
+  }
+
+  private launchFree() {
     this.sfx.unlock();
     this.sfx.startMusic();
     this.sfx.startRumble();
@@ -2162,14 +2241,7 @@ class RailWorld {
     this.push(true);
   }
 
-  private startSeeded(seed: number) {
-    if (!this.modelReady || this.phase === "run" || this.phase === "replay" || this.phase === "loading" || this.phase === "gallery") return;
-    if (this.lockedRunner(this.runnerName)) {
-      this.flash = "169 Diamond Skulls";
-      this.flashT = 1.6;
-      this.push(true);
-      return;
-    }
+  private launchSeeded(seed: number) {
     this.matchOn = true;
     this.matchHeld = false;
     this.sfx.unlock();
@@ -2269,6 +2341,17 @@ class RailWorld {
   private playReplay(tape: GhostTape) {
     if (!this.modelReady || this.phase === "loading") return;
     const id = this.runnerIdFor(tape.runner);
+    if (!this.roster.has(id)) {
+      this.pendingReplay = tape;
+      this.requestRunner(id);
+      return;
+    }
+    this.pendingReplay = null;
+    this.beginReplay(tape);
+  }
+
+  private beginReplay(tape: GhostTape) {
+    const id = this.runnerIdFor(tape.runner);
     if (!this.roster.has(id)) return;
     this.activate(id, false);
     this.beginAttempt(tape.seed);
@@ -2342,6 +2425,27 @@ class RailWorld {
       if (/dance/i.test(clipName)) dance = action.getClip();
     }
     return { model, run, dance };
+  }
+
+  private whenRunner(name: RunnerName, ready: (bundle: StageBundle) => void) {
+    const bundle = this.takeStage(name);
+    if (bundle) {
+      ready(bundle);
+      return;
+    }
+    const waiters = this.stageWaiters.get(name) ?? [];
+    waiters.push(ready);
+    this.stageWaiters.set(name, waiters);
+    this.requestRunner(this.runnerIdFor(name));
+  }
+
+  private flushStage(name: RunnerName) {
+    const waiters = this.stageWaiters.get(name);
+    if (!waiters?.length) return;
+    this.stageWaiters.delete(name);
+    const bundle = this.takeStage(name);
+    if (!bundle) return;
+    for (const ready of waiters) ready(bundle);
   }
 
   private takeGhost(): GhostTape | null {
@@ -2726,6 +2830,7 @@ class RailWorld {
       this.mixer.update(dt);
       if (this.cat && this.phase !== "dead") {
         this.cat.rotation.y = runnerYaw(this.runnerId);
+        this.straightenHeading();
       }
     }
 

@@ -2362,7 +2362,13 @@ export function RailShell() {
               <button
                 type="button"
                 className="rail-view-open"
-                onClick={() => setStage(apiRef.current?.takeStage(hud.runner) ?? null)}
+                onClick={() => {
+                  const api = apiRef.current;
+                  if (!api) return;
+                  const ready = api.takeStage(hud.runner);
+                  if (ready) setStage(ready);
+                  else api.whenRunner(hud.runner, setStage);
+                }}
               >
                 View Character
               </button>
