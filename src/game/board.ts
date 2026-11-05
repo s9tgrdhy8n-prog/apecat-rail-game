@@ -611,7 +611,7 @@ async function diamondTotals(personKey?: string) {
 }
 
 const UNLOCK_COST = 169;
-const REWARD_DROP = "crystal-169-5";
+const REWARD_DROP = "crystal-169-6";
 
 type EarnedGoal = { id: string; skulls: number };
 type RewardState = "open" | "claimed" | "closed";
