@@ -34,6 +34,7 @@ import {
   GMAMUTANT_COST,
   SAMMI_COST,
   RAF_COST,
+  RARA_COST,
   GOALS,
   KOKO_COST,
   OTTER_COST,
@@ -150,6 +151,7 @@ const RUNNERS: { name: RunnerName; src: string }[] = [
   { name: "GMAMUTANT", src: "/brand/gmamutant.jpg" },
   { name: "SAMMI", src: "/brand/sammi.jpg" },
   { name: "RAF", src: "/brand/raf.jpg" },
+  { name: "RARA", src: "/brand/rara.jpg" },
 ];
 const KIDS_SPEEDS = [
   { id: "1", label: "1×", mult: 1 },
@@ -288,6 +290,7 @@ export function RailShell() {
   const [gmamutantUnlocked, setGmamutantUnlocked] = useState(false);
   const [sammiUnlocked, setSammiUnlocked] = useState(false);
   const [rafUnlocked, setRafUnlocked] = useState(false);
+  const [raraUnlocked, setRaraUnlocked] = useState(false);
   const [stats, setStats] = useState<RailStats | null>(null);
   const [nameDraft, setNameDraft] = useState("");
   const [password, setPassword] = useState("");
@@ -349,6 +352,7 @@ export function RailShell() {
   const gmamutantRef = useRef(false);
   const sammiRef = useRef(false);
   const rafRef = useRef(false);
+  const raraRef = useRef(false);
   const settle = useRef<Promise<unknown>>(Promise.resolve());
   const arming = useRef(false);
   const practiceRef = useRef(false);
@@ -502,6 +506,9 @@ export function RailShell() {
     setRafUnlocked(save.raf);
     rafRef.current = save.raf;
     apiRef.current?.setRafUnlocked(save.raf);
+    setRaraUnlocked(save.rara);
+    raraRef.current = save.rara;
+    apiRef.current?.setRaraUnlocked(save.rara);
     if (typeof res.fill === "number") setPickupFill(Math.max(0, Math.min(99, Math.floor(res.fill))));
     if (runSerial > 0) {
       const live = hudRef.current;
@@ -590,6 +597,8 @@ export function RailShell() {
     sammiRef.current = false;
     setRafUnlocked(false);
     rafRef.current = false;
+    setRaraUnlocked(false);
+    raraRef.current = false;
     void syncDiamonds({ data: { token: next } })
       .then((res) => {
         if (!res.daily) return;
@@ -790,6 +799,11 @@ export function RailShell() {
   }, [rafUnlocked, hud.phase]);
 
   useEffect(() => {
+    raraRef.current = raraUnlocked;
+    apiRef.current?.setRaraUnlocked(raraUnlocked);
+  }, [raraUnlocked, hud.phase]);
+
+  useEffect(() => {
     if (hud.phase === "run") setJustEarned([]);
   }, [hud.phase]);
 
@@ -915,7 +929,8 @@ export function RailShell() {
       (hudRef.current.runner === "GMA" && !gmaRef.current) ||
       (hudRef.current.runner === "GMAMUTANT" && !gmamutantRef.current) ||
       (hudRef.current.runner === "SAMMI" && !sammiRef.current) ||
-      (hudRef.current.runner === "RAF" && !rafRef.current)
+      (hudRef.current.runner === "RAF" && !rafRef.current) ||
+      (hudRef.current.runner === "RARA" && !raraRef.current)
     ) {
       apiRef.current?.start();
       return;
@@ -1116,6 +1131,7 @@ export function RailShell() {
         { name: "GMAMUTANT" as const, seconds: 0 },
         { name: "SAMMI" as const, seconds: 0 },
         { name: "RAF" as const, seconds: 0 },
+        { name: "RARA" as const, seconds: 0 },
       ],
     };
     void (async () => getStats({ data: { token } }))()
@@ -1708,6 +1724,13 @@ export function RailShell() {
     if (res?.ok && res.daily) applyWallet(token, res);
   }
 
+  async function onUnlockRara() {
+    if (!token || raraUnlocked) return;
+    if ((ach?.skulls ?? 0) < RARA_COST) return;
+    const res = await unlockRunner({ data: { token, runner: "RARA" } }).catch(() => null);
+    if (res?.ok && res.daily) applyWallet(token, res);
+  }
+
   const pickScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -1761,6 +1784,7 @@ export function RailShell() {
     if (name === "GMAMUTANT") return gmamutantUnlocked;
     if (name === "SAMMI") return sammiUnlocked;
     if (name === "RAF") return rafUnlocked;
+    if (name === "RARA") return raraUnlocked;
     return false;
   }
 
@@ -1851,7 +1875,8 @@ export function RailShell() {
             (runner.name === "GMA" && !gmaUnlocked) ||
             (runner.name === "GMAMUTANT" && !gmamutantUnlocked) ||
             (runner.name === "SAMMI" && !sammiUnlocked) ||
-            (runner.name === "RAF" && !rafUnlocked);
+            (runner.name === "RAF" && !rafUnlocked) ||
+            (runner.name === "RARA" && !raraUnlocked);
           const cost =
             runner.name === "KOKO"
               ? KOKO_COST
@@ -1927,7 +1952,9 @@ export function RailShell() {
                                                                                   ? SAMMI_COST
                                                                                   : runner.name === "RAF"
                                                                                     ? RAF_COST
-                                                                                    : PINKY_COST;
+                                                                                    : runner.name === "RARA"
+                                                                                      ? RARA_COST
+                                                                                      : PINKY_COST;
           return (
             <button
               key={runner.name}
@@ -2281,7 +2308,8 @@ export function RailShell() {
               (hud.runner === "GMA" && !gmaUnlocked) ||
               (hud.runner === "GMAMUTANT" && !gmamutantUnlocked) ||
               (hud.runner === "SAMMI" && !sammiUnlocked) ||
-              (hud.runner === "RAF" && !rafUnlocked)
+              (hud.runner === "RAF" && !rafUnlocked) ||
+              (hud.runner === "RARA" && !raraUnlocked)
                 ? "Unlock for 169 Diamond Skulls."
                 : "Get the highest score. Don’t kiss the bears."}
             </p>
@@ -2565,6 +2593,11 @@ export function RailShell() {
             {hud.runner === "RAF" && !rafUnlocked ? (
               <button type="button" className="rail-stats-btn" onClick={onUnlockRaf}>
                 {(ach?.skulls ?? 0) >= RAF_COST ? `Unlock ${runnerLabel("RAF")} · 169` : "Need 169 Diamond Skulls"}
+              </button>
+            ) : null}
+            {hud.runner === "RARA" && !raraUnlocked ? (
+              <button type="button" className="rail-stats-btn" onClick={onUnlockRara}>
+                {(ach?.skulls ?? 0) >= RARA_COST ? `Unlock ${runnerLabel("RARA")} · 169` : "Need 169 Diamond Skulls"}
               </button>
             ) : null}
             {mobile ? null : (

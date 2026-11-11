@@ -201,7 +201,8 @@ type RunnerId =
   | "gma"
   | "gmamutant"
   | "sammi"
-  | "raf";
+  | "raf"
+  | "rara";
 
 function meshyRunner(id: RunnerId) {
   return (
@@ -242,7 +243,8 @@ function meshyRunner(id: RunnerId) {
     id === "gma" ||
     id === "gmamutant" ||
     id === "sammi" ||
-    id === "raf"
+    id === "raf" ||
+    id === "rara"
   );
 }
 
@@ -345,6 +347,7 @@ class RailWorld {
   private gmamutantUnlocked = false;
   private sammiUnlocked = false;
   private rafUnlocked = false;
+  private raraUnlocked = false;
   private kidsOn = false;
   private kidsDodge = false;
   private kidsMult = 1;
@@ -651,6 +654,9 @@ class RailWorld {
       },
       setRafUnlocked: (unlocked) => {
         this.rafUnlocked = unlocked;
+      },
+      setRaraUnlocked: (unlocked) => {
+        this.raraUnlocked = unlocked;
       },
       pause: () => this.freeze(),
       resume: () => this.beginCountdown(),
@@ -1006,6 +1012,7 @@ class RailWorld {
       { id: "gmamutant", name: "GMAMUTANT", url: "/models/gmamutant.glb" },
       { id: "sammi", name: "SAMMI", url: "/models/sammi.glb" },
       { id: "raf", name: "RAF", url: "/models/raf.glb" },
+      { id: "rara", name: "RARA", url: "/models/rara.glb" },
     ];
     for (const spec of [...starters, ...rest]) this.runnerSpecs.set(spec.id, spec);
     for (const spec of starters) this.loadRunnerGltf(spec, this.runnerLoader, true);
@@ -1194,6 +1201,7 @@ class RailWorld {
     if (name === "GMAMUTANT") return !this.gmamutantUnlocked;
     if (name === "SAMMI") return !this.sammiUnlocked;
     if (name === "RAF") return !this.rafUnlocked;
+    if (name === "RARA") return !this.raraUnlocked;
     return false;
   }
 
@@ -2407,6 +2415,7 @@ class RailWorld {
     if (name === "GMAMUTANT") return "gmamutant";
     if (name === "SAMMI") return "sammi";
     if (name === "RAF") return "raf";
+    if (name === "RARA") return "rara";
     return "gimbo";
   }
 
