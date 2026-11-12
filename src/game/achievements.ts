@@ -121,6 +121,9 @@ export const RAF_COST = 169;
 /** Diamond Skulls to unlock RaRa for good. */
 export const RARA_COST = 169;
 
+/** Diamond Skulls to unlock Adam Weitsman for good. */
+export const ADAMWEITSMAN_COST = 169;
+
 export type RunFacts = {
   score: number;
   meters: number;
@@ -204,6 +207,7 @@ export type AchievementSave = {
   sammi: boolean;
   raf: boolean;
   rara: boolean;
+  adamweitsman: boolean;
   claims: string[];
   dailyKey: string;
   weeklyKey: string;
@@ -325,6 +329,7 @@ export const GOALS: Goal[] = [
         sammi: false,
         raf: false,
         rara: false,
+        adamweitsman: false,
       }),
   },
   {
@@ -378,6 +383,7 @@ export type UnlockFlags = {
   sammi: boolean;
   raf: boolean;
   rara: boolean;
+  adamweitsman: boolean;
 };
 
 /** Lowest finished-run count across the crew. Paid runners join after unlock. */
@@ -422,6 +428,7 @@ export function crewProgress(tally: Tally, unlocked: UnlockFlags) {
   if (unlocked.sammi) counts.push(tally.rides.SAMMI);
   if (unlocked.raf) counts.push(tally.rides.RAF);
   if (unlocked.rara) counts.push(tally.rides.RARA);
+  if (unlocked.adamweitsman) counts.push(tally.rides.ADAMWEITSMAN);
   return Math.min(...counts);
 }
 
@@ -466,6 +473,7 @@ export function crewDetail(unlocked: UnlockFlags) {
   if (unlocked.sammi) bits.push(`30 as ${runnerLabel("SAMMI")}`);
   if (unlocked.raf) bits.push(`30 as ${runnerLabel("RAF")}`);
   if (unlocked.rara) bits.push(`30 as ${runnerLabel("RARA")}`);
+  if (unlocked.adamweitsman) bits.push(`30 as ${runnerLabel("ADAMWEITSMAN")}`);
   return `Finish ${bits.slice(0, -1).join(", ")}, and ${bits[bits.length - 1]}.`;
 }
 
@@ -528,6 +536,7 @@ export function emptyTally(): Tally {
       SAMMI: 0,
       RAF: 0,
       RARA: 0,
+      ADAMWEITSMAN: 0,
     },
   };
 }
@@ -585,6 +594,7 @@ function freshSave(now = new Date()): AchievementSave {
         sammi: false,
         raf: false,
         rara: false,
+        adamweitsman: false,
     claims: [],
     dailyKey: utcDay(now),
     weeklyKey: utcWeek(now),
@@ -644,7 +654,8 @@ function tallyFrom(raw: unknown): Tally {
           name === "GMAMUTANT" ||
           name === "SAMMI" ||
           name === "RAF" ||
-          name === "RARA",
+          name === "RARA" ||
+          name === "ADAMWEITSMAN",
       )
     : [];
   return {
@@ -705,6 +716,7 @@ function tallyFrom(raw: unknown): Tally {
       SAMMI: num(row.rides?.SAMMI),
       RAF: num(row.rides?.RAF),
       RARA: num(row.rides?.RARA),
+      ADAMWEITSMAN: num(row.rides?.ADAMWEITSMAN),
     },
   };
 }
@@ -769,6 +781,7 @@ function readRaw(token: string): AchievementSave {
       sammi: parsed.sammi === true,
       raf: parsed.raf === true,
       rara: parsed.rara === true,
+      adamweitsman: parsed.adamweitsman === true,
       claims: Array.isArray(parsed.claims) ? parsed.claims.filter((claim) => typeof claim === "string") : [],
       dailyKey: typeof parsed.dailyKey === "string" ? parsed.dailyKey : "",
       weeklyKey: typeof parsed.weeklyKey === "string" ? parsed.weeklyKey : "",
@@ -887,6 +900,7 @@ export function goalProgress(
         sammi: false,
         raf: false,
         rara: false,
+        adamweitsman: false,
   },
 ) {
   return Math.min(goal.target, Math.max(0, goalValue(goal, tally, unlocked)));
@@ -935,6 +949,7 @@ export function goalDone(
         sammi: false,
         raf: false,
         rara: false,
+        adamweitsman: false,
   },
 ) {
   return goalValue(goal, tally, unlocked) >= goal.target;
@@ -990,6 +1005,7 @@ export type AchievementSnapshot = {
   sammi: boolean;
   raf: boolean;
   rara: boolean;
+  adamweitsman: boolean;
   paid: string[];
   daily: Tally;
   weekly: Tally;
@@ -1040,6 +1056,7 @@ export function adoptServerAchievements(token: string, snap: AchievementSnapshot
     sammi: snap.sammi === true,
     raf: snap.raf === true,
     rara: snap.rara === true,
+    adamweitsman: snap.adamweitsman === true,
     claims: Array.isArray(snap.paid) ? snap.paid.filter((claim) => typeof claim === "string") : [],
     daily: snap.daily,
     weekly: snap.weekly,

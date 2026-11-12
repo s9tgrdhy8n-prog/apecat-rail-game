@@ -55,7 +55,8 @@ export type RunnerName =
   | "GMAMUTANT"
   | "SAMMI"
   | "RAF"
-  | "RARA";
+  | "RARA"
+  | "ADAMWEITSMAN";
 
 export type Hud = {
   phase: Phase;
@@ -156,6 +157,7 @@ export type RailApi = {
   setSammiUnlocked: (unlocked: boolean) => void;
   setRafUnlocked: (unlocked: boolean) => void;
   setRaraUnlocked: (unlocked: boolean) => void;
+  setAdamweitsmanUnlocked: (unlocked: boolean) => void;
   pause: () => void;
   resume: () => void;
   playReplay: (tape: GhostTape) => void;

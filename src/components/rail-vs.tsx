@@ -66,6 +66,7 @@ function grantRoster(api: RailApi, names: RunnerName[]) {
   api.setSammiUnlocked(has("SAMMI"));
   api.setRafUnlocked(has("RAF"));
   api.setRaraUnlocked(has("RARA"));
+  api.setAdamweitsmanUnlocked(has("ADAMWEITSMAN"));
 }
 
 type LobbyMsg = { t: "lobby"; name: string; runner: RunnerName; ready: boolean; round: number };
