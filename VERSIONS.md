@@ -60,6 +60,7 @@ The start menu reads `GAME_VERSION` in `src/game/version.ts`. On every productio
 | 1.30.0 | 2026-11-05 | Published to https://apecat-rail-game.com. The menu opens with Ape Cat, Boggy, and Gimbo. The other runners load when you pick them, so the tunnel stays lighter. Every runner stays aimed down the rail while the arms and legs still run. |
 | 1.31.0 | 2026-11-11 | Published to https://apecat-rail-game.com. RaRa - Ni Hao Cat joins the runners after RAF and unlocks for 169 Diamond Skulls. RaRa’s X is @faceofsol. Claim Rewards is open for 48 hours from this publish and adds 169 Diamond Skulls, including for accounts that already claimed an earlier drop. Finished RaRa runs count in Stats and in The whole crew after unlock. |
 | 1.32.0 | 2026-11-12 | Published to https://apecat-rail-game.com. Adam Weitsman joins the runners after RaRa - Ni Hao Cat and unlocks for 169 Diamond Skulls. Adam Weitsman’s X is @AdamWeitsman. Finished Adam Weitsman runs count in Stats and in The whole crew after unlock. |
+| 1.33.0 | 2026-11-13 | Published to https://apecat-rail-game.com. Diiirk, Nina, and JokerOlykos join the runners after Adam Weitsman, Diiirk first, and each unlocks for 169 Diamond Skulls. Diiirk’s X is @DiiirkNft. Nina’s X is @nina1174. JokerOlykos’s X is @JokerOlykos. Finished runs count in Stats and in The whole crew after unlock. |
 
 ## 1.0.5 notes
 

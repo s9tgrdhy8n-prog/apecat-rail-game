@@ -44,6 +44,9 @@ const RUNNERS = new Set<RunnerName>([
   "RAF",
   "RARA",
   "ADAMWEITSMAN",
+  "DIIIRK",
+  "NINA",
+  "JOKEROLYKOS",
 ]);
 
 const KEYS = new Set([

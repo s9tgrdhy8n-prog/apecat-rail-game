@@ -203,7 +203,10 @@ type RunnerId =
   | "sammi"
   | "raf"
   | "rara"
-  | "adamweitsman";
+  | "adamweitsman"
+  | "diiirk"
+  | "nina"
+  | "jokerolykos";
 
 function meshyRunner(id: RunnerId) {
   return (
@@ -246,7 +249,10 @@ function meshyRunner(id: RunnerId) {
     id === "sammi" ||
     id === "raf" ||
     id === "rara" ||
-    id === "adamweitsman"
+    id === "adamweitsman" ||
+    id === "diiirk" ||
+    id === "nina" ||
+    id === "jokerolykos"
   );
 }
 
@@ -351,6 +357,9 @@ class RailWorld {
   private rafUnlocked = false;
   private raraUnlocked = false;
   private adamweitsmanUnlocked = false;
+  private diiirkUnlocked = false;
+  private ninaUnlocked = false;
+  private jokerolykosUnlocked = false;
   private kidsOn = false;
   private kidsDodge = false;
   private kidsMult = 1;
@@ -663,6 +672,15 @@ class RailWorld {
       },
       setAdamweitsmanUnlocked: (unlocked) => {
         this.adamweitsmanUnlocked = unlocked;
+      },
+      setDiiirkUnlocked: (unlocked) => {
+        this.diiirkUnlocked = unlocked;
+      },
+      setNinaUnlocked: (unlocked) => {
+        this.ninaUnlocked = unlocked;
+      },
+      setJokerolykosUnlocked: (unlocked) => {
+        this.jokerolykosUnlocked = unlocked;
       },
       pause: () => this.freeze(),
       resume: () => this.beginCountdown(),
@@ -1020,6 +1038,9 @@ class RailWorld {
       { id: "raf", name: "RAF", url: "/models/raf.glb" },
       { id: "rara", name: "RARA", url: "/models/rara.glb" },
       { id: "adamweitsman", name: "ADAMWEITSMAN", url: "/models/adamweitsman.glb" },
+      { id: "diiirk", name: "DIIIRK", url: "/models/diiirk.glb" },
+      { id: "nina", name: "NINA", url: "/models/nina.glb" },
+      { id: "jokerolykos", name: "JOKEROLYKOS", url: "/models/jokerolykos.glb" },
     ];
     for (const spec of [...starters, ...rest]) this.runnerSpecs.set(spec.id, spec);
     for (const spec of starters) this.loadRunnerGltf(spec, this.runnerLoader, true);
@@ -1210,6 +1231,9 @@ class RailWorld {
     if (name === "RAF") return !this.rafUnlocked;
     if (name === "RARA") return !this.raraUnlocked;
     if (name === "ADAMWEITSMAN") return !this.adamweitsmanUnlocked;
+    if (name === "DIIIRK") return !this.diiirkUnlocked;
+    if (name === "NINA") return !this.ninaUnlocked;
+    if (name === "JOKEROLYKOS") return !this.jokerolykosUnlocked;
     return false;
   }
 
@@ -2425,6 +2449,9 @@ class RailWorld {
     if (name === "RAF") return "raf";
     if (name === "RARA") return "rara";
     if (name === "ADAMWEITSMAN") return "adamweitsman";
+    if (name === "DIIIRK") return "diiirk";
+    if (name === "NINA") return "nina";
+    if (name === "JOKEROLYKOS") return "jokerolykos";
     return "gimbo";
   }
 

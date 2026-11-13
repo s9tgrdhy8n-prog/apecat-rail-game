@@ -61,6 +61,9 @@ function crewLine(tally: Tally, unlocked: UnlockFlags) {
   if (unlocked.raf) parts.push(`${runnerLabel("RAF")} ${tally.rides.RAF}`);
   if (unlocked.rara) parts.push(`${runnerLabel("RARA")} ${tally.rides.RARA}`);
   if (unlocked.adamweitsman) parts.push(`${runnerLabel("ADAMWEITSMAN")} ${tally.rides.ADAMWEITSMAN}`);
+  if (unlocked.diiirk) parts.push(`${runnerLabel("DIIIRK")} ${tally.rides.DIIIRK}`);
+  if (unlocked.nina) parts.push(`${runnerLabel("NINA")} ${tally.rides.NINA}`);
+  if (unlocked.jokerolykos) parts.push(`${runnerLabel("JOKEROLYKOS")} ${tally.rides.JOKEROLYKOS}`);
   return ` · ${parts.join(" · ")}`;
 }
 
@@ -158,6 +161,9 @@ export function AchievementSheet({
     raf: save.raf,
     rara: save.rara,
     adamweitsman: save.adamweitsman,
+    diiirk: save.diiirk,
+    nina: save.nina,
+    jokerolykos: save.jokerolykos,
   };
   const daily = GOALS.filter((goal) => goal.period === "daily");
   const weekly = GOALS.filter((goal) => goal.period === "weekly");

@@ -124,6 +124,15 @@ export const RARA_COST = 169;
 /** Diamond Skulls to unlock Adam Weitsman for good. */
 export const ADAMWEITSMAN_COST = 169;
 
+/** Diamond Skulls to unlock Diiirk for good. */
+export const DIIIRK_COST = 169;
+
+/** Diamond Skulls to unlock Nina for good. */
+export const NINA_COST = 169;
+
+/** Diamond Skulls to unlock JokerOlykos for good. */
+export const JOKEROLYKOS_COST = 169;
+
 export type RunFacts = {
   score: number;
   meters: number;
@@ -208,6 +217,9 @@ export type AchievementSave = {
   raf: boolean;
   rara: boolean;
   adamweitsman: boolean;
+  diiirk: boolean;
+  nina: boolean;
+  jokerolykos: boolean;
   claims: string[];
   dailyKey: string;
   weeklyKey: string;
@@ -330,6 +342,9 @@ export const GOALS: Goal[] = [
         raf: false,
         rara: false,
         adamweitsman: false,
+        diiirk: false,
+        nina: false,
+        jokerolykos: false,
       }),
   },
   {
@@ -384,6 +399,9 @@ export type UnlockFlags = {
   raf: boolean;
   rara: boolean;
   adamweitsman: boolean;
+  diiirk: boolean;
+  nina: boolean;
+  jokerolykos: boolean;
 };
 
 /** Lowest finished-run count across the crew. Paid runners join after unlock. */
@@ -429,6 +447,9 @@ export function crewProgress(tally: Tally, unlocked: UnlockFlags) {
   if (unlocked.raf) counts.push(tally.rides.RAF);
   if (unlocked.rara) counts.push(tally.rides.RARA);
   if (unlocked.adamweitsman) counts.push(tally.rides.ADAMWEITSMAN);
+  if (unlocked.diiirk) counts.push(tally.rides.DIIIRK);
+  if (unlocked.nina) counts.push(tally.rides.NINA);
+  if (unlocked.jokerolykos) counts.push(tally.rides.JOKEROLYKOS);
   return Math.min(...counts);
 }
 
@@ -474,6 +495,9 @@ export function crewDetail(unlocked: UnlockFlags) {
   if (unlocked.raf) bits.push(`30 as ${runnerLabel("RAF")}`);
   if (unlocked.rara) bits.push(`30 as ${runnerLabel("RARA")}`);
   if (unlocked.adamweitsman) bits.push(`30 as ${runnerLabel("ADAMWEITSMAN")}`);
+  if (unlocked.diiirk) bits.push(`30 as ${runnerLabel("DIIIRK")}`);
+  if (unlocked.nina) bits.push(`30 as ${runnerLabel("NINA")}`);
+  if (unlocked.jokerolykos) bits.push(`30 as ${runnerLabel("JOKEROLYKOS")}`);
   return `Finish ${bits.slice(0, -1).join(", ")}, and ${bits[bits.length - 1]}.`;
 }
 
@@ -537,6 +561,9 @@ export function emptyTally(): Tally {
       RAF: 0,
       RARA: 0,
       ADAMWEITSMAN: 0,
+      DIIIRK: 0,
+      NINA: 0,
+      JOKEROLYKOS: 0,
     },
   };
 }
@@ -595,6 +622,9 @@ function freshSave(now = new Date()): AchievementSave {
         raf: false,
         rara: false,
         adamweitsman: false,
+        diiirk: false,
+        nina: false,
+        jokerolykos: false,
     claims: [],
     dailyKey: utcDay(now),
     weeklyKey: utcWeek(now),
@@ -655,7 +685,10 @@ function tallyFrom(raw: unknown): Tally {
           name === "SAMMI" ||
           name === "RAF" ||
           name === "RARA" ||
-          name === "ADAMWEITSMAN",
+          name === "ADAMWEITSMAN" ||
+          name === "DIIIRK" ||
+          name === "NINA" ||
+          name === "JOKEROLYKOS",
       )
     : [];
   return {
@@ -717,6 +750,9 @@ function tallyFrom(raw: unknown): Tally {
       RAF: num(row.rides?.RAF),
       RARA: num(row.rides?.RARA),
       ADAMWEITSMAN: num(row.rides?.ADAMWEITSMAN),
+      DIIIRK: num(row.rides?.DIIIRK),
+      NINA: num(row.rides?.NINA),
+      JOKEROLYKOS: num(row.rides?.JOKEROLYKOS),
     },
   };
 }
@@ -782,6 +818,9 @@ function readRaw(token: string): AchievementSave {
       raf: parsed.raf === true,
       rara: parsed.rara === true,
       adamweitsman: parsed.adamweitsman === true,
+      diiirk: parsed.diiirk === true,
+      nina: parsed.nina === true,
+      jokerolykos: parsed.jokerolykos === true,
       claims: Array.isArray(parsed.claims) ? parsed.claims.filter((claim) => typeof claim === "string") : [],
       dailyKey: typeof parsed.dailyKey === "string" ? parsed.dailyKey : "",
       weeklyKey: typeof parsed.weeklyKey === "string" ? parsed.weeklyKey : "",
@@ -901,6 +940,9 @@ export function goalProgress(
         raf: false,
         rara: false,
         adamweitsman: false,
+        diiirk: false,
+        nina: false,
+        jokerolykos: false,
   },
 ) {
   return Math.min(goal.target, Math.max(0, goalValue(goal, tally, unlocked)));
@@ -950,6 +992,9 @@ export function goalDone(
         raf: false,
         rara: false,
         adamweitsman: false,
+        diiirk: false,
+        nina: false,
+        jokerolykos: false,
   },
 ) {
   return goalValue(goal, tally, unlocked) >= goal.target;
@@ -1006,6 +1051,9 @@ export type AchievementSnapshot = {
   raf: boolean;
   rara: boolean;
   adamweitsman: boolean;
+  diiirk: boolean;
+  nina: boolean;
+  jokerolykos: boolean;
   paid: string[];
   daily: Tally;
   weekly: Tally;
@@ -1057,6 +1105,9 @@ export function adoptServerAchievements(token: string, snap: AchievementSnapshot
     raf: snap.raf === true,
     rara: snap.rara === true,
     adamweitsman: snap.adamweitsman === true,
+    diiirk: snap.diiirk === true,
+    nina: snap.nina === true,
+    jokerolykos: snap.jokerolykos === true,
     claims: Array.isArray(snap.paid) ? snap.paid.filter((claim) => typeof claim === "string") : [],
     daily: snap.daily,
     weekly: snap.weekly,
