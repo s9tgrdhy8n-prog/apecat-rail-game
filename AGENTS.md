@@ -349,3 +349,15 @@ auth/db: OFF by default — sign-in, @/lib/db or migrations ONLY on an accounts 
 never:   build an app for a greeting/number/question; invent imagine_* calls;
          ask the user to run commands; delete or abandon /workspace/startup.sh
 ```
+
+---
+
+## Cursor Cloud specific instructions
+
+On a Cursor Cloud Agent machine this repo is checked out at `/agent/repos/apecat-rail-game`, next to the other repos in this environment. The Grok App Builder notes above describe the `/workspace` preview sandbox.
+
+- Install with `npm install`. `npm ci` fails on the committed lockfile (`lru-cache` is missing from it).
+- Dev server: `npm run dev` (Vite through `scripts/with-app-env.mjs`) on port 8080. Leave `DATABASE_URL` unset. `npm run build` then skips Postgres and the app uses PGLite.
+- `npm run typecheck` and `npm run build` are the gates that pass. `npm test` runs the node:test suite; 13 cases currently fail because they still expect the stock template (auth flag off, OG title "Hello World") rather than this game. `npm run lint` reports 2 existing errors in `mount-rail.ts` and `client.server.ts`.
+- `rift-bound-map-sandbox` is a separate Vite app on port 5173 (`npm install` && `npm run dev`). Its `package.json` asks for React 18 while `@react-three/fiber` 9.4.2 requires React 19, and `.npmrc` sets `legacy-peer-deps=true`, so a fresh install boots a blank page with `Cannot read properties of undefined (reading 'S')`. Terrain GLBs are not in this environment.
+- `apecat-climber` and `BB-MM` have no app to install. `fictional-lamp` is an empty GitHub repo.
