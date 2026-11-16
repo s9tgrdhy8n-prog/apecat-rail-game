@@ -206,7 +206,8 @@ type RunnerId =
   | "adamweitsman"
   | "diiirk"
   | "nina"
-  | "jokerolykos";
+  | "jokerolykos"
+  | "aiogytttv";
 
 function meshyRunner(id: RunnerId) {
   return (
@@ -252,7 +253,8 @@ function meshyRunner(id: RunnerId) {
     id === "adamweitsman" ||
     id === "diiirk" ||
     id === "nina" ||
-    id === "jokerolykos"
+    id === "jokerolykos" ||
+    id === "aiogytttv"
   );
 }
 
@@ -360,6 +362,7 @@ class RailWorld {
   private diiirkUnlocked = false;
   private ninaUnlocked = false;
   private jokerolykosUnlocked = false;
+  private aiogytttvUnlocked = false;
   private kidsOn = false;
   private kidsDodge = false;
   private kidsMult = 1;
@@ -681,6 +684,9 @@ class RailWorld {
       },
       setJokerolykosUnlocked: (unlocked) => {
         this.jokerolykosUnlocked = unlocked;
+      },
+      setAiogytttvUnlocked: (unlocked) => {
+        this.aiogytttvUnlocked = unlocked;
       },
       pause: () => this.freeze(),
       resume: () => this.beginCountdown(),
@@ -1041,6 +1047,7 @@ class RailWorld {
       { id: "diiirk", name: "DIIIRK", url: "/models/diiirk.glb" },
       { id: "nina", name: "NINA", url: "/models/nina.glb" },
       { id: "jokerolykos", name: "JOKEROLYKOS", url: "/models/jokerolykos.glb" },
+      { id: "aiogytttv", name: "AIOGYTTTV", url: "/models/aiogytttv.glb" },
     ];
     for (const spec of [...starters, ...rest]) this.runnerSpecs.set(spec.id, spec);
     for (const spec of starters) this.loadRunnerGltf(spec, this.runnerLoader, true);
@@ -1234,6 +1241,7 @@ class RailWorld {
     if (name === "DIIIRK") return !this.diiirkUnlocked;
     if (name === "NINA") return !this.ninaUnlocked;
     if (name === "JOKEROLYKOS") return !this.jokerolykosUnlocked;
+    if (name === "AIOGYTTTV") return !this.aiogytttvUnlocked;
     return false;
   }
 
@@ -2452,6 +2460,7 @@ class RailWorld {
     if (name === "DIIIRK") return "diiirk";
     if (name === "NINA") return "nina";
     if (name === "JOKEROLYKOS") return "jokerolykos";
+    if (name === "AIOGYTTTV") return "aiogytttv";
     return "gimbo";
   }
 

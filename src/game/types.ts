@@ -59,7 +59,8 @@ export type RunnerName =
   | "ADAMWEITSMAN"
   | "DIIIRK"
   | "NINA"
-  | "JOKEROLYKOS";
+  | "JOKEROLYKOS"
+  | "AIOGYTTTV";
 
 export type Hud = {
   phase: Phase;
@@ -164,6 +165,7 @@ export type RailApi = {
   setDiiirkUnlocked: (unlocked: boolean) => void;
   setNinaUnlocked: (unlocked: boolean) => void;
   setJokerolykosUnlocked: (unlocked: boolean) => void;
+  setAiogytttvUnlocked: (unlocked: boolean) => void;
   pause: () => void;
   resume: () => void;
   playReplay: (tape: GhostTape) => void;
