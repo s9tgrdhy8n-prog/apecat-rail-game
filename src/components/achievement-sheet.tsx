@@ -65,6 +65,7 @@ function crewLine(tally: Tally, unlocked: UnlockFlags) {
   if (unlocked.nina) parts.push(`${runnerLabel("NINA")} ${tally.rides.NINA}`);
   if (unlocked.jokerolykos) parts.push(`${runnerLabel("JOKEROLYKOS")} ${tally.rides.JOKEROLYKOS}`);
   if (unlocked.aiogytttv) parts.push(`${runnerLabel("AIOGYTTTV")} ${tally.rides.AIOGYTTTV}`);
+  if (unlocked.squiddy) parts.push(`${runnerLabel("SQUIDDY")} ${tally.rides.SQUIDDY}`);
   return ` · ${parts.join(" · ")}`;
 }
 
@@ -166,6 +167,7 @@ export function AchievementSheet({
     nina: save.nina,
     jokerolykos: save.jokerolykos,
     aiogytttv: save.aiogytttv,
+    squiddy: save.squiddy,
   };
   const daily = GOALS.filter((goal) => goal.period === "daily");
   const weekly = GOALS.filter((goal) => goal.period === "weekly");

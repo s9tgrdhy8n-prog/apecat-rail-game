@@ -136,6 +136,9 @@ export const JOKEROLYKOS_COST = 169;
 /** Diamond Skulls to unlock AI OG YT TTV for good. */
 export const AIOGYTTTV_COST = 169;
 
+/** Diamond Skulls to unlock SQUIDDY for good. */
+export const SQUIDDY_COST = 169;
+
 export type RunFacts = {
   score: number;
   meters: number;
@@ -224,6 +227,7 @@ export type AchievementSave = {
   nina: boolean;
   jokerolykos: boolean;
   aiogytttv: boolean;
+  squiddy: boolean;
   claims: string[];
   dailyKey: string;
   weeklyKey: string;
@@ -350,6 +354,7 @@ export const GOALS: Goal[] = [
         nina: false,
         jokerolykos: false,
         aiogytttv: false,
+        squiddy: false,
       }),
   },
   {
@@ -408,6 +413,7 @@ export type UnlockFlags = {
   nina: boolean;
   jokerolykos: boolean;
   aiogytttv: boolean;
+  squiddy: boolean;
 };
 
 /** Lowest finished-run count across the crew. Paid runners join after unlock. */
@@ -457,6 +463,7 @@ export function crewProgress(tally: Tally, unlocked: UnlockFlags) {
   if (unlocked.nina) counts.push(tally.rides.NINA);
   if (unlocked.jokerolykos) counts.push(tally.rides.JOKEROLYKOS);
   if (unlocked.aiogytttv) counts.push(tally.rides.AIOGYTTTV);
+  if (unlocked.squiddy) counts.push(tally.rides.SQUIDDY);
   return Math.min(...counts);
 }
 
@@ -506,6 +513,7 @@ export function crewDetail(unlocked: UnlockFlags) {
   if (unlocked.nina) bits.push(`30 as ${runnerLabel("NINA")}`);
   if (unlocked.jokerolykos) bits.push(`30 as ${runnerLabel("JOKEROLYKOS")}`);
   if (unlocked.aiogytttv) bits.push(`30 as ${runnerLabel("AIOGYTTTV")}`);
+  if (unlocked.squiddy) bits.push(`30 as ${runnerLabel("SQUIDDY")}`);
   return `Finish ${bits.slice(0, -1).join(", ")}, and ${bits[bits.length - 1]}.`;
 }
 
@@ -573,6 +581,7 @@ export function emptyTally(): Tally {
       NINA: 0,
       JOKEROLYKOS: 0,
       AIOGYTTTV: 0,
+      SQUIDDY: 0,
     },
   };
 }
@@ -635,6 +644,7 @@ function freshSave(now = new Date()): AchievementSave {
         nina: false,
         jokerolykos: false,
         aiogytttv: false,
+        squiddy: false,
     claims: [],
     dailyKey: utcDay(now),
     weeklyKey: utcWeek(now),
@@ -699,7 +709,8 @@ function tallyFrom(raw: unknown): Tally {
           name === "DIIIRK" ||
           name === "NINA" ||
           name === "JOKEROLYKOS" ||
-          name === "AIOGYTTTV",
+          name === "AIOGYTTTV" ||
+          name === "SQUIDDY",
       )
     : [];
   return {
@@ -765,6 +776,7 @@ function tallyFrom(raw: unknown): Tally {
       NINA: num(row.rides?.NINA),
       JOKEROLYKOS: num(row.rides?.JOKEROLYKOS),
       AIOGYTTTV: num(row.rides?.AIOGYTTTV),
+      SQUIDDY: num(row.rides?.SQUIDDY),
     },
   };
 }
@@ -834,6 +846,7 @@ function readRaw(token: string): AchievementSave {
       nina: parsed.nina === true,
       jokerolykos: parsed.jokerolykos === true,
       aiogytttv: parsed.aiogytttv === true,
+      squiddy: parsed.squiddy === true,
       claims: Array.isArray(parsed.claims) ? parsed.claims.filter((claim) => typeof claim === "string") : [],
       dailyKey: typeof parsed.dailyKey === "string" ? parsed.dailyKey : "",
       weeklyKey: typeof parsed.weeklyKey === "string" ? parsed.weeklyKey : "",
@@ -957,6 +970,7 @@ export function goalProgress(
         nina: false,
         jokerolykos: false,
         aiogytttv: false,
+        squiddy: false,
   },
 ) {
   return Math.min(goal.target, Math.max(0, goalValue(goal, tally, unlocked)));
@@ -1010,6 +1024,7 @@ export function goalDone(
         nina: false,
         jokerolykos: false,
         aiogytttv: false,
+        squiddy: false,
   },
 ) {
   return goalValue(goal, tally, unlocked) >= goal.target;
@@ -1070,6 +1085,7 @@ export type AchievementSnapshot = {
   nina: boolean;
   jokerolykos: boolean;
   aiogytttv: boolean;
+  squiddy: boolean;
   paid: string[];
   daily: Tally;
   weekly: Tally;
@@ -1125,6 +1141,7 @@ export function adoptServerAchievements(token: string, snap: AchievementSnapshot
     nina: snap.nina === true,
     jokerolykos: snap.jokerolykos === true,
     aiogytttv: snap.aiogytttv === true,
+    squiddy: snap.squiddy === true,
     claims: Array.isArray(snap.paid) ? snap.paid.filter((claim) => typeof claim === "string") : [],
     daily: snap.daily,
     weekly: snap.weekly,

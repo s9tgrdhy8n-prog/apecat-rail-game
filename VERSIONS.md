@@ -62,6 +62,7 @@ The start menu reads `GAME_VERSION` in `src/game/version.ts`. On every productio
 | 1.32.0 | 2026-11-12 | Published to https://apecat-rail-game.com. Adam Weitsman joins the runners after RaRa - Ni Hao Cat and unlocks for 169 Diamond Skulls. Adam Weitsman’s X is @AdamWeitsman. Finished Adam Weitsman runs count in Stats and in The whole crew after unlock. |
 | 1.33.0 | 2026-11-13 | Published to https://apecat-rail-game.com. Diiirk, Nina, and JokerOlykos join the runners after Adam Weitsman, Diiirk first, and each unlocks for 169 Diamond Skulls. Diiirk’s X is @DiiirkNft. Nina’s X is @nina1174. JokerOlykos’s X is @JokerOlykos. Finished runs count in Stats and in The whole crew after unlock. |
 | 1.34.0 | 2026-11-16 | Published to https://apecat-rail-game.com. AI OG YT TTV joins the runners after JokerOlykos and unlocks for 169 Diamond Skulls. AI OG YT TTV’s X is @AI_OG_YT_TTV. Claim Rewards is open for 48 hours from this publish and adds 169 Diamond Skulls, including for accounts that already claimed an earlier drop. Finished AI OG YT TTV runs count in Stats and in The whole crew after unlock. |
+| 1.35.0 | 2026-11-17 | Published to https://apecat-rail-game.com. SQUIDDY joins the runners after AI OG YT TTV and unlocks for 169 Diamond Skulls. SQUIDDY’s X is @SquiddyNFT. Finished SQUIDDY runs count in Stats and in The whole crew after unlock. |
 
 ## 1.0.5 notes
 

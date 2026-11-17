@@ -207,7 +207,8 @@ type RunnerId =
   | "diiirk"
   | "nina"
   | "jokerolykos"
-  | "aiogytttv";
+  | "aiogytttv"
+  | "squiddy";
 
 function meshyRunner(id: RunnerId) {
   return (
@@ -254,7 +255,8 @@ function meshyRunner(id: RunnerId) {
     id === "diiirk" ||
     id === "nina" ||
     id === "jokerolykos" ||
-    id === "aiogytttv"
+    id === "aiogytttv" ||
+    id === "squiddy"
   );
 }
 
@@ -363,6 +365,7 @@ class RailWorld {
   private ninaUnlocked = false;
   private jokerolykosUnlocked = false;
   private aiogytttvUnlocked = false;
+  private squiddyUnlocked = false;
   private kidsOn = false;
   private kidsDodge = false;
   private kidsMult = 1;
@@ -687,6 +690,9 @@ class RailWorld {
       },
       setAiogytttvUnlocked: (unlocked) => {
         this.aiogytttvUnlocked = unlocked;
+      },
+      setSquiddyUnlocked: (unlocked) => {
+        this.squiddyUnlocked = unlocked;
       },
       pause: () => this.freeze(),
       resume: () => this.beginCountdown(),
@@ -1048,6 +1054,7 @@ class RailWorld {
       { id: "nina", name: "NINA", url: "/models/nina.glb" },
       { id: "jokerolykos", name: "JOKEROLYKOS", url: "/models/jokerolykos.glb" },
       { id: "aiogytttv", name: "AIOGYTTTV", url: "/models/aiogytttv.glb" },
+      { id: "squiddy", name: "SQUIDDY", url: "/models/squiddy.glb" },
     ];
     for (const spec of [...starters, ...rest]) this.runnerSpecs.set(spec.id, spec);
     for (const spec of starters) this.loadRunnerGltf(spec, this.runnerLoader, true);
@@ -1242,6 +1249,7 @@ class RailWorld {
     if (name === "NINA") return !this.ninaUnlocked;
     if (name === "JOKEROLYKOS") return !this.jokerolykosUnlocked;
     if (name === "AIOGYTTTV") return !this.aiogytttvUnlocked;
+    if (name === "SQUIDDY") return !this.squiddyUnlocked;
     return false;
   }
 
@@ -2461,6 +2469,7 @@ class RailWorld {
     if (name === "NINA") return "nina";
     if (name === "JOKEROLYKOS") return "jokerolykos";
     if (name === "AIOGYTTTV") return "aiogytttv";
+    if (name === "SQUIDDY") return "squiddy";
     return "gimbo";
   }
 

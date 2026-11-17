@@ -40,6 +40,7 @@ import {
   NINA_COST,
   JOKEROLYKOS_COST,
   AIOGYTTTV_COST,
+  SQUIDDY_COST,
   GOALS,
   KOKO_COST,
   OTTER_COST,
@@ -162,6 +163,7 @@ const RUNNERS: { name: RunnerName; src: string }[] = [
   { name: "NINA", src: "/brand/nina.jpg" },
   { name: "JOKEROLYKOS", src: "/brand/jokerolykos.jpg" },
   { name: "AIOGYTTTV", src: "/brand/aiogytttv.jpg" },
+  { name: "SQUIDDY", src: "/brand/squiddy.jpg" },
 ];
 const KIDS_SPEEDS = [
   { id: "1", label: "1×", mult: 1 },
@@ -306,6 +308,7 @@ export function RailShell() {
   const [ninaUnlocked, setNinaUnlocked] = useState(false);
   const [jokerolykosUnlocked, setJokerolykosUnlocked] = useState(false);
   const [aiogytttvUnlocked, setAiogytttvUnlocked] = useState(false);
+  const [squiddyUnlocked, setSquiddyUnlocked] = useState(false);
   const [stats, setStats] = useState<RailStats | null>(null);
   const [nameDraft, setNameDraft] = useState("");
   const [password, setPassword] = useState("");
@@ -373,6 +376,7 @@ export function RailShell() {
   const ninaRef = useRef(false);
   const jokerolykosRef = useRef(false);
   const aiogytttvRef = useRef(false);
+  const squiddyRef = useRef(false);
   const settle = useRef<Promise<unknown>>(Promise.resolve());
   const arming = useRef(false);
   const practiceRef = useRef(false);
@@ -544,6 +548,9 @@ export function RailShell() {
     setAiogytttvUnlocked(save.aiogytttv);
     aiogytttvRef.current = save.aiogytttv;
     apiRef.current?.setAiogytttvUnlocked(save.aiogytttv);
+    setSquiddyUnlocked(save.squiddy);
+    squiddyRef.current = save.squiddy;
+    apiRef.current?.setSquiddyUnlocked(save.squiddy);
     if (typeof res.fill === "number") setPickupFill(Math.max(0, Math.min(99, Math.floor(res.fill))));
     if (runSerial > 0) {
       const live = hudRef.current;
@@ -644,6 +651,8 @@ export function RailShell() {
     jokerolykosRef.current = false;
     setAiogytttvUnlocked(false);
     aiogytttvRef.current = false;
+    setSquiddyUnlocked(false);
+    squiddyRef.current = false;
     void syncDiamonds({ data: { token: next } })
       .then((res) => {
         if (!res.daily) return;
@@ -874,6 +883,11 @@ export function RailShell() {
   }, [aiogytttvUnlocked, hud.phase]);
 
   useEffect(() => {
+    squiddyRef.current = squiddyUnlocked;
+    apiRef.current?.setSquiddyUnlocked(squiddyUnlocked);
+  }, [squiddyUnlocked, hud.phase]);
+
+  useEffect(() => {
     if (hud.phase === "run") setJustEarned([]);
   }, [hud.phase]);
 
@@ -1005,7 +1019,8 @@ export function RailShell() {
       (hudRef.current.runner === "DIIIRK" && !diiirkRef.current) ||
       (hudRef.current.runner === "NINA" && !ninaRef.current) ||
       (hudRef.current.runner === "JOKEROLYKOS" && !jokerolykosRef.current) ||
-      (hudRef.current.runner === "AIOGYTTTV" && !aiogytttvRef.current)
+      (hudRef.current.runner === "AIOGYTTTV" && !aiogytttvRef.current) ||
+      (hudRef.current.runner === "SQUIDDY" && !squiddyRef.current)
     ) {
       apiRef.current?.start();
       return;
@@ -1212,6 +1227,7 @@ export function RailShell() {
         { name: "NINA" as const, seconds: 0 },
         { name: "JOKEROLYKOS" as const, seconds: 0 },
         { name: "AIOGYTTTV" as const, seconds: 0 },
+        { name: "SQUIDDY" as const, seconds: 0 },
       ],
     };
     void (async () => getStats({ data: { token } }))()
@@ -1846,6 +1862,13 @@ export function RailShell() {
     if (res?.ok && res.daily) applyWallet(token, res);
   }
 
+  async function onUnlockSquiddy() {
+    if (!token || squiddyUnlocked) return;
+    if ((ach?.skulls ?? 0) < SQUIDDY_COST) return;
+    const res = await unlockRunner({ data: { token, runner: "SQUIDDY" } }).catch(() => null);
+    if (res?.ok && res.daily) applyWallet(token, res);
+  }
+
   const pickScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -1905,6 +1928,7 @@ export function RailShell() {
     if (name === "NINA") return ninaUnlocked;
     if (name === "JOKEROLYKOS") return jokerolykosUnlocked;
     if (name === "AIOGYTTTV") return aiogytttvUnlocked;
+    if (name === "SQUIDDY") return squiddyUnlocked;
     return false;
   }
 
@@ -2001,7 +2025,8 @@ export function RailShell() {
             (runner.name === "DIIIRK" && !diiirkUnlocked) ||
             (runner.name === "NINA" && !ninaUnlocked) ||
             (runner.name === "JOKEROLYKOS" && !jokerolykosUnlocked) ||
-            (runner.name === "AIOGYTTTV" && !aiogytttvUnlocked);
+            (runner.name === "AIOGYTTTV" && !aiogytttvUnlocked) ||
+            (runner.name === "SQUIDDY" && !squiddyUnlocked);
           const cost =
             runner.name === "KOKO"
               ? KOKO_COST
@@ -2089,7 +2114,9 @@ export function RailShell() {
                                                                                               ? JOKEROLYKOS_COST
                                                                                               : runner.name === "AIOGYTTTV"
                                                                                                 ? AIOGYTTTV_COST
-                                                                                                : PINKY_COST;
+                                                                                                : runner.name === "SQUIDDY"
+                                                                                                  ? SQUIDDY_COST
+                                                                                                  : PINKY_COST;
           return (
             <button
               key={runner.name}
@@ -2449,7 +2476,8 @@ export function RailShell() {
               (hud.runner === "DIIIRK" && !diiirkUnlocked) ||
               (hud.runner === "NINA" && !ninaUnlocked) ||
               (hud.runner === "JOKEROLYKOS" && !jokerolykosUnlocked) ||
-              (hud.runner === "AIOGYTTTV" && !aiogytttvUnlocked)
+              (hud.runner === "AIOGYTTTV" && !aiogytttvUnlocked) ||
+              (hud.runner === "SQUIDDY" && !squiddyUnlocked)
                 ? "Unlock for 169 Diamond Skulls."
                 : "Get the highest score. Don’t kiss the bears."}
             </p>
@@ -2763,6 +2791,11 @@ export function RailShell() {
             {hud.runner === "AIOGYTTTV" && !aiogytttvUnlocked ? (
               <button type="button" className="rail-stats-btn" onClick={onUnlockAiogytttv}>
                 {(ach?.skulls ?? 0) >= AIOGYTTTV_COST ? `Unlock ${runnerLabel("AIOGYTTTV")} · 169` : "Need 169 Diamond Skulls"}
+              </button>
+            ) : null}
+            {hud.runner === "SQUIDDY" && !squiddyUnlocked ? (
+              <button type="button" className="rail-stats-btn" onClick={onUnlockSquiddy}>
+                {(ach?.skulls ?? 0) >= SQUIDDY_COST ? `Unlock ${runnerLabel("SQUIDDY")} · 169` : "Need 169 Diamond Skulls"}
               </button>
             ) : null}
             {mobile ? null : (
