@@ -208,7 +208,9 @@ type RunnerId =
   | "nina"
   | "jokerolykos"
   | "aiogytttv"
-  | "squiddy";
+  | "squiddy"
+  | "three69"
+  | "abpeth";
 
 function meshyRunner(id: RunnerId) {
   return (
@@ -256,7 +258,9 @@ function meshyRunner(id: RunnerId) {
     id === "nina" ||
     id === "jokerolykos" ||
     id === "aiogytttv" ||
-    id === "squiddy"
+    id === "squiddy" ||
+    id === "three69" ||
+    id === "abpeth"
   );
 }
 
@@ -366,6 +370,8 @@ class RailWorld {
   private jokerolykosUnlocked = false;
   private aiogytttvUnlocked = false;
   private squiddyUnlocked = false;
+  private three69Unlocked = false;
+  private abpethUnlocked = false;
   private kidsOn = false;
   private kidsDodge = false;
   private kidsMult = 1;
@@ -694,6 +700,12 @@ class RailWorld {
       setSquiddyUnlocked: (unlocked) => {
         this.squiddyUnlocked = unlocked;
       },
+      setThree69Unlocked: (unlocked) => {
+        this.three69Unlocked = unlocked;
+      },
+      setAbpethUnlocked: (unlocked) => {
+        this.abpethUnlocked = unlocked;
+      },
       pause: () => this.freeze(),
       resume: () => this.beginCountdown(),
       playReplay: (tape) => this.playReplay(tape),
@@ -944,9 +956,11 @@ class RailWorld {
           ? 0.84
           : spec.id === "goldfinger" || spec.id === "slimshady" || spec.id === "lilredmercy"
             ? 0.77
-            : meshyRunner(spec.id)
-            ? 1.3
-            : 0.7;
+            : spec.id === "abpeth"
+              ? 0.7
+              : meshyRunner(spec.id)
+              ? 1.3
+              : 0.7;
     const yaw = runnerYaw(spec.id);
     this.fitModel(model, fit, yaw);
     const straight = this.captureHeading(model);
@@ -1055,6 +1069,8 @@ class RailWorld {
       { id: "jokerolykos", name: "JOKEROLYKOS", url: "/models/jokerolykos.glb" },
       { id: "aiogytttv", name: "AIOGYTTTV", url: "/models/aiogytttv.glb" },
       { id: "squiddy", name: "SQUIDDY", url: "/models/squiddy.glb" },
+      { id: "three69", name: "THREE69", url: "/models/three69.glb" },
+      { id: "abpeth", name: "ABPETH", url: "/models/abpeth.glb" },
     ];
     for (const spec of [...starters, ...rest]) this.runnerSpecs.set(spec.id, spec);
     for (const spec of starters) this.loadRunnerGltf(spec, this.runnerLoader, true);
@@ -1250,6 +1266,8 @@ class RailWorld {
     if (name === "JOKEROLYKOS") return !this.jokerolykosUnlocked;
     if (name === "AIOGYTTTV") return !this.aiogytttvUnlocked;
     if (name === "SQUIDDY") return !this.squiddyUnlocked;
+    if (name === "THREE69") return !this.three69Unlocked;
+    if (name === "ABPETH") return !this.abpethUnlocked;
     return false;
   }
 
@@ -2470,6 +2488,8 @@ class RailWorld {
     if (name === "JOKEROLYKOS") return "jokerolykos";
     if (name === "AIOGYTTTV") return "aiogytttv";
     if (name === "SQUIDDY") return "squiddy";
+    if (name === "THREE69") return "three69";
+    if (name === "ABPETH") return "abpeth";
     return "gimbo";
   }
 

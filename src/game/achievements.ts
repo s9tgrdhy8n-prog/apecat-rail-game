@@ -139,6 +139,12 @@ export const AIOGYTTTV_COST = 169;
 /** Diamond Skulls to unlock SQUIDDY for good. */
 export const SQUIDDY_COST = 169;
 
+/** Diamond Skulls to unlock 369 for good. */
+export const THREE69_COST = 169;
+
+/** Diamond Skulls to unlock ABP.eth for good. */
+export const ABPETH_COST = 169;
+
 export type RunFacts = {
   score: number;
   meters: number;
@@ -228,6 +234,8 @@ export type AchievementSave = {
   jokerolykos: boolean;
   aiogytttv: boolean;
   squiddy: boolean;
+  three69: boolean;
+  abpeth: boolean;
   claims: string[];
   dailyKey: string;
   weeklyKey: string;
@@ -355,6 +363,8 @@ export const GOALS: Goal[] = [
         jokerolykos: false,
         aiogytttv: false,
         squiddy: false,
+        three69: false,
+        abpeth: false,
       }),
   },
   {
@@ -414,6 +424,8 @@ export type UnlockFlags = {
   jokerolykos: boolean;
   aiogytttv: boolean;
   squiddy: boolean;
+  three69: boolean;
+  abpeth: boolean;
 };
 
 /** Lowest finished-run count across the crew. Paid runners join after unlock. */
@@ -464,6 +476,8 @@ export function crewProgress(tally: Tally, unlocked: UnlockFlags) {
   if (unlocked.jokerolykos) counts.push(tally.rides.JOKEROLYKOS);
   if (unlocked.aiogytttv) counts.push(tally.rides.AIOGYTTTV);
   if (unlocked.squiddy) counts.push(tally.rides.SQUIDDY);
+  if (unlocked.three69) counts.push(tally.rides.THREE69);
+  if (unlocked.abpeth) counts.push(tally.rides.ABPETH);
   return Math.min(...counts);
 }
 
@@ -514,6 +528,8 @@ export function crewDetail(unlocked: UnlockFlags) {
   if (unlocked.jokerolykos) bits.push(`30 as ${runnerLabel("JOKEROLYKOS")}`);
   if (unlocked.aiogytttv) bits.push(`30 as ${runnerLabel("AIOGYTTTV")}`);
   if (unlocked.squiddy) bits.push(`30 as ${runnerLabel("SQUIDDY")}`);
+  if (unlocked.three69) bits.push(`30 as ${runnerLabel("THREE69")}`);
+  if (unlocked.abpeth) bits.push(`30 as ${runnerLabel("ABPETH")}`);
   return `Finish ${bits.slice(0, -1).join(", ")}, and ${bits[bits.length - 1]}.`;
 }
 
@@ -582,6 +598,8 @@ export function emptyTally(): Tally {
       JOKEROLYKOS: 0,
       AIOGYTTTV: 0,
       SQUIDDY: 0,
+      THREE69: 0,
+      ABPETH: 0,
     },
   };
 }
@@ -645,6 +663,8 @@ function freshSave(now = new Date()): AchievementSave {
         jokerolykos: false,
         aiogytttv: false,
         squiddy: false,
+        three69: false,
+        abpeth: false,
     claims: [],
     dailyKey: utcDay(now),
     weeklyKey: utcWeek(now),
@@ -710,7 +730,9 @@ function tallyFrom(raw: unknown): Tally {
           name === "NINA" ||
           name === "JOKEROLYKOS" ||
           name === "AIOGYTTTV" ||
-          name === "SQUIDDY",
+          name === "SQUIDDY" ||
+          name === "THREE69" ||
+          name === "ABPETH",
       )
     : [];
   return {
@@ -777,6 +799,8 @@ function tallyFrom(raw: unknown): Tally {
       JOKEROLYKOS: num(row.rides?.JOKEROLYKOS),
       AIOGYTTTV: num(row.rides?.AIOGYTTTV),
       SQUIDDY: num(row.rides?.SQUIDDY),
+      THREE69: num(row.rides?.THREE69),
+      ABPETH: num(row.rides?.ABPETH),
     },
   };
 }
@@ -847,6 +871,8 @@ function readRaw(token: string): AchievementSave {
       jokerolykos: parsed.jokerolykos === true,
       aiogytttv: parsed.aiogytttv === true,
       squiddy: parsed.squiddy === true,
+      three69: parsed.three69 === true,
+      abpeth: parsed.abpeth === true,
       claims: Array.isArray(parsed.claims) ? parsed.claims.filter((claim) => typeof claim === "string") : [],
       dailyKey: typeof parsed.dailyKey === "string" ? parsed.dailyKey : "",
       weeklyKey: typeof parsed.weeklyKey === "string" ? parsed.weeklyKey : "",
@@ -971,6 +997,8 @@ export function goalProgress(
         jokerolykos: false,
         aiogytttv: false,
         squiddy: false,
+        three69: false,
+        abpeth: false,
   },
 ) {
   return Math.min(goal.target, Math.max(0, goalValue(goal, tally, unlocked)));
@@ -1025,6 +1053,8 @@ export function goalDone(
         jokerolykos: false,
         aiogytttv: false,
         squiddy: false,
+        three69: false,
+        abpeth: false,
   },
 ) {
   return goalValue(goal, tally, unlocked) >= goal.target;
@@ -1086,6 +1116,8 @@ export type AchievementSnapshot = {
   jokerolykos: boolean;
   aiogytttv: boolean;
   squiddy: boolean;
+  three69: boolean;
+  abpeth: boolean;
   paid: string[];
   daily: Tally;
   weekly: Tally;
@@ -1142,6 +1174,8 @@ export function adoptServerAchievements(token: string, snap: AchievementSnapshot
     jokerolykos: snap.jokerolykos === true,
     aiogytttv: snap.aiogytttv === true,
     squiddy: snap.squiddy === true,
+    three69: snap.three69 === true,
+    abpeth: snap.abpeth === true,
     claims: Array.isArray(snap.paid) ? snap.paid.filter((claim) => typeof claim === "string") : [],
     daily: snap.daily,
     weekly: snap.weekly,
