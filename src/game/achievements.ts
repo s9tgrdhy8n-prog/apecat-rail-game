@@ -145,6 +145,9 @@ export const THREE69_COST = 169;
 /** Diamond Skulls to unlock ABP.eth for good. */
 export const ABPETH_COST = 169;
 
+/** Diamond Skulls to unlock Joker's Mutant for good. */
+export const JOKERSMUTANT_COST = 169;
+
 export type RunFacts = {
   score: number;
   meters: number;
@@ -236,6 +239,7 @@ export type AchievementSave = {
   squiddy: boolean;
   three69: boolean;
   abpeth: boolean;
+  jokersmutant: boolean;
   claims: string[];
   dailyKey: string;
   weeklyKey: string;
@@ -365,6 +369,7 @@ export const GOALS: Goal[] = [
         squiddy: false,
         three69: false,
         abpeth: false,
+        jokersmutant: false,
       }),
   },
   {
@@ -426,6 +431,7 @@ export type UnlockFlags = {
   squiddy: boolean;
   three69: boolean;
   abpeth: boolean;
+  jokersmutant: boolean;
 };
 
 /** Lowest finished-run count across the crew. Paid runners join after unlock. */
@@ -478,6 +484,7 @@ export function crewProgress(tally: Tally, unlocked: UnlockFlags) {
   if (unlocked.squiddy) counts.push(tally.rides.SQUIDDY);
   if (unlocked.three69) counts.push(tally.rides.THREE69);
   if (unlocked.abpeth) counts.push(tally.rides.ABPETH);
+  if (unlocked.jokersmutant) counts.push(tally.rides.JOKERSMUTANT);
   return Math.min(...counts);
 }
 
@@ -530,6 +537,7 @@ export function crewDetail(unlocked: UnlockFlags) {
   if (unlocked.squiddy) bits.push(`30 as ${runnerLabel("SQUIDDY")}`);
   if (unlocked.three69) bits.push(`30 as ${runnerLabel("THREE69")}`);
   if (unlocked.abpeth) bits.push(`30 as ${runnerLabel("ABPETH")}`);
+  if (unlocked.jokersmutant) bits.push(`30 as ${runnerLabel("JOKERSMUTANT")}`);
   return `Finish ${bits.slice(0, -1).join(", ")}, and ${bits[bits.length - 1]}.`;
 }
 
@@ -600,6 +608,7 @@ export function emptyTally(): Tally {
       SQUIDDY: 0,
       THREE69: 0,
       ABPETH: 0,
+      JOKERSMUTANT: 0,
     },
   };
 }
@@ -665,6 +674,7 @@ function freshSave(now = new Date()): AchievementSave {
         squiddy: false,
         three69: false,
         abpeth: false,
+        jokersmutant: false,
     claims: [],
     dailyKey: utcDay(now),
     weeklyKey: utcWeek(now),
@@ -732,7 +742,8 @@ function tallyFrom(raw: unknown): Tally {
           name === "AIOGYTTTV" ||
           name === "SQUIDDY" ||
           name === "THREE69" ||
-          name === "ABPETH",
+          name === "ABPETH" ||
+          name === "JOKERSMUTANT",
       )
     : [];
   return {
@@ -801,6 +812,7 @@ function tallyFrom(raw: unknown): Tally {
       SQUIDDY: num(row.rides?.SQUIDDY),
       THREE69: num(row.rides?.THREE69),
       ABPETH: num(row.rides?.ABPETH),
+      JOKERSMUTANT: num(row.rides?.JOKERSMUTANT),
     },
   };
 }
@@ -873,6 +885,7 @@ function readRaw(token: string): AchievementSave {
       squiddy: parsed.squiddy === true,
       three69: parsed.three69 === true,
       abpeth: parsed.abpeth === true,
+      jokersmutant: parsed.jokersmutant === true,
       claims: Array.isArray(parsed.claims) ? parsed.claims.filter((claim) => typeof claim === "string") : [],
       dailyKey: typeof parsed.dailyKey === "string" ? parsed.dailyKey : "",
       weeklyKey: typeof parsed.weeklyKey === "string" ? parsed.weeklyKey : "",
@@ -999,6 +1012,7 @@ export function goalProgress(
         squiddy: false,
         three69: false,
         abpeth: false,
+        jokersmutant: false,
   },
 ) {
   return Math.min(goal.target, Math.max(0, goalValue(goal, tally, unlocked)));
@@ -1055,6 +1069,7 @@ export function goalDone(
         squiddy: false,
         three69: false,
         abpeth: false,
+        jokersmutant: false,
   },
 ) {
   return goalValue(goal, tally, unlocked) >= goal.target;
@@ -1118,6 +1133,7 @@ export type AchievementSnapshot = {
   squiddy: boolean;
   three69: boolean;
   abpeth: boolean;
+  jokersmutant: boolean;
   paid: string[];
   daily: Tally;
   weekly: Tally;
@@ -1176,6 +1192,7 @@ export function adoptServerAchievements(token: string, snap: AchievementSnapshot
     squiddy: snap.squiddy === true,
     three69: snap.three69 === true,
     abpeth: snap.abpeth === true,
+    jokersmutant: snap.jokersmutant === true,
     claims: Array.isArray(snap.paid) ? snap.paid.filter((claim) => typeof claim === "string") : [],
     daily: snap.daily,
     weekly: snap.weekly,

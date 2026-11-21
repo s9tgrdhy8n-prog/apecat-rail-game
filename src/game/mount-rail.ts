@@ -210,7 +210,8 @@ type RunnerId =
   | "aiogytttv"
   | "squiddy"
   | "three69"
-  | "abpeth";
+  | "abpeth"
+  | "jokersmutant";
 
 function meshyRunner(id: RunnerId) {
   return (
@@ -260,7 +261,8 @@ function meshyRunner(id: RunnerId) {
     id === "aiogytttv" ||
     id === "squiddy" ||
     id === "three69" ||
-    id === "abpeth"
+    id === "abpeth" ||
+    id === "jokersmutant"
   );
 }
 
@@ -372,6 +374,7 @@ class RailWorld {
   private squiddyUnlocked = false;
   private three69Unlocked = false;
   private abpethUnlocked = false;
+  private jokersmutantUnlocked = false;
   private kidsOn = false;
   private kidsDodge = false;
   private kidsMult = 1;
@@ -705,6 +708,9 @@ class RailWorld {
       },
       setAbpethUnlocked: (unlocked) => {
         this.abpethUnlocked = unlocked;
+      },
+      setJokersmutantUnlocked: (unlocked) => {
+        this.jokersmutantUnlocked = unlocked;
       },
       pause: () => this.freeze(),
       resume: () => this.beginCountdown(),
@@ -1071,6 +1077,7 @@ class RailWorld {
       { id: "squiddy", name: "SQUIDDY", url: "/models/squiddy.glb" },
       { id: "three69", name: "THREE69", url: "/models/three69.glb" },
       { id: "abpeth", name: "ABPETH", url: "/models/abpeth.glb" },
+      { id: "jokersmutant", name: "JOKERSMUTANT", url: "/models/jokersmutant.glb" },
     ];
     for (const spec of [...starters, ...rest]) this.runnerSpecs.set(spec.id, spec);
     for (const spec of starters) this.loadRunnerGltf(spec, this.runnerLoader, true);
@@ -1268,6 +1275,7 @@ class RailWorld {
     if (name === "SQUIDDY") return !this.squiddyUnlocked;
     if (name === "THREE69") return !this.three69Unlocked;
     if (name === "ABPETH") return !this.abpethUnlocked;
+    if (name === "JOKERSMUTANT") return !this.jokersmutantUnlocked;
     return false;
   }
 
@@ -2490,6 +2498,7 @@ class RailWorld {
     if (name === "SQUIDDY") return "squiddy";
     if (name === "THREE69") return "three69";
     if (name === "ABPETH") return "abpeth";
+    if (name === "JOKERSMUTANT") return "jokersmutant";
     return "gimbo";
   }
 

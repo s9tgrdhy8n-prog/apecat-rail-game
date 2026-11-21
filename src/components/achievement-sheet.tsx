@@ -68,6 +68,7 @@ function crewLine(tally: Tally, unlocked: UnlockFlags) {
   if (unlocked.squiddy) parts.push(`${runnerLabel("SQUIDDY")} ${tally.rides.SQUIDDY}`);
   if (unlocked.three69) parts.push(`${runnerLabel("THREE69")} ${tally.rides.THREE69}`);
   if (unlocked.abpeth) parts.push(`${runnerLabel("ABPETH")} ${tally.rides.ABPETH}`);
+  if (unlocked.jokersmutant) parts.push(`${runnerLabel("JOKERSMUTANT")} ${tally.rides.JOKERSMUTANT}`);
   return ` · ${parts.join(" · ")}`;
 }
 
@@ -172,6 +173,7 @@ export function AchievementSheet({
     squiddy: save.squiddy,
     three69: save.three69,
     abpeth: save.abpeth,
+    jokersmutant: save.jokersmutant,
   };
   const daily = GOALS.filter((goal) => goal.period === "daily");
   const weekly = GOALS.filter((goal) => goal.period === "weekly");
