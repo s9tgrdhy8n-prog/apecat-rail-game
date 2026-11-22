@@ -52,6 +52,7 @@ const LABELS: Record<RunnerName, string> = {
   THREE69: "369",
   ABPETH: "ABP\u200b.eth",
   JOKERSMUTANT: "Joker's Mutant",
+  ELIEN: "Elien",
 };
 
 const HANDLES: Partial<Record<RunnerName, string>> = {
@@ -102,6 +103,7 @@ const HANDLES: Partial<Record<RunnerName, string>> = {
   THREE69: "Threesixninemf",
   ABPETH: "abpmoon",
   JOKERSMUTANT: "JokerOlykos",
+  ELIEN: "ElienMosk",
 };
 
 export function runnerLabel(name: RunnerName | string) {

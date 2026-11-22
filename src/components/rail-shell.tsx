@@ -44,6 +44,7 @@ import {
   THREE69_COST,
   ABPETH_COST,
   JOKERSMUTANT_COST,
+  ELIEN_COST,
   GOALS,
   KOKO_COST,
   OTTER_COST,
@@ -170,6 +171,7 @@ const RUNNERS: { name: RunnerName; src: string }[] = [
   { name: "THREE69", src: "/brand/three69.jpg" },
   { name: "ABPETH", src: "/brand/abpeth.jpg" },
   { name: "JOKERSMUTANT", src: "/brand/jokersmutant.jpg" },
+  { name: "ELIEN", src: "/brand/elien.jpg" },
 ];
 const KIDS_SPEEDS = [
   { id: "1", label: "1×", mult: 1 },
@@ -318,6 +320,7 @@ export function RailShell() {
   const [three69Unlocked, setThree69Unlocked] = useState(false);
   const [abpethUnlocked, setAbpethUnlocked] = useState(false);
   const [jokersmutantUnlocked, setJokersmutantUnlocked] = useState(false);
+  const [elienUnlocked, setElienUnlocked] = useState(false);
   const [stats, setStats] = useState<RailStats | null>(null);
   const [nameDraft, setNameDraft] = useState("");
   const [password, setPassword] = useState("");
@@ -389,6 +392,7 @@ export function RailShell() {
   const three69Ref = useRef(false);
   const abpethRef = useRef(false);
   const jokersmutantRef = useRef(false);
+  const elienRef = useRef(false);
   const settle = useRef<Promise<unknown>>(Promise.resolve());
   const arming = useRef(false);
   const practiceRef = useRef(false);
@@ -572,6 +576,9 @@ export function RailShell() {
     setJokersmutantUnlocked(save.jokersmutant);
     jokersmutantRef.current = save.jokersmutant;
     apiRef.current?.setJokersmutantUnlocked(save.jokersmutant);
+    setElienUnlocked(save.elien);
+    elienRef.current = save.elien;
+    apiRef.current?.setElienUnlocked(save.elien);
     if (typeof res.fill === "number") setPickupFill(Math.max(0, Math.min(99, Math.floor(res.fill))));
     if (runSerial > 0) {
       const live = hudRef.current;
@@ -680,6 +687,8 @@ export function RailShell() {
     abpethRef.current = false;
     setJokersmutantUnlocked(false);
     jokersmutantRef.current = false;
+    setElienUnlocked(false);
+    elienRef.current = false;
     void syncDiamonds({ data: { token: next } })
       .then((res) => {
         if (!res.daily) return;
@@ -930,6 +939,11 @@ export function RailShell() {
   }, [jokersmutantUnlocked, hud.phase]);
 
   useEffect(() => {
+    elienRef.current = elienUnlocked;
+    apiRef.current?.setElienUnlocked(elienUnlocked);
+  }, [elienUnlocked, hud.phase]);
+
+  useEffect(() => {
     if (hud.phase === "run") setJustEarned([]);
   }, [hud.phase]);
 
@@ -1065,7 +1079,8 @@ export function RailShell() {
       (hudRef.current.runner === "SQUIDDY" && !squiddyRef.current) ||
       (hudRef.current.runner === "THREE69" && !three69Ref.current) ||
       (hudRef.current.runner === "ABPETH" && !abpethRef.current) ||
-      (hudRef.current.runner === "JOKERSMUTANT" && !jokersmutantRef.current)
+      (hudRef.current.runner === "JOKERSMUTANT" && !jokersmutantRef.current) ||
+      (hudRef.current.runner === "ELIEN" && !elienRef.current)
     ) {
       apiRef.current?.start();
       return;
@@ -1276,6 +1291,7 @@ export function RailShell() {
         { name: "THREE69" as const, seconds: 0 },
         { name: "ABPETH" as const, seconds: 0 },
         { name: "JOKERSMUTANT" as const, seconds: 0 },
+        { name: "ELIEN" as const, seconds: 0 },
       ],
     };
     void (async () => getStats({ data: { token } }))()
@@ -1938,6 +1954,13 @@ export function RailShell() {
     if (res?.ok && res.daily) applyWallet(token, res);
   }
 
+  async function onUnlockElien() {
+    if (!token || elienUnlocked) return;
+    if ((ach?.skulls ?? 0) < ELIEN_COST) return;
+    const res = await unlockRunner({ data: { token, runner: "ELIEN" } }).catch(() => null);
+    if (res?.ok && res.daily) applyWallet(token, res);
+  }
+
   const pickScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -2001,6 +2024,7 @@ export function RailShell() {
     if (name === "THREE69") return three69Unlocked;
     if (name === "ABPETH") return abpethUnlocked;
     if (name === "JOKERSMUTANT") return jokersmutantUnlocked;
+    if (name === "ELIEN") return elienUnlocked;
     return false;
   }
 
@@ -2101,7 +2125,8 @@ export function RailShell() {
             (runner.name === "SQUIDDY" && !squiddyUnlocked) ||
             (runner.name === "THREE69" && !three69Unlocked) ||
             (runner.name === "ABPETH" && !abpethUnlocked) ||
-            (runner.name === "JOKERSMUTANT" && !jokersmutantUnlocked);
+            (runner.name === "JOKERSMUTANT" && !jokersmutantUnlocked) ||
+            (runner.name === "ELIEN" && !elienUnlocked);
           const cost =
             runner.name === "KOKO"
               ? KOKO_COST
@@ -2195,9 +2220,11 @@ export function RailShell() {
                                                                                                     ? THREE69_COST
                                                                                                     : runner.name === "ABPETH"
                                                                                                       ? ABPETH_COST
-                                                                                                      : runner.name === "JOKERSMUTANT"
-                                                                                                        ? JOKERSMUTANT_COST
-                                                                                                        : PINKY_COST;
+                                                                                                        : runner.name === "JOKERSMUTANT"
+                                                                                                          ? JOKERSMUTANT_COST
+                                                                                                          : runner.name === "ELIEN"
+                                                                                                            ? ELIEN_COST
+                                                                                                            : PINKY_COST;
           return (
             <button
               key={runner.name}
@@ -2561,7 +2588,8 @@ export function RailShell() {
               (hud.runner === "SQUIDDY" && !squiddyUnlocked) ||
               (hud.runner === "THREE69" && !three69Unlocked) ||
               (hud.runner === "ABPETH" && !abpethUnlocked) ||
-              (hud.runner === "JOKERSMUTANT" && !jokersmutantUnlocked)
+              (hud.runner === "JOKERSMUTANT" && !jokersmutantUnlocked) ||
+              (hud.runner === "ELIEN" && !elienUnlocked)
                 ? "Unlock for 169 Diamond Skulls."
                 : "Get the highest score. Don’t kiss the bears."}
             </p>
@@ -2895,6 +2923,11 @@ export function RailShell() {
             {hud.runner === "JOKERSMUTANT" && !jokersmutantUnlocked ? (
               <button type="button" className="rail-stats-btn" onClick={onUnlockJokersmutant}>
                 {(ach?.skulls ?? 0) >= JOKERSMUTANT_COST ? `Unlock ${runnerLabel("JOKERSMUTANT")} · 169` : "Need 169 Diamond Skulls"}
+              </button>
+            ) : null}
+            {hud.runner === "ELIEN" && !elienUnlocked ? (
+              <button type="button" className="rail-stats-btn" onClick={onUnlockElien}>
+                {(ach?.skulls ?? 0) >= ELIEN_COST ? `Unlock ${runnerLabel("ELIEN")} · 169` : "Need 169 Diamond Skulls"}
               </button>
             ) : null}
             {mobile ? null : (

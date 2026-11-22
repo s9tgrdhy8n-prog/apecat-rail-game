@@ -211,7 +211,8 @@ type RunnerId =
   | "squiddy"
   | "three69"
   | "abpeth"
-  | "jokersmutant";
+  | "jokersmutant"
+  | "elien";
 
 function meshyRunner(id: RunnerId) {
   return (
@@ -262,7 +263,8 @@ function meshyRunner(id: RunnerId) {
     id === "squiddy" ||
     id === "three69" ||
     id === "abpeth" ||
-    id === "jokersmutant"
+    id === "jokersmutant" ||
+    id === "elien"
   );
 }
 
@@ -375,6 +377,7 @@ class RailWorld {
   private three69Unlocked = false;
   private abpethUnlocked = false;
   private jokersmutantUnlocked = false;
+  private elienUnlocked = false;
   private kidsOn = false;
   private kidsDodge = false;
   private kidsMult = 1;
@@ -712,6 +715,9 @@ class RailWorld {
       setJokersmutantUnlocked: (unlocked) => {
         this.jokersmutantUnlocked = unlocked;
       },
+      setElienUnlocked: (unlocked) => {
+        this.elienUnlocked = unlocked;
+      },
       pause: () => this.freeze(),
       resume: () => this.beginCountdown(),
       playReplay: (tape) => this.playReplay(tape),
@@ -962,7 +968,7 @@ class RailWorld {
           ? 0.84
           : spec.id === "goldfinger" || spec.id === "slimshady" || spec.id === "lilredmercy"
             ? 0.77
-            : spec.id === "abpeth"
+            : spec.id === "abpeth" || spec.id === "elien"
               ? 0.7
               : meshyRunner(spec.id)
               ? 1.3
@@ -1078,6 +1084,7 @@ class RailWorld {
       { id: "three69", name: "THREE69", url: "/models/three69.glb" },
       { id: "abpeth", name: "ABPETH", url: "/models/abpeth.glb" },
       { id: "jokersmutant", name: "JOKERSMUTANT", url: "/models/jokersmutant.glb" },
+      { id: "elien", name: "ELIEN", url: "/models/elien.glb" },
     ];
     for (const spec of [...starters, ...rest]) this.runnerSpecs.set(spec.id, spec);
     for (const spec of starters) this.loadRunnerGltf(spec, this.runnerLoader, true);
@@ -1276,6 +1283,7 @@ class RailWorld {
     if (name === "THREE69") return !this.three69Unlocked;
     if (name === "ABPETH") return !this.abpethUnlocked;
     if (name === "JOKERSMUTANT") return !this.jokersmutantUnlocked;
+    if (name === "ELIEN") return !this.elienUnlocked;
     return false;
   }
 
@@ -2499,6 +2507,7 @@ class RailWorld {
     if (name === "THREE69") return "three69";
     if (name === "ABPETH") return "abpeth";
     if (name === "JOKERSMUTANT") return "jokersmutant";
+    if (name === "ELIEN") return "elien";
     return "gimbo";
   }
 

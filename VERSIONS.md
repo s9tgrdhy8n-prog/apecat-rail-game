@@ -65,6 +65,7 @@ The start menu reads `GAME_VERSION` in `src/game/version.ts`. On every productio
 | 1.35.0 | 2026-11-17 | Published to https://apecat-rail-game.com. SQUIDDY joins the runners after AI OG YT TTV and unlocks for 169 Diamond Skulls. SQUIDDY’s X is @SquiddyNFT. Finished SQUIDDY runs count in Stats and in The whole crew after unlock. |
 | 1.36.0 | 2026-11-19 | Published to https://apecat-rail-game.com. 369 and ABP.eth join the runners after SQUIDDY, 369 first, and each unlocks for 169 Diamond Skulls. 369’s X is @Threesixninemf. ABP.eth’s X is @abpmoon. ABP.eth is the same size as Ape Cat. Claim Rewards is open for 48 hours from this publish and adds 169 Diamond Skulls, including for accounts that already claimed an earlier drop. Finished runs count in Stats and in The whole crew after unlock. |
 | 1.37.0 | 2026-11-21 | Published to https://apecat-rail-game.com. Joker's Mutant joins the runners after ABP.eth and unlocks for 169 Diamond Skulls. Joker's Mutant’s X is @JokerOlykos. Finished Joker's Mutant runs count in Stats and in The whole crew after unlock. |
+| 1.38.0 | 2026-11-22 | Published to https://apecat-rail-game.com. Elien joins the runners after Joker's Mutant and unlocks for 169 Diamond Skulls. Elien’s X is @ElienMosk. Elien is the same size as Ape Cat. Claim Rewards is open for 48 hours from this publish and adds 169 Diamond Skulls, including for accounts that already claimed an earlier drop. Finished Elien runs count in Stats and in The whole crew after unlock. |
 
 ## 1.0.5 notes
 

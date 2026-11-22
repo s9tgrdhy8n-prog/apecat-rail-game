@@ -64,7 +64,8 @@ export type RunnerName =
   | "SQUIDDY"
   | "THREE69"
   | "ABPETH"
-  | "JOKERSMUTANT";
+  | "JOKERSMUTANT"
+  | "ELIEN";
 
 export type Hud = {
   phase: Phase;
@@ -174,6 +175,7 @@ export type RailApi = {
   setThree69Unlocked: (unlocked: boolean) => void;
   setAbpethUnlocked: (unlocked: boolean) => void;
   setJokersmutantUnlocked: (unlocked: boolean) => void;
+  setElienUnlocked: (unlocked: boolean) => void;
   pause: () => void;
   resume: () => void;
   playReplay: (tape: GhostTape) => void;
